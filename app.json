@@ -114,8 +114,7 @@
       },
       "class": "sensor",
       "platforms": [
-        "local",
-        "cloud"
+        "local"
       ],
       "capabilities": [
         "alarm_motion",
