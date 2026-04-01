@@ -1,0 +1,13 @@
+{
+  "pair": {
+    "title": "Legg til rom",
+    "description": "Opprett en virtuell romenhet for å spore romstatus og automatisere lys og andre enheter.",
+    "room_name_label": "Romnavn",
+    "timeout_label": "Slå av etter ingen bevegelse i",
+    "timeout_unit": "minutter",
+    "timeout_hint": "\"Ingen bevegelse\"-triggeren utløses etter dette antall minutter uten registrert bevegelse.",
+    "add_button": "Legg til rom",
+    "default_name": "Nytt rom",
+    "error_name": "Vennligst skriv inn et romnavn."
+  }
+}

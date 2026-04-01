@@ -1,0 +1,13 @@
+{
+  "name": "no.easy.automation",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Easy Automation - room-based automations for lights and devices",
+  "main": "app.js",
+  "dependencies": {
+    "homey-api": "^3.17.4"
+  },
+  "devDependencies": {
+    "homey": "^4.0.11"
+  }
+}

@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <!-- Background circle -->
+  <circle cx="50" cy="50" r="48" fill="#EEF4FF"/>
+
+  <!-- House shape -->
+  <polygon points="50,12 14,40 86,40" fill="#4A90E2"/>
+  <rect x="18" y="40" width="64" height="44" rx="3" fill="#4A90E2" opacity="0.85"/>
+
+  <!-- Door -->
+  <rect x="42" y="62" width="16" height="22" rx="2" fill="#fff" opacity="0.9"/>
+  <circle cx="54" cy="73" r="1.5" fill="#4A90E2"/>
+
+  <!-- Window / light bulb -->
+  <circle cx="50" cy="52" r="8" fill="#FFD700"/>
+  <!-- Bulb base -->
+  <rect x="46" y="59" width="8" height="3" rx="1.5" fill="#E5B400"/>
+  <rect x="47" y="62" width="6" height="2" rx="1" fill="#E5B400"/>
+
+  <!-- Light rays -->
+  <line x1="50" y1="40" x2="50" y2="37" stroke="#FFD700" stroke-width="2" stroke-linecap="round"/>
+  <line x1="61" y1="44" x2="63" y2="42" stroke="#FFD700" stroke-width="2" stroke-linecap="round"/>
+  <line x1="39" y1="44" x2="37" y2="42" stroke="#FFD700" stroke-width="2" stroke-linecap="round"/>
+  <line x1="65" y1="52" x2="68" y2="52" stroke="#FFD700" stroke-width="2" stroke-linecap="round"/>
+  <line x1="35" y1="52" x2="32" y2="52" stroke="#FFD700" stroke-width="2" stroke-linecap="round"/>
+</svg>

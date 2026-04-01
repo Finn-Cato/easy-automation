@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Add Room</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f0f2f5;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 24px;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 16px;
+      padding: 32px 28px;
+      width: 100%;
+      max-width: 420px;
+      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.10);
+    }
+
+    .icon {
+      width: 56px;
+      height: 56px;
+      margin-bottom: 16px;
+    }
+
+    h1 {
+      font-size: 22px;
+      font-weight: 700;
+      color: #111;
+      margin-bottom: 6px;
+    }
+
+    .subtitle {
+      font-size: 14px;
+      color: #666;
+      margin-bottom: 28px;
+      line-height: 1.5;
+    }
+
+    .field {
+      margin-bottom: 20px;
+    }
+
+    label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: #444;
+      margin-bottom: 6px;
+    }
+
+    input[type="text"],
+    input[type="number"] {
+      width: 100%;
+      padding: 11px 14px;
+      border: 1.5px solid #ddd;
+      border-radius: 10px;
+      font-size: 15px;
+      color: #111;
+      outline: none;
+      transition: border-color 0.18s;
+      background: #fafafa;
+    }
+
+    input:focus {
+      border-color: #007aff;
+      background: #fff;
+    }
+
+    .timeout-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .timeout-row input[type="number"] {
+      /* inherit full-width from parent grid */
+    }
+
+    .unit {
+      font-size: 14px;
+      color: #666;
+      white-space: nowrap;
+    }
+
+    .hint {
+      font-size: 12px;
+      color: #888;
+      margin-top: 6px;
+    }
+
+    .examples {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .chip {
+      background: #f0f4ff;
+      color: #3366cc;
+      border: 1px solid #c0cff8;
+      border-radius: 20px;
+      padding: 4px 12px;
+      font-size: 12px;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .chip:hover {
+      background: #dce8ff;
+    }
+
+    .error-msg {
+      color: #cc0000;
+      font-size: 13px;
+      margin-top: 4px;
+      display: none;
+    }
+
+    .btn-add {
+      width: 100%;
+      padding: 13px;
+      margin-top: 10px;
+      background: #007aff;
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.18s, opacity 0.18s;
+    }
+
+    .btn-add:hover { background: #0062cc; }
+    .btn-add:disabled { opacity: 0.45; cursor: not-allowed; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <!-- SVG icon inline -->
+    <svg class="icon" viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect width="56" height="56" rx="14" fill="#EEF4FF"/>
+      <path d="M28 10L10 24v20a2 2 0 002 2h10V34h12v12h10a2 2 0 002-2V24L28 10z" fill="#4A90E2"/>
+      <circle cx="28" cy="30" r="6" fill="#FFD700"/>
+      <path d="M28 20v-3M28 43v-3M38 30h3M15 30h3M36 22l2-2M18 38l2-2M36 38l2 2M18 22l2 2" stroke="#FFD700" stroke-width="1.8" stroke-linecap="round"/>
+    </svg>
+
+    <h1 data-i18n="pair.title">Add Room</h1>
+    <p class="subtitle" data-i18n="pair.description">
+      Create a virtual room to track occupancy and automate lights &amp; devices.
+    </p>
+
+    <!-- Room name -->
+    <div class="field">
+      <label for="room-name" data-i18n="pair.room_name_label">Room Name</label>
+      <input type="text" id="room-name" maxlength="48"
+             placeholder="e.g. Living Room, Bedroom, Garage" autocomplete="off" />
+      <div class="error-msg" id="name-error" data-i18n="pair.error_name">
+        Please enter a room name.
+      </div>
+      <!-- Quick-pick chips -->
+      <div class="examples">
+        <span class="chip" onclick="setName('Living Room')">Living Room</span>
+        <span class="chip" onclick="setName('Bedroom')">Bedroom</span>
+        <span class="chip" onclick="setName('Kitchen')">Kitchen</span>
+        <span class="chip" onclick="setName('Garage')">Garage</span>
+        <span class="chip" onclick="setName('Hallway')">Hallway</span>
+        <span class="chip" onclick="setName('Office')">Office</span>
+      </div>
+    </div>
+
+    <!-- Motion timeout -->
+    <div class="field">
+      <label for="motion-timeout" data-i18n="pair.timeout_label">
+        Turn off after no motion for
+      </label>
+      <div class="timeout-row">
+        <input type="number" id="motion-timeout" value="5" min="1" max="120" />
+        <span class="unit" data-i18n="pair.timeout_unit">minutes</span>
+      </div>
+      <p class="hint" data-i18n="pair.timeout_hint">
+        The "No motion" flow trigger fires after this many minutes without motion.
+      </p>
+    </div>
+
+    <button class="btn-add" id="add-btn" data-i18n="pair.add_button" onclick="addRoom()">
+      Add Room
+    </button>
+  </div>
+
+  <script>
+    function setName(name) {
+      document.getElementById('room-name').value = name;
+      document.getElementById('room-name').focus();
+    }
+
+    function addRoom() {
+      const nameInput    = document.getElementById('room-name');
+      const timeoutInput = document.getElementById('motion-timeout');
+      const nameError    = document.getElementById('name-error');
+      const btn          = document.getElementById('add-btn');
+
+      const name    = nameInput.value.trim();
+      const timeout = parseInt(timeoutInput.value, 10);
+
+      // Validate name
+      if (!name) {
+        nameError.style.display = 'block';
+        nameInput.focus();
+        return;
+      }
+      nameError.style.display = 'none';
+
+      // Validate timeout
+      if (isNaN(timeout) || timeout < 1 || timeout > 120) {
+        Homey.alert('Timeout must be between 1 and 120 minutes.');
+        timeoutInput.focus();
+        return;
+      }
+
+      btn.disabled = true;
+
+      Homey.emit('set_data', { name: name, timeout: timeout }, function(err) {
+        if (err) {
+          Homey.alert(err.message || err);
+          btn.disabled = false;
+          return;
+        }
+        Homey.nextView();
+      });
+    }
+
+    // Submit on Enter key in the name field
+    document.getElementById('room-name').addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') addRoom();
+    });
+  </script>
+</body>
+</html>

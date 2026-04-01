@@ -1,0 +1,3080 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Easy Automation</title>
+
+  <script type="text/javascript" src="/homey.js" data-origin="settings"></script>
+  <script>
+    function onHomeyReady(Homey) {
+      Homey.ready();
+      window._hGet = function(key) {
+        return new Promise(function(resolve, reject) {
+          Homey.get(key, function(err, val) { err ? reject(new Error(String(err))) : resolve(val); });
+        });
+      };
+      window._hSet = function(key, val) {
+        return new Promise(function(resolve, reject) {
+          Homey.set(key, val, function(err) { err ? reject(new Error(String(err))) : resolve(); });
+        });
+      };
+      window._hAlert   = function(msg) { Homey.alert(msg); };
+      window._hApi = function(method, path, data) {
+        return new Promise(function(resolve, reject) {
+          Homey.api(method, path, data, function(err, result) {
+            if (err) reject(new Error(String(err))); else resolve(result);
+          });
+        });
+      };
+      window._hConfirm = function(msg) {
+        return new Promise(function(res) { Homey.confirm(msg, null, function(e, ok) { res(ok); }); });
+      };
+      window._hBridge = async function(reqKey, resKey, payload, timeoutMs) {
+        var ts = Date.now();
+        await window._hSet(reqKey, JSON.stringify(Object.assign({ ts: ts }, payload)));
+        var deadline = Date.now() + (timeoutMs || 10000);
+        while (Date.now() < deadline) {
+          await new Promise(function(r){ setTimeout(r, 400); });
+          var raw = await window._hGet(resKey);
+          if (!raw) continue;
+          var res = typeof raw === 'string' ? JSON.parse(raw) : raw;
+          if (res.reqTs === ts) return res;
+        }
+        throw new Error('Timeout waiting for response');
+      };
+      App.init();
+    }
+  </script>
+
+  <style>
+    /* ── Colour tokens — light default, dark via OS/Homey ── */
+    :root {
+      --ea-bg:       #f2f2f7;
+      --ea-surface:  #ffffff;
+      --ea-card:     #ffffff;
+      --ea-border:   #e0e0e5;
+      --ea-divider:  #f2f2f7;
+      --ea-text:     #1c1c1e;
+      --ea-sub:      #8e8e93;
+      --ea-accent:   #e8622a;
+      --ea-accent2:  #c94e1e;
+      --ea-green:    #34c759;
+      --ea-red:      #ff3b30;
+      --ea-input-bg: #fafafa;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --ea-bg:       #111111;
+        --ea-surface:  #1a1a1a;
+        --ea-card:     #1e1e1e;
+        --ea-border:   #2e2e2e;
+        --ea-divider:  #252525;
+        --ea-text:     #f0f0f0;
+        --ea-sub:      #888;
+        --ea-input-bg: #252525;
+      }
+    }
+    .homey-dark-mode {
+      --ea-bg:       #111111;
+      --ea-surface:  #1a1a1a;
+      --ea-card:     #1e1e1e;
+      --ea-border:   #2e2e2e;
+      --ea-divider:  #252525;
+      --ea-text:     #f0f0f0;
+      --ea-sub:      #888;
+      --ea-input-bg: #252525;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 14px; background-color: var(--ea-bg); color: var(--ea-text); }
+    #app { background-color: var(--ea-bg); color: var(--ea-text); min-height: 100vh; }
+
+    /* Top bar */
+    .topbar { background-color: var(--ea-surface); border-bottom: 1px solid var(--ea-border); padding: 10px 16px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 5; }
+    .topbar h1 { font-size: 15px; font-weight: 700; color: var(--ea-text); }
+    .topbar h1 span { color: var(--ea-accent); }
+    #status-msg { font-size: 11px; color: var(--ea-sub); min-width: 60px; text-align: right; }
+
+    /* Tabs */
+    .tabs { display: flex; background-color: var(--ea-surface); border-bottom: 1px solid var(--ea-border); padding: 0 14px; }
+    .tab { padding: 8px 12px; background: none; border: none; border-bottom: 2px solid transparent; font-size: 12px; font-weight: 600; color: var(--ea-sub); cursor: pointer; margin-bottom: -1px; }
+    .tab.on { color: var(--ea-accent); border-bottom-color: var(--ea-accent); }
+
+    /* Views */
+    .view { display: none; padding: 14px; max-width: 640px; margin: 0 auto; background-color: var(--ea-bg); color: var(--ea-text); }
+    .view.on { display: block; }
+    .sec-hdr { font-size: 11px; font-weight: 700; color: var(--ea-sub); text-transform: uppercase; letter-spacing: .5px; margin: 14px 0 8px; }
+
+    /* Template cards */
+    .templates { display: grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap: 8px; margin-bottom: 6px; }
+    .tmpl-btn { -webkit-appearance: none; appearance: none; background-color: var(--ea-card) !important; border: 1.5px solid var(--ea-border); border-radius: 10px; padding: 10px 6px 8px; cursor: pointer; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 5px; transition: border-color .15s, box-shadow .15s; }
+    .tmpl-btn:hover { border-color: var(--ea-accent); box-shadow: 0 2px 12px rgba(232,98,42,.2); }
+    .tmpl-icon { font-size: 22px; line-height: 1; }
+    .tmpl-name { font-size: 11px; font-weight: 600; color: var(--ea-text); line-height: 1.3; }
+
+    /* Automation cards */
+    .auto-list-wrap { background-color: var(--ea-surface); border-radius: 10px; box-shadow: 0 1px 4px rgba(0,0,0,.3); overflow: hidden; border: 1px solid var(--ea-border); }
+    .card { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-bottom: 1px solid var(--ea-divider); cursor: default; border-left: 3px solid transparent; }
+    .card:last-child { border-bottom: none; }
+    .card-active   { border-left-color: var(--ea-green); }
+    .card-paused   { border-left-color: #444; }
+    .card-override { border-left-color: var(--ea-accent); }
+    .card-body { flex: 1; min-width: 0; cursor: pointer; padding: 2px 0; }
+    .card-body:hover .card-name { color: var(--ea-accent); }
+    .card-name { font-weight: 600; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: color .15s; color: var(--ea-text); }
+    .card-sub { font-size: 11px; color: var(--ea-sub); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .card-chevron { color: #444; font-size: 14px; flex-shrink: 0; pointer-events: none; }
+    .ico { -webkit-appearance: none; appearance: none; background-color: transparent !important; border: none; cursor: pointer; color: var(--ea-sub); font-size: 14px; padding: 6px; border-radius: 6px; flex-shrink: 0; min-width: 28px; min-height: 28px; display: flex; align-items: center; justify-content: center; }
+    .ico:hover { background: rgba(255,59,48,.15); color: var(--ea-red); }
+    .ico-run:hover { background: rgba(232,98,42,.15) !important; color: var(--ea-accent) !important; }
+    .ico-pause:hover { background: rgba(232,98,42,.15) !important; color: var(--ea-accent) !important; }
+    .ico-pause.active { color: var(--ea-accent); }
+    .ov-time-btn { -webkit-appearance: none; appearance: none; flex: 1; padding: 8px 6px; border: 1.5px solid var(--ea-border); border-radius: 8px; background-color: var(--ea-input-bg); font-size: 13px; font-weight: 600; color: var(--ea-text); cursor: pointer; text-align: center; transition: border-color .15s, background .15s; }
+    .ov-time-btn:hover { border-color: var(--ea-accent); background: rgba(232,98,42,.12); color: var(--ea-accent); }
+    .ov-resume-btn { -webkit-appearance: none; appearance: none; width: 100%; padding: 8px; border: 1.5px solid var(--ea-red); border-radius: 8px; background: rgba(255,59,48,.12); color: var(--ea-red); font-size: 13px; font-weight: 600; cursor: pointer; margin-top: 10px; }
+    .ov-resume-btn:hover { background: var(--ea-red); color: #fff; }
+    .light-grid { display: flex; flex-wrap: wrap; gap: 8px; padding: 10px; background-color: var(--ea-input-bg); border-radius: 10px; margin-bottom: 10px; }
+    .light-tile { display: flex; flex-direction: column; align-items: center; gap: 3px; min-width: 56px; max-width: 80px; }
+    .light-tile-icon { font-size: 22px; line-height: 1; }
+    .light-tile-name { font-size: 10px; font-weight: 600; text-align: center; color: var(--ea-text); word-break: break-word; line-height: 1.2; }
+    .light-tile-state { font-size: 10px; font-weight: 700; }
+
+    /* Toggle */
+    .tog { position: relative; width: 36px; height: 20px; flex-shrink: 0; }
+    .tog input { opacity: 0; width: 0; height: 0; position: absolute; }
+    .tog-track { position: absolute; inset: 0; background: #333; border-radius: 10px; cursor: pointer; transition: background .2s; }
+    .tog-track::after { content: ''; position: absolute; width: 16px; height: 16px; background: #888; border-radius: 50%; top: 2px; left: 2px; transition: transform .2s; box-shadow: 0 1px 3px rgba(0,0,0,.5); }
+    .tog input:checked + .tog-track { background-color: var(--ea-green); }
+    .tog input:checked + .tog-track::after { transform: translateX(16px); background: #fff; }
+
+    /* Buttons */
+    .btn { -webkit-appearance: none; appearance: none; padding: 7px 14px; border: none; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; transition: opacity .15s; }
+    .btn:disabled { opacity: .4; cursor: not-allowed; }
+    .btn-blue { background-color: var(--ea-accent) !important; color: #fff; }
+    .btn-blue:hover:not(:disabled) { background-color: var(--ea-accent2) !important; }
+    .btn-gray { background-color: var(--ea-border) !important; color: var(--ea-text) !important; border: 1px solid var(--ea-border); }
+    .btn-gray:hover:not(:disabled) { background-color: var(--ea-divider) !important; }
+
+    /* Modal overlay */
+    .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.75); z-index: 50; overflow-y: auto; padding: 14px; }
+    .overlay.on { display: flex; align-items: flex-start; justify-content: center; }
+    .modal { background-color: var(--ea-surface); border: 1px solid var(--ea-border); border-radius: 12px; width: 100%; max-width: 480px; padding: 16px 18px 20px; margin: auto; box-shadow: 0 8px 40px rgba(0,0,0,.6); }
+    .modal-hdr { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+    .modal-hdr h2 { font-size: 15px; font-weight: 700; color: var(--ea-text); }
+    .modal-ftr { display: flex; gap: 8px; justify-content: flex-end; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--ea-border); }
+    .close-btn { background: none; border: none; cursor: pointer; color: var(--ea-sub); font-size: 18px; padding: 2px 6px; border-radius: 6px; }
+    .close-btn:hover { background-color: var(--ea-border); color: var(--ea-text); }
+
+    /* Form */
+    .fgrp { margin-bottom: 10px; }
+    .flabel { display: block; font-size: 11px; font-weight: 700; color: var(--ea-sub); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 4px; }
+    .finput { width: 100%; padding: 7px 10px; border: 1.5px solid var(--ea-border); border-radius: 8px; font-size: 14px; color: var(--ea-text); background-color: var(--ea-input-bg); outline: none; font-family: inherit; transition: border-color .15s; }
+    .finput:focus { border-color: var(--ea-accent); background-color: var(--ea-card); }
+    select.finput { cursor: pointer; }
+    .sep { border: none; border-top: 1px solid var(--ea-border); margin: 10px 0; }
+
+    /* Time row */
+    .time-row { display: flex; gap: 10px; align-items: flex-end; }
+    .time-row .fgrp { flex: 1; }
+
+    /* Day-of-week selector */
+    .day-row { display:flex; gap:6px; flex-wrap:wrap; }
+    .day-btn { cursor:pointer; }
+    .day-btn input { display:none; }
+    .day-btn span { display:inline-block; padding:4px 8px; border-radius:6px; font-size:12px; font-weight:600; background-color:var(--ea-input-bg); border:1.5px solid var(--ea-border); color:var(--ea-sub); transition:all 0.15s; }
+    .day-btn input:checked + span { background-color:var(--ea-accent); border-color:var(--ea-accent); color:#fff; }
+
+    /* Custom 24h time picker (dropdown) */
+    .tp-wrap { display:inline-flex; align-items:center; gap:2px; user-select:none; }
+    .tp-sel  { font-size:13px; font-weight:600; color:var(--ea-text); background-color:var(--ea-input-bg); border:1px solid var(--ea-border); border-radius:4px; padding:3px 2px; cursor:pointer; font-family:inherit; -webkit-appearance:none; appearance:none; text-align:center; width:40px; }
+    .tp-sel:focus { border-color:var(--ea-accent); outline:none; }
+    .tp-sep  { font-size:13px; font-weight:700; color:var(--ea-sub); }
+
+    /* Brightness slider */
+    .slider-row { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
+    .slider-row input[type=range] { flex: 1; -webkit-appearance: none; height: 4px; background: #333; border-radius: 2px; outline: none; cursor: pointer; }
+    .slider-row input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 20px; height: 20px; background-color: var(--ea-accent); border-radius: 50%; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,.4); }
+    .slider-val { font-size: 13px; font-weight: 700; color: var(--ea-accent); min-width: 36px; text-align: right; }
+
+    /* Device picker */
+    .dp-wrap { max-height: 180px; overflow-y: auto; border: 1.5px solid var(--ea-border); border-radius: 8px; background-color: var(--ea-input-bg); }
+    .dp-item { display: flex; align-items: center; gap: 8px; padding: 7px 10px; cursor: pointer; border-bottom: 1px solid var(--ea-card); }
+    .dp-item:last-child { border-bottom: none; }
+    .dp-item:hover { background: rgba(232,98,42,.1); }
+    .dp-item input[type=checkbox] { width: 16px; height: 16px; cursor: pointer; accent-color: var(--ea-accent); }
+    .dp-name { font-size: 13px; flex: 1; color: var(--ea-text); }
+    .dp-zone { font-size: 11px; color: var(--ea-sub); }
+    .dp-empty { padding: 12px; text-align: center; color: var(--ea-sub); font-size: 12px; }
+    .dp-grp { padding: 4px 10px 2px; font-size: 10px; font-weight: 700; color: var(--ea-sub); text-transform: uppercase; letter-spacing: .4px; background-color: var(--ea-card); }
+    .dp-selall { font-size: 11px; color: var(--ea-accent); cursor: pointer; margin-top: 4px; display: inline-block; }
+
+    /* Check row */
+    .check-row { display: flex; align-items: center; gap: 8px; padding: 6px 0; }
+    .check-row input[type=checkbox] { width: 16px; height: 16px; accent-color: var(--ea-accent); cursor: pointer; flex-shrink: 0; }
+    .check-row label { font-size: 13px; cursor: pointer; color: var(--ea-text); }
+
+    /* Devices tab */
+    .device-card { background-color: var(--ea-card); border: 1px solid var(--ea-border); border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,.2); margin-bottom: 6px; padding: 8px 10px; display: flex; align-items: center; gap: 8px; }
+    .device-card-info { flex: 1; }
+    .device-card-name { font-weight: 600; font-size: 13px; color: var(--ea-text); }
+    .device-card-sub { font-size: 11px; color: var(--ea-sub); margin-top: 1px; }
+    .badge { font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 5px; background: rgba(232,98,42,.15); color: var(--ea-accent); }
+
+    /* Log */
+    .log-row { display: flex; gap: 8px; padding: 5px 12px; border-bottom: 1px solid var(--ea-divider); font-size: 12px; align-items: baseline; }
+    .log-ts { color: var(--ea-sub); font-size: 10px; white-space: nowrap; flex-shrink: 0; }
+    .log-lv { font-size: 9px; font-weight: 700; text-transform: uppercase; border-radius: 3px; padding: 1px 5px; flex-shrink: 0; width: 48px; text-align: center; }
+    .log-lv.info { background: rgba(41,128,185,.2); color: #5dade2; }
+    .log-lv.error { background: rgba(255,59,48,.2); color: #ff6b60; }
+    .log-lv.warn { background: rgba(255,149,0,.2); color: #ffb340; }
+    .log-lv.trigger { background: rgba(52,199,89,.2); color: #4cd964; }
+    .log-lv.action { background: rgba(232,98,42,.2); color: var(--ea-accent); }
+    .log-lv.skipped { background-color: var(--ea-divider); color: var(--ea-sub); }
+    .log-lv.test { background: rgba(255,149,0,.2); color: #ffb340; }
+    .log-msg { flex: 1; color: var(--ea-text); }
+
+    .loader { text-align: center; padding: 28px; color: var(--ea-sub); font-size: 13px; }
+    .empty { text-align: center; padding: 30px 16px; color: var(--ea-sub); }
+    .empty .icon { font-size: 28px; margin-bottom: 8px; }
+    .empty p { font-size: 13px; line-height: 1.6; }
+    .row-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+    .row-top h2 { font-size: 14px; font-weight: 700; color: var(--ea-text); }
+
+    /* Modal inner tabs */
+    .modal-tab { background: none; border: none; border-bottom: 2px solid transparent; padding: 7px 12px; font-size: 12px; font-weight: 600; color: var(--ea-sub); cursor: pointer; margin-bottom: -1px; font-family: inherit; }
+    .modal-tab.on { color: var(--ea-accent); border-bottom-color: var(--ea-accent); }
+
+    /* Small action button */
+    .btn-sm { background-color:var(--ea-input-bg); border:1px solid var(--ea-border); color:var(--ea-text); border-radius:6px; padding:5px 10px; font-size:12px; font-weight:600; cursor:pointer; font-family:inherit; transition:border-color .15s; }
+    .btn-sm:hover { border-color:var(--ea-accent); color:var(--ea-accent); }
+
+    /* Lights tab */
+    .lt-card { padding: 10px 12px; border-bottom: 1px solid var(--ea-divider); }
+    .lt-card:last-child { border-bottom: none; }
+    .lt-name { font-weight: 600; font-size: 13px; margin-bottom: 6px; color: var(--ea-text); }
+    .lt-row { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+    .lt-row:last-child { margin-bottom: 0; }
+    .lt-label { font-size: 11px; font-weight: 700; color: var(--ea-sub); width: 48px; flex-shrink: 0; }
+
+    /* ── Mobile: prevent iOS zoom on input focus ── */
+    @media (max-width: 480px) {
+      .finput { font-size: 16px; }
+    }
+  </style>
+</head>
+<body>
+<div id="app">
+
+<div class="topbar">
+  <h1>Easy <span>Automation</span></h1>
+  <span id="status-msg"></span>
+</div>
+
+<div class="tabs">
+  <button class="tab on"  id="tab-auto"    onclick="UI.tab('auto')">Automations</button>
+  <button class="tab"     id="tab-devices" onclick="UI.tab('devices')">Devices</button>
+  <button class="tab"     id="tab-logs"    onclick="UI.tab('logs')">Logs</button>
+  <button class="tab"     id="tab-help"    onclick="UI.tab('help')">Help</button>
+</div>
+
+<!-- Automations -->
+<div class="view on" id="view-auto">
+  <div class="sec-hdr">Add new automation</div>
+  <div class="templates">
+    <button class="tmpl-btn" onclick="TModal.open('motion_lights')">
+      <span class="tmpl-icon">🏃</span>
+      <span class="tmpl-name">Motion<br>→ Lights</span>
+    </button>
+    <button class="tmpl-btn" onclick="TModal.open('smart_dim')">
+      <span class="tmpl-icon">🌙</span>
+      <span class="tmpl-name">Smart Dim<br>Day / Night</span>
+    </button>
+    <button class="tmpl-btn" onclick="TModal.open('door_lights')">
+      <span class="tmpl-icon">🚪</span>
+      <span class="tmpl-name">Door<br>→ Lights</span>
+    </button>
+    <button class="tmpl-btn" onclick="TModal.open('schedule')">
+      <span class="tmpl-icon">⏰</span>
+      <span class="tmpl-name">Schedule<br>Lights</span>
+    </button>
+    <button class="tmpl-btn" onclick="TModal.open('scene')">
+      <span class="tmpl-icon">💡</span>
+      <span class="tmpl-name">Light<br>Group</span>
+    </button>
+    <button class="tmpl-btn" onclick="TModal.open('switch')">
+      <span class="tmpl-icon">🔘</span>
+      <span class="tmpl-name">Wall Switch<br>/ Button</span>
+    </button>
+    <button class="tmpl-btn" onclick="TModal.open('custom')">
+      <span class="tmpl-icon">⚙️</span>
+      <span class="tmpl-name">Custom<br>Advanced</span>
+    </button>
+  </div>
+
+  <div class="sec-hdr">My automations</div>
+  <div id="auto-list"><div class="loader">Loading…</div></div>
+</div>
+
+<!-- Devices tab -->
+<div class="view" id="view-devices">
+  <div class="row-top">
+    <h2>Devices</h2>
+    <button class="btn btn-blue" id="btn-refresh-dev" onclick="DevTab.refresh()">Refresh</button>
+  </div>
+  <div style="font-size:13px;color:var(--ea-sub);margin-bottom:12px">Check the devices you want to use in automations. Unchecked devices are hidden from all pickers. If nothing is checked, all devices are shown.</div>
+  <div id="dev-filter-bar" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px"></div>
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+    <span style="font-size:11px;font-weight:600;color:var(--ea-sub);text-transform:uppercase;letter-spacing:.5px;white-space:nowrap">Filtered:</span>
+    <button class="btn-sm" onclick="DevTab.selectVisible()">✓ Check all</button>
+    <button class="btn-sm" onclick="DevTab.uncheckVisible()">✗ Uncheck all</button>
+    <div style="width:1px;height:20px;background:var(--ea-border);flex-shrink:0"></div>
+    <span style="font-size:11px;font-weight:600;color:var(--ea-sub);text-transform:uppercase;letter-spacing:.5px;white-space:nowrap">All:</span>
+    <button class="btn-sm" onclick="DevTab.selectNone()">Clear selection</button>
+  </div>
+  <div id="device-list"><div class="loader">Loading…</div></div>
+</div>
+
+
+<!-- Test tab -->
+
+<!-- Logs tab -->
+<div class="view" id="view-logs">
+  <div class="row-top">
+    <h2>Activity Log</h2>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-gray" onclick="LogTab.copy()">Copy Log</button>
+      <button class="btn btn-gray" onclick="LogTab.load()">Refresh</button>
+    </div>
+  </div>
+  <div style="background:var(--ea-surface);border:1px solid var(--ea-border);border-radius:14px;overflow:hidden">
+    <div style="width:100%" id="log-list"><div class="loader">Loading…</div></div>
+  </div>
+</div>
+
+<!-- Help tab -->
+<div class="view" id="view-help">
+  <div style="max-width:600px;margin:0 auto;padding-bottom:40px">
+
+    <div style="text-align:center;padding:28px 0 20px">
+      <div style="font-size:48px;line-height:1">⚡</div>
+      <div style="font-size:22px;font-weight:800;color:var(--ea-text);margin-top:10px">Easy Automation</div>
+      <div style="font-size:13px;color:var(--ea-sub);margin-top:4px">Control your lights and automations from Homey</div>
+    </div>
+
+    <!-- Getting started -->
+    <div style="background:var(--ea-surface);border:1px solid var(--ea-border);border-radius:14px;padding:20px 22px;margin-bottom:14px">
+      <div style="font-size:13px;font-weight:700;color:var(--ea-sub);text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px">Getting started</div>
+      <ol style="padding-left:18px;line-height:1.9;font-size:14px;color:var(--ea-text)">
+        <li>Go to the <strong>Devices</strong> tab and press <strong>Refresh</strong> to load all your Homey devices.</li>
+        <li>Go to <strong>Automations</strong> and pick a template to create your first automation.</li>
+        <li>Give it a name, choose your lights, and press <strong>Add</strong>.</li>
+        <li>Use a <strong>Wall Switch</strong> automation to link a button to any group you have created.</li>
+      </ol>
+    </div>
+
+    <!-- Templates -->
+    <div style="background:var(--ea-surface);border:1px solid var(--ea-border);border-radius:14px;padding:20px 22px;margin-bottom:14px">
+      <div style="font-size:13px;font-weight:700;color:var(--ea-sub);text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px">Automation templates</div>
+
+      <div style="display:flex;gap:12px;margin-bottom:14px;align-items:flex-start">
+        <span style="font-size:26px;line-height:1;flex-shrink:0">🏃</span>
+        <div>
+          <div style="font-weight:700;font-size:14px;color:var(--ea-text)">Motion → Lights</div>
+          <div style="font-size:13px;color:var(--ea-sub);margin-top:2px;line-height:1.5">Turns lights on when a motion sensor detects movement, and optionally off again after motion stops. You can set a hold time (e.g. keep lights on for 5 minutes after the last movement) and a fade-in / fade-out duration.</div>
+        </div>
+      </div>
+
+      <div style="border-top:1px solid var(--ea-divider);margin:12px 0"></div>
+
+      <div style="display:flex;gap:12px;margin-bottom:14px;align-items:flex-start">
+        <span style="font-size:26px;line-height:1;flex-shrink:0">🌙</span>
+        <div>
+          <div style="font-weight:700;font-size:14px;color:var(--ea-text)">Smart Dim — Day &amp; Night</div>
+          <div style="font-size:13px;color:var(--ea-sub);margin-top:2px;line-height:1.5">Same as Motion → Lights but uses two brightness levels: a bright level during the day and a dim level at night. You set the times when day starts and when night starts. Great for hallways and bathrooms.</div>
+        </div>
+      </div>
+
+      <div style="border-top:1px solid var(--ea-divider);margin:12px 0"></div>
+
+      <div style="display:flex;gap:12px;margin-bottom:14px;align-items:flex-start">
+        <span style="font-size:26px;line-height:1;flex-shrink:0">🚪</span>
+        <div>
+          <div style="font-weight:700;font-size:14px;color:var(--ea-text)">Door → Lights</div>
+          <div style="font-size:13px;color:var(--ea-sub);margin-top:2px;line-height:1.5">Turns lights on when a door or contact sensor opens, and optionally off when it closes again. Useful for cupboards, storage rooms, or garage lights.</div>
+        </div>
+      </div>
+
+      <div style="border-top:1px solid var(--ea-divider);margin:12px 0"></div>
+
+      <div style="display:flex;gap:12px;margin-bottom:14px;align-items:flex-start">
+        <span style="font-size:26px;line-height:1;flex-shrink:0">⏰</span>
+        <div>
+          <div style="font-weight:700;font-size:14px;color:var(--ea-text)">Schedule Lights</div>
+          <div style="font-size:13px;color:var(--ea-sub);margin-top:2px;line-height:1.5">Runs an action on a fixed time every day (or selected days of the week). You can turn lights ON, OFF, or dim them to a specific level. Good for morning routines or turning everything off at bedtime.</div>
+        </div>
+      </div>
+
+      <div style="border-top:1px solid var(--ea-divider);margin:12px 0"></div>
+
+      <div style="display:flex;gap:12px;margin-bottom:14px;align-items:flex-start">
+        <span style="font-size:26px;line-height:1;flex-shrink:0">💡</span>
+        <div>
+          <div style="font-weight:700;font-size:14px;color:var(--ea-text)">Light Group / Scene</div>
+          <div style="font-size:13px;color:var(--ea-sub);margin-top:2px;line-height:1.5">A group of lights with a fixed state. You choose what each light does when the scene runs: set it to a brightness (1–100%) or fully off (0%). The scene does nothing on its own — it is meant to be triggered by a <strong>Wall Switch</strong> button, another automation, or the Test button. Perfect for a night scene where some lights dim low and others turn off completely.</div>
+        </div>
+      </div>
+
+      <div style="border-top:1px solid var(--ea-divider);margin:12px 0"></div>
+
+      <div style="display:flex;gap:12px;margin-bottom:0;align-items:flex-start">
+        <span style="font-size:26px;line-height:1;flex-shrink:0">🔘</span>
+        <div>
+          <div style="font-weight:700;font-size:14px;color:var(--ea-text)">Wall Switch / Button</div>
+          <div style="font-size:13px;color:var(--ea-sub);margin-top:2px;line-height:1.5">Links a physical switch or button to one or more automations. Each button action (press, on, off, hold) can be mapped to any group you have already created. For devices without standard capabilities, Homey Flows are created automatically.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Lights tab -->
+    <div style="background:var(--ea-surface);border:1px solid var(--ea-border);border-radius:14px;padding:20px 22px;margin-bottom:14px">
+      <div style="font-size:13px;font-weight:700;color:var(--ea-sub);text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px">💡 Lights tab (inside an automation)</div>
+      <div style="font-size:14px;color:var(--ea-text);line-height:1.7">
+        When editing an automation you will see a <strong>Lights</strong> tab. Here you can set individual brightness levels per light — overriding the global slider. This lets you have one light at 80% and another at 20% in the same automation.<br><br>
+        For a <strong>Light Group</strong>, dragging a slider to <strong>0% turns that specific light OFF</strong> when the scene runs, while others stay on at their set level.
+      </div>
+    </div>
+
+    <!-- Pause / override -->
+    <div style="background:var(--ea-surface);border:1px solid var(--ea-border);border-radius:14px;padding:20px 22px;margin-bottom:14px">
+      <div style="font-size:13px;font-weight:700;color:var(--ea-sub);text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px">⏸ Pausing an automation</div>
+      <div style="font-size:14px;color:var(--ea-text);line-height:1.7">
+        Press the <strong>⏸</strong> icon on an automation card to pause it for 30 min, 1 hour, 2 hours, 4 hours, or until midnight. While paused, the automation will not react to any triggers. Useful when you want to override the lights manually for a while. Press <strong>Resume</strong> to cancel early.
+      </div>
+    </div>
+
+    <!-- Tips -->
+    <div style="background:var(--ea-surface);border:1px solid var(--ea-border);border-radius:14px;padding:20px 22px;margin-bottom:14px">
+      <div style="font-size:13px;font-weight:700;color:var(--ea-sub);text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px">💬 Tips &amp; common setups</div>
+      <div style="font-size:14px;color:var(--ea-text);line-height:1.8">
+        <strong>Night scene via wall switch:</strong><br>
+        1. Create a <em>Light Group</em> called "Night Scene". Add all lights you want to control. In the Lights tab set hallway lights to 5%, bedroom lights to 0%.<br>
+        2. Create a <em>Wall Switch</em> automation. Map one button to the Night Scene group.<br>
+        3. Press the button at night — hallway dims, bedroom lights turn off.<br><br>
+
+        <strong>Motion lights that dim at night:</strong><br>
+        Use <em>Smart Dim</em>. Set daytime brightness to 100% and night brightness to 15%. The app automatically picks the right level based on the current time.<br><br>
+
+        <strong>Devices not showing up?</strong><br>
+        Go to the <strong>Devices</strong> tab and press <strong>Refresh</strong>. The app caches the device list — a refresh pulls the latest from Homey.<br><br>
+
+        <strong>Testing an automation:</strong><br>
+        Open any automation and switch to the <strong>🧪 Test</strong> tab. Press the test button to run the actions immediately without waiting for a trigger.
+      </div>
+    </div>
+
+    <!-- Log tab -->
+    <div style="background:var(--ea-surface);border:1px solid var(--ea-border);border-radius:14px;padding:20px 22px;margin-bottom:14px">
+      <div style="font-size:13px;font-weight:700;color:var(--ea-sub);text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px">📋 Logs tab</div>
+      <div style="font-size:14px;color:var(--ea-text);line-height:1.7">
+        The Logs tab shows a timestamped activity log of everything the app has done: triggers fired, conditions checked, actions executed, and any errors. Press <strong>Copy Log</strong> to copy the full log to your clipboard for troubleshooting.
+      </div>
+    </div>
+
+    <!-- PAT section -->
+    <div style="background:var(--ea-surface);border:1px solid var(--ea-border);border-radius:14px;padding:20px 22px;margin-bottom:0">
+      <div style="font-size:13px;font-weight:700;color:var(--ea-sub);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">🔑 Personal Access Token</div>
+      <div style="font-size:13px;color:var(--ea-sub);margin-bottom:14px;line-height:1.6">
+        Required for <strong>Wall Switch</strong> automations that use Homey Flows (e.g. Z-Wave remotes like NAMRON). Without this token the app cannot create the flows automatically.<br><br>
+        To create a token: go to <strong>my.homey.app</strong> → Settings → API → <em>Create a Personal Access Token</em> and enable the <strong>Flows</strong> permission.
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <input id="pat-input" type="password" placeholder="Paste token here…"
+          style="flex:1;padding:9px 12px;border:1.5px solid var(--ea-border);border-radius:10px;background:var(--ea-input-bg);color:var(--ea-text);font-size:14px;font-family:inherit;outline:none"/>
+        <button class="btn btn-blue" onclick="PATSettings.save()" style="white-space:nowrap">Save</button>
+        <button class="btn btn-gray" onclick="PATSettings.clear()" id="pat-clear-btn" style="display:none;white-space:nowrap">Remove</button>
+      </div>
+      <div id="pat-status" style="font-size:12px;color:var(--ea-sub);margin-top:8px"></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Override modal -->
+<div class="overlay" id="ov-overlay" onclick="OverrideModal.bgClose(event)">
+  <div class="modal" style="max-width:360px">
+    <div class="modal-hdr">
+      <h2 id="ov-title" style="font-size:16px">Pause automation</h2>
+      <button class="close-btn" onclick="OverrideModal.close()">✕</button>
+    </div>
+    <p style="font-size:13px;color:#8e8e93;margin-bottom:14px">Triggers are paused — lights stay as you set them manually. Automation resumes when the override expires.</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <button class="ov-time-btn" onclick="OverrideModal.set(30)">⏸ 30 min</button>
+      <button class="ov-time-btn" onclick="OverrideModal.set(60)">⏸ 1 hour</button>
+      <button class="ov-time-btn" onclick="OverrideModal.set(120)">⏸ 2 hours</button>
+      <button class="ov-time-btn" onclick="OverrideModal.set(240)">⏸ 4 hours</button>
+    </div>
+    <button class="ov-time-btn" style="width:100%;margin-top:8px" onclick="OverrideModal.setMidnight()">🌙 Until midnight</button>
+    <div id="ov-resume-wrap" style="display:none">
+      <hr class="sep" style="margin:14px 0">
+      <div style="font-size:12px;color:#af52de;font-weight:600;margin-bottom:8px" id="ov-active-label"></div>
+      <button class="ov-resume-btn" onclick="OverrideModal.cancel()">▶ Resume automation now</button>
+    </div>
+  </div>
+</div>
+
+<!-- Template / Custom modal -->
+<div class="overlay" id="tmpl-overlay" onclick="TModal.overlayClick(event)">
+  <div class="modal" id="tmpl-modal">
+    <div class="modal-hdr">
+      <h2 id="tmpl-title">Add Automation</h2>
+      <button class="close-btn" onclick="TModal.close()">✕</button>
+    </div>
+    <div id="tmpl-inner-tabs" style="display:none;border-bottom:1px solid #2a2a2a;margin:0 -24px 16px;padding:0 24px">
+      <button id="tmpl-tab-settings" class="modal-tab on" onclick="TModal._modalTab('settings')">⚙️ Settings</button>
+      <button id="tmpl-tab-lights"   class="modal-tab"    onclick="TModal._modalTab('lights')">💡 Lights</button>
+      <button id="tmpl-tab-test"     class="modal-tab"    onclick="TModal._modalTab('test')">🧪 Test</button>
+    </div>
+    <div id="tmpl-settings-tab">
+      <div id="tmpl-body"></div>
+    </div>
+    <div id="tmpl-lights-tab" style="display:none;margin:0 -24px;padding:0 24px 4px;max-height:55vh;overflow-y:auto"></div>
+    <div id="tmpl-test-tab"   style="display:none;padding:4px 0 8px"></div>
+    <div class="modal-ftr" id="tmpl-ftr">
+      <label style="display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer">
+        <input type="checkbox" id="tmpl-enabled" checked> Active
+      </label>
+      <div style="display:flex;gap:8px;margin-left:auto">
+        <button class="btn btn-gray" onclick="TModal.close()">Cancel</button>
+        <button class="btn btn-blue" id="tmpl-save-btn" onclick="TModal.save()">Add</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+var el = function(id) { return document.getElementById(id); };
+function esc(s) {
+  return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function setStatus(msg, t) {
+  el('status-msg').textContent = msg;
+  if (t) setTimeout(function() { el('status-msg').textContent = ''; }, t);
+}
+
+// ── State ──────────────────────────────────────────────────────────────────────
+var State = { devices: [], automations: [], holdStatus: {}, overrides: {}, pinnedDevices: [] };
+
+// ── API (settings-based, works on permanent install) ──────────────────────────
+var API = {
+  getDevices: function() {
+    return window._hGet('_deviceCache').then(function(v) {
+      return v ? (typeof v === 'string' ? JSON.parse(v) : v) : [];
+    });
+  },
+  getAutomations: function() {
+    return window._hGet('automations').then(function(v) {
+      return v ? (typeof v === 'string' ? JSON.parse(v) : v) : [];
+    });
+  },
+  saveAutomations: function(list) {
+    return window._hSet('automations', JSON.stringify(list));
+  }
+};
+
+// ── Personal Access Token settings ─────────────────────────────────────────────
+var PATSettings = {
+  load: async function() {
+    var val = await window._hGet('_homeyPAT').catch(function(){ return null; });
+    if (val) {
+      el('pat-input').value = '••••••••••••••••';
+      el('pat-status').textContent = 'Token saved — flows will be created automatically.';
+      el('pat-status').style.color = 'var(--ea-green)';
+      el('pat-clear-btn').style.display = '';
+    }
+  },
+  save: async function() {
+    var val = el('pat-input').value.trim();
+    if (!val || val.startsWith('•')) return;
+    await window._hSet('_homeyPAT', val);
+    el('pat-input').value = '••••••••••••••••';
+    el('pat-status').textContent = 'Token saved — flows will be created automatically.';
+    el('pat-status').style.color = 'var(--ea-green)';
+    el('pat-clear-btn').style.display = '';
+  },
+  clear: async function() {
+    await window._hSet('_homeyPAT', '');
+    el('pat-input').value = '';
+    el('pat-status').textContent = 'Token removed.';
+    el('pat-status').style.color = 'var(--ea-sub)';
+    el('pat-clear-btn').style.display = 'none';
+  }
+};
+
+// ── App init ───────────────────────────────────────────────────────────────────
+var App = {
+  init: async function() {
+    try {
+      var res = await Promise.all([API.getDevices(), API.getAutomations(), window._hGet('_pinnedDevices')]);
+      State.devices       = Array.isArray(res[0]) ? res[0] : [];
+      State.automations   = Array.isArray(res[1]) ? res[1] : [];
+      var pinRaw = res[2];
+      State.pinnedDevices = pinRaw ? (typeof pinRaw === 'string' ? JSON.parse(pinRaw) : pinRaw) : [];
+      if (!Array.isArray(State.pinnedDevices)) State.pinnedDevices = [];
+      AutoList.render();
+      DevTab.render();
+      PATSettings.load();
+    } catch(e) {
+      el('auto-list').innerHTML = '<div class="loader" style="color:#ff3b30">Load error: ' + e.message + '</div>';
+    }
+    // Load hold status and overrides once on init
+    window._hGet('_holdStatus').then(function(raw) {
+      State.holdStatus = raw ? (typeof raw === 'string' ? JSON.parse(raw) : raw) : {};
+    }).catch(function(){});
+    window._hGet('_overrides').then(function(raw) {
+      State.overrides = raw ? (typeof raw === 'string' ? JSON.parse(raw) : raw) : {};
+    }).catch(function(){});
+    // Ticker: update countdown display every second
+    setInterval(function() { Countdown.tick(); }, 1000);
+    // Sync hold status and overrides from backend every 8 seconds
+    setInterval(function() {
+      window._hGet('_holdStatus').then(function(raw) {
+        State.holdStatus = raw ? (typeof raw === 'string' ? JSON.parse(raw) : raw) : {};
+      }).catch(function(){});
+      window._hGet('_overrides').then(function(raw) {
+        State.overrides = raw ? (typeof raw === 'string' ? JSON.parse(raw) : raw) : {};
+      }).catch(function(){});
+    }, 8000);
+  }
+};
+
+// ── UI tabs ────────────────────────────────────────────────────────────────────
+var UI = {
+  tab: function(name) {
+    ['auto','devices','logs','help'].forEach(function(t) {
+      el('tab-'  + t).classList.toggle('on', t === name);
+      el('view-' + t).classList.toggle('on', t === name);
+    });
+    if (name === 'logs') LogTab.load();
+  }
+};
+
+// ── Group automations by _groupId ──────────────────────────────────────────────
+function computeGroups() {
+  var byId = {}, order = [], orphans = [];
+  State.automations.forEach(function(a, i) {
+    if (a._groupId) {
+      if (!byId[a._groupId]) { byId[a._groupId] = { id: a._groupId, type: a._templateType, name: a._groupName, items: [] }; order.push(a._groupId); }
+      byId[a._groupId].items.push({ a: a, i: i });
+    } else {
+      orphans.push({ a: a, i: i });
+    }
+  });
+  return { groups: order.map(function(id) { return byId[id]; }), orphans: orphans };
+}
+
+function hasLightTemp(dev) {
+  if (!dev) return false;
+  if (dev.capabilities && dev.capabilities.indexOf('light_temperature') !== -1) return true;
+  if (dev.capabilitiesObj && dev.capabilitiesObj['light_temperature']) return true;
+  return false;
+}
+
+function devName(id) {
+  var d = State.devices.find(function(x) { return x.id === id; });
+  return d ? d.name : '';
+}
+
+function groupSummary(g) {
+  var icons = { motion_lights:'🏃', smart_dim:'🌙', door_lights:'🚪', schedule:'⏰', switch:'🔘', scene:'💡' };
+  var icon  = icons[g.type] || '⚙️';
+  var trigger = g.items[0] && g.items[0].a.trigger;
+  var sensor  = trigger && trigger.deviceId ? devName(trigger.deviceId) : '';
+
+  if (g.type === 'switch') {
+    var firstA = g.items[0] && g.items[0].a;
+    var parts = ['🔘'];
+    if (sensor) parts.push(sensor);
+    if (firstA && firstA._useHomeyFlows) {
+      var n = (firstA._switchMappings || []).filter(function(m){ return m.groupId; }).length;
+      if (n) parts.push(n + ' button' + (n !== 1 ? 's' : '') + ' (via Flows)');
+    } else {
+      var mappedNames = [];
+      g.items.forEach(function(it) {
+        var runAct = (it.a.actions||[]).find(function(a){ return a.type === 'run_group'; });
+        if (!runAct) return;
+        var targetAuto = State.automations.find(function(a){ return a._groupId === runAct.groupId; });
+        var n = targetAuto ? (targetAuto._groupName || targetAuto.name) : null;
+        if (n && mappedNames.indexOf(n) === -1) mappedNames.push(n);
+      });
+      if (mappedNames.length) parts.push('→ ' + mappedNames.join(', '));
+    }
+    return parts.join(' · ');
+  }
+
+  // Count unique lights (scene counts both turn_on and turn_off)
+  var lights  = new Set();
+  g.items.forEach(function(it) {
+    (it.a.actions || []).forEach(function(ac) {
+      if (ac.type === 'turn_on' || (g.type === 'scene' && ac.type === 'turn_off')) lights.add(ac.deviceId);
+    });
+  });
+  // Time for schedule
+  var dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  var schedDays = (g.type === 'schedule' && trigger && trigger.days && trigger.days.length)
+    ? trigger.days.slice().sort(function(a,b){return a-b;}).map(function(d){return dayNames[d];}).join(',')
+    : '';
+  var time = (g.type === 'schedule' && trigger) ? ('at ' + trigger.time + (schedDays ? ' · ' + schedDays : '')) : '';
+  var parts = [icon];
+  if (sensor) parts.push(sensor);
+  if (time)   parts.push(time);
+  if (lights.size) parts.push(lights.size + ' light' + (lights.size !== 1 ? 's' : ''));
+  return parts.join(' · ');
+}
+
+// ── Hold countdown ─────────────────────────────────────────────────────────────
+var Countdown = {
+  tick: function() {
+    var now = Date.now();
+    var hs  = State.holdStatus || {};
+    var ov  = State.overrides  || {};
+
+    document.querySelectorAll('[data-cd-gid]').forEach(function(el) {
+      var gid   = el.getAttribute('data-cd-gid');
+      var endsAt = hs[gid];
+      if (!endsAt || endsAt <= now) { el.style.display = 'none'; return; }
+      var secs  = Math.round((endsAt - now) / 1000);
+      var mins  = Math.floor(secs / 60);
+      var s     = secs % 60;
+      el.textContent = '⏱ off in ' + (mins > 0 ? mins + ':' + String(s).padStart(2,'0') : s + 's');
+      el.style.display = '';
+    });
+
+    document.querySelectorAll('[data-ov-gid]').forEach(function(el) {
+      var gid      = el.getAttribute('data-ov-gid');
+      var expiresAt = ov[gid];
+      var btn = document.querySelector('[data-ov-btn="' + gid + '"]');
+      if (!expiresAt || expiresAt <= now) {
+        el.style.display = 'none';
+        if (btn) btn.classList.remove('active');
+        return;
+      }
+      var rem  = expiresAt - now;
+      var h    = Math.floor(rem / 3600000);
+      var m    = Math.floor((rem % 3600000) / 60000);
+      var disp = h > 0 ? h + 'h ' + m + 'm' : (m > 0 ? m + 'm' : 'ending soon');
+      el.textContent = '⏸ paused ' + disp;
+      el.style.display = '';
+      if (btn) btn.classList.add('active');
+    });
+  }
+};
+
+// ── Automation list ────────────────────────────────────────────────────────────
+var AutoList = {
+  _computed: null,
+
+  render: function() {
+    var list = el('auto-list');
+    AutoList._computed = computeGroups();
+    var groups  = AutoList._computed.groups;
+    var orphans = AutoList._computed.orphans;
+
+    if (!groups.length && !orphans.length) {
+      list.innerHTML = '<div class="empty"><div class="icon">⚡</div><p>No automations yet.<br>Choose a template above to get started.</p></div>';
+      return;
+    }
+
+    var html = '';
+
+    if (groups.length) {
+      html += '<div class="auto-list-wrap">';
+      groups.forEach(function(g, gi) {
+        var enabled = g.items.every(function(it) { return it.a.enabled; });
+        html += '<div class="card">' +
+          '<label class="tog"><input type="checkbox"' + (enabled ? ' checked' : '') +
+            ' onchange="AutoList.toggleGroup(' + gi + ',this.checked)"/><span class="tog-track"></span></label>' +
+          '<div class="card-body" onclick="AutoList.editGroup(' + gi + ')">' +
+            '<div class="card-name">' + esc(g.name || 'Automation') + '</div>' +
+            '<div class="card-sub">' + esc(groupSummary(g)) + '</div>' +
+            '<div data-cd-gid="' + esc(g.id) + '" style="display:none;font-size:12px;color:#ff9500;font-weight:600;margin-top:3px"></div>' +
+            '<div data-ov-gid="' + esc(g.id) + '" style="display:none;font-size:12px;color:#af52de;font-weight:600;margin-top:2px"></div>' +
+          '</div>' +
+          '<span class="card-chevron">›</span>' +
+          '<button class="ico" onclick="event.stopPropagation();AutoList.dupGroup(' + gi + ')" title="Duplicate">⧉</button>' +
+          '<button class="ico" onclick="AutoList.delGroup(' + gi + ')">🗑</button>' +
+        '</div>';
+      });
+      html += '</div>';
+    }
+
+    if (orphans.length) {
+      if (groups.length) html += '<div class="sec-hdr" style="margin-top:18px">Custom automations</div>';
+      html += '<div class="auto-list-wrap">';
+      orphans.forEach(function(item) {
+        var a = item.a, i = item.i;
+        html += '<div class="card">' +
+          '<label class="tog"><input type="checkbox"' + (a.enabled ? ' checked' : '') +
+            ' onchange="AutoList.toggle(' + i + ',this.checked)"/><span class="tog-track"></span></label>' +
+          '<div class="card-body" onclick="CustomEditor.open(' + i + ')">' +
+            '<div class="card-name">' + esc(a.name || 'Unnamed') + '</div>' +
+            '<div class="card-sub">' + esc(AutoList._singleSummary(a)) + '</div>' +
+          '</div>' +
+          '<span class="card-chevron">›</span>' +
+          '<button class="ico" onclick="AutoList.del(' + i + ')">🗑</button>' +
+        '</div>';
+      });
+      html += '</div>';
+    }
+
+    list.innerHTML = html;
+  },
+
+  _singleSummary: function(a) {
+    var t = a.trigger || {};
+    var labels = { motion_start:'Motion on', motion_stop:'Motion off', door_open:'Door opens', door_close:'Door closes' };
+    var s = t.type === 'time' ? ('Every day at ' + (t.time||'?')) : (labels[t.type] || t.type || '');
+    if (t.deviceId) s += ' · ' + (devName(t.deviceId) || 'Unknown');
+    var n = (a.actions||[]).length;
+    return s + ' → ' + n + ' action' + (n !== 1 ? 's' : '');
+  },
+
+  toggleGroup: function(gi, val) {
+    var g = AutoList._computed.groups[gi];
+    g.items.forEach(function(it) { State.automations[it.i].enabled = val; });
+    AutoList.persist('Saved');
+  },
+
+  toggle: function(i, val) {
+    State.automations[i].enabled = val;
+    AutoList.persist('Saved');
+  },
+
+  dupGroup: async function(gi) {
+    var g = AutoList._computed && AutoList._computed.groups[gi];
+    if (!g) return;
+    var newGid = 'a' + Date.now() + Math.floor(Math.random()*1000);
+    var newName = g.name + ' (copy)';
+    g.items.forEach(function(item) {
+      var copy = JSON.parse(JSON.stringify(item.a));
+      copy.id = 'a' + Date.now() + Math.floor(Math.random()*1000);
+      copy._groupId = newGid;
+      copy._groupName = newName;
+      copy.name = copy.name ? copy.name.replace(g.name, newName) : newName;
+      State.automations.push(copy);
+    });
+    await AutoList.persist('Duplicated');
+  },
+
+  delGroup: async function(gi) {
+    var g = AutoList._computed.groups[gi];
+    var yes = await window._hConfirm('Delete "' + (g.name || 'this automation') + '"?');
+    if (!yes) return;
+    var indices = g.items.map(function(it) { return it.i; }).sort(function(a,b){return b-a;});
+    indices.forEach(function(i) { State.automations.splice(i, 1); });
+    await AutoList.persist('Deleted');
+  },
+
+  editGroup: function(gi) {
+    var g = AutoList._computed.groups[gi];
+    if (g.type && g.type !== 'custom') {
+      TModal.openEdit(g);
+    } else if (g.items.length === 1) {
+      CustomEditor.open(g.items[0].i);
+    }
+  },
+
+  del: async function(i) {
+    var yes = await window._hConfirm('Delete "' + (State.automations[i].name||'this automation') + '"?');
+    if (yes) { State.automations.splice(i, 1); await AutoList.persist('Deleted'); }
+  },
+
+  persist: async function(msg) {
+    setStatus('Saving…');
+    try {
+      await API.saveAutomations(State.automations);
+      AutoList.render();
+      setStatus(msg || 'Saved', 3000);
+    } catch(e) { setStatus('Save failed: ' + e.message, 5000); }
+  },
+
+  addAll: async function(newAutomations) {
+    newAutomations.forEach(function(a) { State.automations.push(a); });
+    await AutoList.persist('Added');
+  }
+};
+
+// ── Device picker helper ────────────────────────────────────────────────────────
+var Picker = {
+  render: function(containerId, selectedIds, cap) {
+    var pinned = State.pinnedDevices;
+    var list = State.devices.filter(function(d) {
+      if (pinned.length && pinned.indexOf(d.id) === -1) return false;
+      if (cap && !(d.capabilities && d.capabilities.indexOf(cap) !== -1)) return false;
+      return true;
+    });
+
+    if (!list.length) {
+      el(containerId).innerHTML = '<div class="dp-empty">No matching devices found.<br>Go to Devices tab and press Refresh.</div>';
+      return;
+    }
+
+    // Group by zone
+    var zones = {}, noZone = [];
+    list.forEach(function(d) {
+      if (d.zone) { if (!zones[d.zone]) zones[d.zone] = []; zones[d.zone].push(d); }
+      else noZone.push(d);
+    });
+
+    var html = '';
+    Object.keys(zones).sort().forEach(function(z) {
+      html += '<div class="dp-grp">' + esc(z) + '</div>';
+      zones[z].forEach(function(d) { html += Picker._item(d, selectedIds); });
+    });
+    if (noZone.length) {
+      if (Object.keys(zones).length) html += '<div class="dp-grp">Other</div>';
+      noZone.forEach(function(d) { html += Picker._item(d, selectedIds); });
+    }
+    el(containerId).innerHTML = html;
+  },
+
+  _item: function(d, selectedIds) {
+    var checked = selectedIds && selectedIds.indexOf(d.id) !== -1 ? ' checked' : '';
+    return '<label class="dp-item">' +
+      '<input type="checkbox" value="' + esc(d.id) + '"' + checked + '>' +
+      '<span class="dp-name">' + esc(d.name) + '</span>' +
+      (d.zone ? '<span class="dp-zone">' + esc(d.zone) + '</span>' : '') +
+    '</label>';
+  },
+
+  getSelected: function(containerId) {
+    return Array.from(el(containerId).querySelectorAll('input[type=checkbox]:checked')).map(function(cb) { return cb.value; });
+  }
+};
+
+// ── Template Modal ─────────────────────────────────────────────────────────────
+var TModal = {
+  type: null,
+  _editingGroup: null,
+  _lightDims: {},
+  _prevGlobal: {},
+  _previewTimers: {},
+
+  _previewLight: function(deviceId, value, capability) {
+    if (!window._hSet) return;
+    if (TModal._previewTimers[deviceId]) clearTimeout(TModal._previewTimers[deviceId]);
+    TModal._previewTimers[deviceId] = setTimeout(function() {
+      delete TModal._previewTimers[deviceId];
+      window._hSet('_previewReq', JSON.stringify({ deviceId: deviceId, value: value, capability: capability || 'dim' })).catch(function() {});
+    }, 150);
+  },
+
+  open: function(type) {
+    this.type = type;
+    this._editingGroup = null;
+    if (type === 'custom') { CustomEditor.open(); return; }
+
+    var titles = {
+      motion_lights: '🏃  Motion → Lights',
+      smart_dim:     '🌙  Smart Dim — Day & Night',
+      door_lights:   '🚪  Door → Lights',
+      schedule:      '⏰  Schedule Lights',
+      switch:        '🔘  Wall Switch / Button',
+      scene:         '💡  Light Group / Scene'
+    };
+    el('tmpl-title').textContent = titles[type];
+    el('tmpl-save-btn').textContent = 'Add';
+    if (el('tmpl-enabled')) el('tmpl-enabled').checked = true;
+    TModal._lightDims  = {};
+    TModal._prevGlobal = {};
+    el('tmpl-body').innerHTML = TModal._form(type);
+    el('tmpl-overlay').classList.add('on');
+    var hasTabs = type !== 'custom';
+    el('tmpl-inner-tabs').style.display = hasTabs ? '' : 'none';
+    el('tmpl-tab-lights').style.display = (type === 'switch') ? 'none' : '';
+    el('tmpl-settings-tab').style.display = '';
+    el('tmpl-lights-tab').style.display   = 'none';
+    el('tmpl-test-tab').style.display     = 'none';
+    el('tmpl-tab-settings').classList.add('on');
+    el('tmpl-tab-lights').classList.remove('on');
+    el('tmpl-tab-test').classList.remove('on');
+
+    // Render device pickers (switch uses dynamic mapping, no static picker)
+    if (type === 'motion_lights') {
+      Picker.render('dp-lights', [], 'dim');
+    } else if (type === 'smart_dim') {
+      Picker.render('dp-lights', [], 'dim');
+    } else if (type === 'door_lights') {
+      Picker.render('dp-lights', [], 'onoff');
+    } else if (type === 'schedule') {
+      Picker.render('dp-lights', [], 'onoff');
+    } else if (type === 'scene') {
+      Picker.render('dp-lights', [], 'onoff');
+    }
+  },
+
+  openEdit: function(g) {
+    this._editingGroup = g;
+    this.type = g.type;
+    var titles = { motion_lights:'🏃  Motion → Lights', smart_dim:'🌙  Smart Dim — Day & Night', door_lights:'🚪  Door → Lights', schedule:'⏰  Schedule Lights', switch:'🔘  Wall Switch / Button', scene:'💡  Light Group / Scene' };
+    el('tmpl-title').textContent = titles[g.type] || 'Edit Automation';
+    el('tmpl-save-btn').textContent = 'Save';
+    var groupEnabled = g.items.every(function(it){ return it.a.enabled; });
+    if (el('tmpl-enabled')) el('tmpl-enabled').checked = groupEnabled;
+    el('tmpl-body').innerHTML = TModal._form(g.type);
+    el('tmpl-overlay').classList.add('on');
+    TModal._lightDims  = {};
+    TModal._prevGlobal = {};
+    var _hasTabs = g.type !== 'custom';
+    el('tmpl-inner-tabs').style.display = _hasTabs ? '' : 'none';
+    el('tmpl-tab-lights').style.display = (g.type === 'switch') ? 'none' : '';
+    el('tmpl-settings-tab').style.display = '';
+    el('tmpl-lights-tab').style.display   = 'none';
+    el('tmpl-test-tab').style.display     = 'none';
+    el('tmpl-tab-settings').classList.add('on');
+    el('tmpl-tab-lights').classList.remove('on');
+    el('tmpl-tab-test').classList.remove('on');
+
+    // Render pickers + pre-fill
+    if (g.type === 'motion_lights') {
+      var onItem = (g.items.find(function(it){return it.a.trigger&&it.a.trigger.type==='motion_start';})||g.items[0]).a;
+      var luxCond   = (onItem.conditions||[]).find(function(c){return c.type==='lux_below';});
+      var hoursCond = (onItem.conditions||[]).find(function(c){return c.type==='time_between';});
+      var sensor  = onItem.trigger && onItem.trigger.deviceId;
+      var lights  = (onItem.actions||[]).filter(function(ac){return ac.type==='turn_on';}).map(function(ac){return ac.deviceId;});
+      var dimAc   = (onItem.actions||[]).find(function(ac){return ac.type==='set_dim'||ac.type==='fade_to';});
+      var bright  = dimAc ? Math.round((dimAc.value||1)*100) : 100;
+      var fadeInM = (onItem.actions||[]).find(function(ac){return ac.type==='fade_to';});
+      var fadeIn0 = fadeInM ? (fadeInM.duration || 0) : 0;
+      var offItem0 = g.items.find(function(it){return it.a.trigger&&it.a.trigger.type==='motion_stop';});
+      var hasOff   = !!offItem0;
+      var hold0    = offItem0 ? (offItem0.a._holdMinutes || 0) : 5;
+      var fadeOutAc = offItem0 && (offItem0.a.actions||[]).find(function(ac){return ac.type==='fade_off';});
+      var fadeOut0  = fadeOutAc ? (fadeOutAc.duration || 0) : 0;
+      Picker.render('dp-lights', lights, 'dim');
+      // Populate per-light dims from saved actions
+      TModal._prevGlobal.on = bright;
+      (onItem.actions||[]).forEach(function(ac) {
+        if ((ac.type==='set_dim'||ac.type==='fade_to') && ac.deviceId) {
+          if (!TModal._lightDims[ac.deviceId]) TModal._lightDims[ac.deviceId] = {};
+          TModal._lightDims[ac.deviceId].on = ac.value;
+        }
+        if (ac.type==='set_color_temp' && ac.deviceId) {
+          if (!TModal._lightDims[ac.deviceId]) TModal._lightDims[ac.deviceId] = {};
+          TModal._lightDims[ac.deviceId].ct = ac.value;
+        }
+      });
+      setTimeout(function(){
+        if (sensor && el('t-sensor')) el('t-sensor').value = sensor;
+        if (el('t-bright'))   { el('t-bright').value = bright; if(el('t-bval')) el('t-bval').textContent = bright+'%'; }
+        if (el('t-fadein'))   { el('t-fadein').value = fadeIn0; if(el('t-fadein-val')) el('t-fadein-val').textContent = fadeIn0===0?'instant':fadeIn0+'s'; }
+        if (el('t-turnoff'))  el('t-turnoff').checked = hasOff;
+        if (el('t-hold'))     { el('t-hold').value = hold0; if(el('t-holdval')) el('t-holdval').textContent = hold0===0?'off immediately':hold0+' min'; }
+        if (el('t-hold-wrap'))    el('t-hold-wrap').style.display = hasOff ? '' : 'none';
+        if (el('t-fadeout'))  { el('t-fadeout').value = fadeOut0; if(el('t-fadeout-val')) el('t-fadeout-val').textContent = fadeOut0===0?'instant':fadeOut0+'s'; }
+        if (el('t-fadeout-wrap')) el('t-fadeout-wrap').style.display = hasOff ? '' : 'none';
+        if (el('t-lux-en') && luxCond && luxCond.deviceId) {
+          el('t-lux-en').checked = true; el('t-lux-wrap').style.display = '';
+          if(el('t-lux-sensor')) el('t-lux-sensor').value = luxCond.deviceId;
+          if(el('t-lux-max')) { el('t-lux-max').value = luxCond.maxLux||50; if(el('t-lux-val')) el('t-lux-val').textContent = (luxCond.maxLux||50)+' lx'; }
+        }
+        if (el('t-hours-en') && hoursCond) {
+          el('t-hours-en').checked = true; el('t-hours-wrap').style.display = '';
+          tpSet('t-hours-from', hoursCond.from||'07:00'); tpSet('t-hours-to', hoursCond.to||'23:00');
+        }
+        if (el('t-name'))     el('t-name').value = g.name || '';
+      }, 0);
+
+    } else if (g.type === 'smart_dim') {
+      var dayItem   = (g.items.find(function(it){return it.a.name&&it.a.name.indexOf('Day')!==-1;})||g.items[0]).a;
+      var nightItem = (g.items.find(function(it){return it.a.name&&it.a.name.indexOf('Night')!==-1;})||(g.items[1]||g.items[0])).a;
+      var offItem   = g.items.find(function(it){return it.a.trigger&&it.a.trigger.type==='motion_stop';});
+      var luxCondSD = (dayItem.conditions||[]).find(function(c){return c.type==='lux_below';});
+      var sensor    = dayItem.trigger && dayItem.trigger.deviceId;
+      var lights    = (dayItem.actions||[]).filter(function(ac){return ac.type==='turn_on';}).map(function(ac){return ac.deviceId;});
+      var dayDim    = (dayItem.actions||[]).find(function(ac){return ac.type==='set_dim'||ac.type==='fade_to';});
+      var nightDim  = (nightItem.actions||[]).find(function(ac){return ac.type==='set_dim'||ac.type==='fade_to';});
+      var dayBright = dayDim   ? Math.round((dayDim.value||1)*100)   : 100;
+      var nightBright = nightDim ? Math.round((nightDim.value||1)*100) : 20;
+      var dayCond   = (dayItem.conditions||[])[0];
+      var dayFrom   = dayCond ? (dayCond.from||'07:00') : '07:00';
+      var nightFrom = dayCond ? (dayCond.to  ||'22:00') : '22:00';
+      var holdSD    = offItem ? (offItem.a._holdMinutes || 0) : 5;
+      var fadeInSD  = (dayItem.actions||[]).find(function(ac){return ac.type==='fade_to';});
+      var fadeIn0SD = fadeInSD ? (fadeInSD.duration || 0) : 0;
+      var fadeOutSDac = offItem && (offItem.a.actions||[]).find(function(ac){return ac.type==='fade_off';});
+      var fadeOut0SD  = fadeOutSDac ? (fadeOutSDac.duration || 0) : 0;
+      Picker.render('dp-lights', lights, 'dim');
+      // Populate per-light dims from saved actions
+      TModal._prevGlobal.day   = dayBright;
+      TModal._prevGlobal.night = nightBright;
+      (dayItem.actions||[]).forEach(function(ac) {
+        if ((ac.type==='set_dim'||ac.type==='fade_to') && ac.deviceId) {
+          if (!TModal._lightDims[ac.deviceId]) TModal._lightDims[ac.deviceId] = {};
+          TModal._lightDims[ac.deviceId].day = ac.value;
+        }
+        if (ac.type==='set_color_temp' && ac.deviceId) {
+          if (!TModal._lightDims[ac.deviceId]) TModal._lightDims[ac.deviceId] = {};
+          TModal._lightDims[ac.deviceId].ct_day = ac.value;
+        }
+      });
+      (nightItem.actions||[]).forEach(function(ac) {
+        if ((ac.type==='set_dim'||ac.type==='fade_to') && ac.deviceId) {
+          if (!TModal._lightDims[ac.deviceId]) TModal._lightDims[ac.deviceId] = {};
+          TModal._lightDims[ac.deviceId].night = ac.value;
+        }
+        if (ac.type==='set_color_temp' && ac.deviceId) {
+          if (!TModal._lightDims[ac.deviceId]) TModal._lightDims[ac.deviceId] = {};
+          TModal._lightDims[ac.deviceId].ct_night = ac.value;
+        }
+      });
+      setTimeout(function(){
+        if (sensor && el('t-sensor'))   el('t-sensor').value = sensor;
+        if (el('t-day-from'))           tpSet('t-day-from', dayFrom);
+        if (el('t-night-from'))         tpSet('t-night-from', nightFrom);
+        if (el('t-day-bright'))   { el('t-day-bright').value = dayBright;   if(el('t-day-bval'))   el('t-day-bval').textContent   = dayBright+'%'; }
+        if (el('t-night-bright')) { el('t-night-bright').value = nightBright; if(el('t-night-bval')) el('t-night-bval').textContent = nightBright+'%'; }
+        if (el('t-fadein'))  { el('t-fadein').value = fadeIn0SD; if(el('t-fadein-val')) el('t-fadein-val').textContent = fadeIn0SD===0?'instant':fadeIn0SD+'s'; }
+        if (el('t-turnoff')) el('t-turnoff').checked = !!offItem;
+        if (el('t-hold'))    { el('t-hold').value = holdSD; if(el('t-holdval')) el('t-holdval').textContent = holdSD===0?'off immediately':holdSD+' min'; }
+        if (el('t-hold-wrap'))    el('t-hold-wrap').style.display = offItem ? '' : 'none';
+        if (el('t-fadeout'))  { el('t-fadeout').value = fadeOut0SD; if(el('t-fadeout-val')) el('t-fadeout-val').textContent = fadeOut0SD===0?'instant':fadeOut0SD+'s'; }
+        if (el('t-fadeout-wrap')) el('t-fadeout-wrap').style.display = offItem ? '' : 'none';
+        if (el('t-lux-en') && luxCondSD && luxCondSD.deviceId) {
+          el('t-lux-en').checked = true; el('t-lux-wrap').style.display = '';
+          if(el('t-lux-sensor')) el('t-lux-sensor').value = luxCondSD.deviceId;
+          if(el('t-lux-max')) { el('t-lux-max').value = luxCondSD.maxLux||50; if(el('t-lux-val')) el('t-lux-val').textContent = (luxCondSD.maxLux||50)+' lx'; }
+        }
+        if (el('t-name'))    el('t-name').value = g.name || '';
+      }, 0);
+
+    } else if (g.type === 'door_lights') {
+      var onItem  = (g.items.find(function(it){return it.a.trigger&&it.a.trigger.type==='door_open';})||g.items[0]).a;
+      var hoursCondDoor = (onItem.conditions||[]).find(function(c){return c.type==='time_between';});
+      var sensor  = onItem.trigger && onItem.trigger.deviceId;
+      var lights  = (onItem.actions||[]).filter(function(ac){return ac.type==='turn_on';}).map(function(ac){return ac.deviceId;});
+      var dimAc    = (onItem.actions||[]).find(function(ac){return ac.type==='set_dim'||ac.type==='fade_to';});
+      var bright   = dimAc ? Math.round((dimAc.value||1)*100) : 100;
+      var fadeInD  = (onItem.actions||[]).find(function(ac){return ac.type==='fade_to';});
+      var fadeIn0D = fadeInD ? (fadeInD.duration || 0) : 0;
+      var offItemD = g.items.find(function(it){return it.a.trigger&&it.a.trigger.type==='door_close';});
+      var hasOff   = !!offItemD;
+      var fadeOutDac = offItemD && (offItemD.a.actions||[]).find(function(ac){return ac.type==='fade_off';});
+      var fadeOut0D  = fadeOutDac ? (fadeOutDac.duration || 0) : 0;
+      Picker.render('dp-lights', lights, 'onoff');
+      // Populate per-light dims from saved actions
+      TModal._prevGlobal.on = bright;
+      (onItem.actions||[]).forEach(function(ac) {
+        if ((ac.type==='set_dim'||ac.type==='fade_to') && ac.deviceId) {
+          if (!TModal._lightDims[ac.deviceId]) TModal._lightDims[ac.deviceId] = {};
+          TModal._lightDims[ac.deviceId].on = ac.value;
+        }
+        if (ac.type==='set_color_temp' && ac.deviceId) {
+          if (!TModal._lightDims[ac.deviceId]) TModal._lightDims[ac.deviceId] = {};
+          TModal._lightDims[ac.deviceId].ct = ac.value;
+        }
+      });
+      setTimeout(function(){
+        if (sensor && el('t-sensor')) el('t-sensor').value = sensor;
+        if (el('t-bright'))   { el('t-bright').value = bright; if(el('t-bval')) el('t-bval').textContent = bright+'%'; }
+        if (el('t-fadein'))   { el('t-fadein').value = fadeIn0D; if(el('t-fadein-val')) el('t-fadein-val').textContent = fadeIn0D===0?'instant':fadeIn0D+'s'; }
+        if (el('t-turnoff'))  el('t-turnoff').checked = hasOff;
+        if (el('t-fadeout'))  { el('t-fadeout').value = fadeOut0D; if(el('t-fadeout-val')) el('t-fadeout-val').textContent = fadeOut0D===0?'instant':fadeOut0D+'s'; }
+        if (el('t-fadeout-wrap')) el('t-fadeout-wrap').style.display = hasOff ? '' : 'none';
+        if (el('t-hours-en') && hoursCondDoor) {
+          el('t-hours-en').checked = true; el('t-hours-wrap').style.display = '';
+          tpSet('t-hours-from', hoursCondDoor.from||'07:00'); tpSet('t-hours-to', hoursCondDoor.to||'23:00');
+        }
+        if (el('t-name'))     el('t-name').value = g.name || '';
+      }, 0);
+
+    } else if (g.type === 'schedule') {
+      var a0      = (g.items[0]||{}).a || {};
+      var lights  = [];
+      var action  = 'on';
+      var bright  = 50;
+      (a0.actions||[]).forEach(function(ac){
+        if (ac.type==='turn_on')  { lights.push(ac.deviceId); action='on'; }
+        if (ac.type==='turn_off') { lights.push(ac.deviceId); action='off'; }
+        if (ac.type==='set_dim')  { bright=Math.round(ac.value*100); action='dim'; }
+        if (ac.type==='set_color_temp' && ac.deviceId) {
+          if (!TModal._lightDims[ac.deviceId]) TModal._lightDims[ac.deviceId] = {};
+          TModal._lightDims[ac.deviceId].ct = ac.value;
+        }
+      });
+      Picker.render('dp-lights', lights, 'onoff');
+      setTimeout(function(){
+        if (a0.trigger && el('t-time')) tpSet('t-time', a0.trigger.time || '07:00');
+        if (el('t-sched-action')) { el('t-sched-action').value = action; TModal._schedActionChanged(); }
+        if (el('t-bright'))  { el('t-bright').value = bright; if(el('t-bval')) el('t-bval').textContent = bright+'%'; }
+        if (el('t-name'))    el('t-name').value = g.name || '';
+        if (el('t-days') && a0.trigger) {
+          var savedDays = a0.trigger.days;
+          el('t-days').querySelectorAll('.day-chk').forEach(function(cb) {
+            cb.checked = !savedDays || savedDays.length === 0 || savedDays.indexOf(parseInt(cb.value)) !== -1;
+          });
+        }
+      }, 0);
+
+    } else if (g.type === 'scene') {
+      var a0sc    = (g.items[0] || {}).a || {};
+      // Collect all lights that appear in actions (on or off)
+      var allLightsScene = [];
+      (a0sc.actions || []).forEach(function(ac) {
+        if ((ac.type === 'turn_on' || ac.type === 'turn_off') && ac.deviceId && allLightsScene.indexOf(ac.deviceId) === -1) {
+          allLightsScene.push(ac.deviceId);
+        }
+      });
+      // Load per-light dim values
+      TModal._prevGlobal.on = 10;
+      (a0sc.actions || []).forEach(function(ac) {
+        if (ac.type === 'set_dim' && ac.deviceId) {
+          if (!TModal._lightDims[ac.deviceId]) TModal._lightDims[ac.deviceId] = {};
+          TModal._lightDims[ac.deviceId].on = ac.value;
+        }
+        if (ac.type === 'turn_off' && ac.deviceId) {
+          if (!TModal._lightDims[ac.deviceId]) TModal._lightDims[ac.deviceId] = {};
+          TModal._lightDims[ac.deviceId].on = 0;
+        }
+        if (ac.type === 'set_color_temp' && ac.deviceId) {
+          if (!TModal._lightDims[ac.deviceId]) TModal._lightDims[ac.deviceId] = {};
+          TModal._lightDims[ac.deviceId].ct = ac.value;
+        }
+      });
+      // Lights with only turn_on (no set_dim) are at 100%
+      allLightsScene.forEach(function(id) {
+        if (!TModal._lightDims[id]) TModal._lightDims[id] = {};
+        if (TModal._lightDims[id].on == null) TModal._lightDims[id].on = 1;
+      });
+      // Calculate average of non-zero dims for global slider
+      var dimValsScene = allLightsScene.map(function(id) {
+        return TModal._lightDims[id] && TModal._lightDims[id].on != null ? Math.round(TModal._lightDims[id].on * 100) : 10;
+      }).filter(function(v) { return v > 0; });
+      var avgScene = dimValsScene.length ? Math.round(dimValsScene.reduce(function(a,b){return a+b;},0)/dimValsScene.length) : 10;
+      TModal._prevGlobal.on = avgScene;
+      Picker.render('dp-lights', allLightsScene, 'onoff');
+      setTimeout(function() {
+        if (el('t-bright')) { el('t-bright').value = avgScene; if (el('t-bval')) el('t-bval').textContent = avgScene + '%'; }
+        if (el('t-name'))   el('t-name').value = g.name || '';
+      }, 0);
+
+    } else if (g.type === 'switch') {
+      var firstItem = g.items[0] && g.items[0].a;
+      var swDev = firstItem && firstItem.trigger && firstItem.trigger.deviceId;
+      var isFlowMode = firstItem && firstItem._useHomeyFlows;
+      var savedMappings = isFlowMode ? (firstItem._switchMappings || []) : null;
+      setTimeout(function() {
+        if (swDev && el('t-switch')) {
+          el('t-switch').value = swDev;
+          // _switchDeviceChanged is async — after it resolves, set values
+          Promise.resolve(TModal._switchDeviceChanged()).then(function() {
+            if (isFlowMode && savedMappings) {
+              // Re-populate flow rows by triggerId match
+              savedMappings.forEach(function(m) {
+                var j = 0;
+                while (el('t-sw-map-' + j)) {
+                  var sel = el('t-sw-map-' + j);
+                  if (sel.getAttribute('data-trigger-id') === m.triggerId) {
+                    // Match by triggerArgs too (for expanded group rows)
+                    var rowArgs = {};
+                    try { rowArgs = JSON.parse(sel.getAttribute('data-trigger-args') || '{}'); } catch(e) {}
+                    var savedArgs = m.triggerArgs || {};
+                    var argsMatch = JSON.stringify(savedArgs) === JSON.stringify(rowArgs)
+                                 || Object.keys(savedArgs).length === 0;
+                    if (argsMatch) { sel.value = m.groupId; break; }
+                  }
+                  j++;
+                }
+              });
+            } else {
+              // Standard cap mode — match by trigger type/cap
+              g.items.forEach(function(it) {
+                var trig   = it.a.trigger;
+                var runAct = (it.a.actions || []).find(function(a){ return a.type === 'run_group'; });
+                if (!trig || !runAct) return;
+                var savedKey = trig.type === 'button_key' ? trig.type + ':' + trig.capability : trig.type;
+                var j = 0;
+                while (el('t-sw-map-' + j)) {
+                  var sel = el('t-sw-map-' + j);
+                  var rowKey = sel.getAttribute('data-trigger-type') === 'button_key'
+                    ? sel.getAttribute('data-trigger-type') + ':' + sel.getAttribute('data-cap')
+                    : sel.getAttribute('data-trigger-type');
+                  if (rowKey === savedKey) { sel.value = runAct.groupId; break; }
+                  j++;
+                }
+              });
+            }
+          });
+        }
+        if (el('t-name')) el('t-name').value = g.name || '';
+      }, 0);
+    }
+  },
+
+  overlayClick: function(e) { if (e.target === el('tmpl-overlay')) TModal.close(); },
+  close: function() { el('tmpl-overlay').classList.remove('on'); TModal._editingGroup = null; },
+
+  _modalTab: function(tab) {
+    el('tmpl-settings-tab').style.display = tab === 'settings' ? '' : 'none';
+    el('tmpl-lights-tab').style.display   = tab === 'lights'   ? '' : 'none';
+    el('tmpl-test-tab').style.display     = tab === 'test'     ? '' : 'none';
+    el('tmpl-tab-settings').classList.toggle('on', tab === 'settings');
+    el('tmpl-tab-lights').classList.toggle('on',   tab === 'lights');
+    el('tmpl-tab-test').classList.toggle('on',     tab === 'test');
+    if (tab === 'lights') TModal._renderLightsTab();
+    if (tab === 'test')   TModal._renderTestTab();
+  },
+
+  _renderLightsTab: function() {
+    var lights = Picker.getSelected('dp-lights');
+    if (!lights.length) {
+      el('tmpl-lights-tab').innerHTML = '<div style="padding:28px 0;text-align:center;color:#8e8e93;font-size:14px">Select lights in the ⚙️ Settings tab first.</div>';
+      return;
+    }
+    var type = TModal.type;
+    var html = '';
+    if (type === 'scene') {
+      html += '<div style="padding:8px 0 12px;display:flex;gap:8px">' +
+        '<button class="btn-sm" onclick="TModal._setAllSceneDim(0)">Set all OFF</button>' +
+        '<button class="btn-sm" onclick="TModal._setAllSceneDim(null)">Reset to default</button>' +
+      '</div>';
+    }
+    lights.forEach(function(id) {
+      var dname = devName(id) || id;
+      var did = 'ld_' + id.replace(/[^a-zA-Z0-9]/g, '_');
+      html += '<div class="lt-card">';
+      html += '<div class="lt-name">💡 ' + esc(dname) + '</div>';
+      if (type === 'scene') {
+        var globalVal = el('t-bright') ? parseInt(el('t-bright').value) : 10;
+        if (!TModal._lightDims[id]) TModal._lightDims[id] = {};
+        if (TModal._lightDims[id].on == null) TModal._lightDims[id].on = globalVal / 100;
+        if (TModal._prevGlobal.on == null) TModal._prevGlobal.on = globalVal;
+        var pct = Math.round(TModal._lightDims[id].on * 100);
+        var sid = did + '_on', vid = sid + '_v';
+        html += '<div class="lt-row">' +
+          '<span class="lt-label">💡 Level</span>' +
+          '<div class="slider-row" style="flex:1;margin-top:0">' +
+            '<input type="range" id="' + sid + '" min="0" max="100" value="' + pct + '"' +
+              ' oninput="var v=parseInt(this.value);document.getElementById(\'' + vid + '\').textContent=v===0?\'OFF\':v+\'%\';TModal._setLightDim(\'' + id + '\',\'on\',v);TModal._previewLight(\'' + id + '\',v/100)">' +
+            '<span class="slider-val" id="' + vid + '">' + (pct === 0 ? 'OFF' : pct + '%') + '</span>' +
+          '</div></div>';
+        var dev = State.devices.find(function(d){return d.id===id;});
+        if (hasLightTemp(dev)) {
+          var ctVal = TModal._lightDims[id] && TModal._lightDims[id].ct != null ? Math.round(TModal._lightDims[id].ct * 100) : 50;
+          var ctId = did + '_ct', ctVid = ctId + '_v';
+          html += '<div class="lt-row">' +
+            '<span class="lt-label">🌡 Temp</span>' +
+            '<div class="slider-row" style="flex:1;margin-top:0">' +
+              '<input type="range" id="' + ctId + '" min="0" max="100" value="' + ctVal + '"' +
+                ' oninput="var v=parseInt(this.value);document.getElementById(\'' + ctVid + '\').textContent=(v<30?\'Warm\':(v>70?\'Cool\':\'Mid\'));TModal._setLightDim(\'' + id + '\',\'ct\',v);TModal._previewLight(\'' + id + '\',v/100,\'ct\')">' +
+              '<span class="slider-val" id="' + ctVid + '">' + (ctVal < 30 ? 'Warm' : (ctVal > 70 ? 'Cool' : 'Mid')) + '</span>' +
+            '</div></div>';
+        }
+      } else if (type === 'smart_dim') {
+        var modes = [
+          { key: 'day',   label: '☀️ Day',   defEl: 't-day-bright',   defVal: 100 },
+          { key: 'night', label: '🌙 Night', defEl: 't-night-bright', defVal: 20  }
+        ];
+        var devSD = State.devices.find(function(d){return d.id===id;});
+        modes.forEach(function(m) {
+          var globalVal = el(m.defEl) ? parseInt(el(m.defEl).value) : m.defVal;
+          if (!TModal._lightDims[id]) TModal._lightDims[id] = {};
+          if (TModal._lightDims[id][m.key] == null) TModal._lightDims[id][m.key] = globalVal / 100;
+          if (TModal._prevGlobal[m.key] == null) TModal._prevGlobal[m.key] = globalVal;
+          var pct = Math.round(TModal._lightDims[id][m.key] * 100);
+          var sid = did + '_' + m.key, vid = sid + '_v';
+          html += '<div class="lt-row">' +
+            '<span class="lt-label">' + m.label + '</span>' +
+            '<div class="slider-row" style="flex:1;margin-top:0">' +
+              '<input type="range" id="' + sid + '" min="1" max="100" value="' + pct + '"' +
+                ' oninput="document.getElementById(\'' + vid + '\').textContent=this.value+\'%\';TModal._setLightDim(\'' + id + '\',\'' + m.key + '\',parseInt(this.value));TModal._previewLight(\'' + id + '\',parseInt(this.value)/100)">' +
+              '<span class="slider-val" id="' + vid + '">' + pct + '%</span>' +
+            '</div></div>';
+          if (hasLightTemp(devSD)) {
+            var ctKey = 'ct_' + m.key;
+            var ctVal = TModal._lightDims[id][ctKey] != null ? Math.round(TModal._lightDims[id][ctKey] * 100) : 50;
+            var ctId = did + '_' + ctKey, ctVid = ctId + '_v';
+            html += '<div class="lt-row">' +
+              '<span class="lt-label">🌡 Temp</span>' +
+              '<div class="slider-row" style="flex:1;margin-top:0">' +
+                '<input type="range" id="' + ctId + '" min="0" max="100" value="' + ctVal + '"' +
+                  ' oninput="var v=parseInt(this.value);document.getElementById(\'' + ctVid + '\').textContent=(v<30?\'Warm\':(v>70?\'Cool\':\'Mid\'));TModal._setLightDim(\'' + id + '\',\'' + ctKey + '\',v);TModal._previewLight(\'' + id + '\',v/100,\'ct\')">' +
+                '<span class="slider-val" id="' + ctVid + '">' + (ctVal < 30 ? 'Warm' : (ctVal > 70 ? 'Cool' : 'Mid')) + '</span>' +
+              '</div></div>';
+          }
+        });
+      } else {
+        var globalVal = el('t-bright') ? parseInt(el('t-bright').value) : 100;
+        if (!TModal._lightDims[id]) TModal._lightDims[id] = {};
+        if (TModal._lightDims[id].on == null) TModal._lightDims[id].on = globalVal / 100;
+        if (TModal._prevGlobal.on == null) TModal._prevGlobal.on = globalVal;
+        var pct = Math.round(TModal._lightDims[id].on * 100);
+        var sid = did + '_on', vid = sid + '_v';
+        html += '<div class="lt-row">' +
+          '<span class="lt-label">💡 ON</span>' +
+          '<div class="slider-row" style="flex:1;margin-top:0">' +
+            '<input type="range" id="' + sid + '" min="1" max="100" value="' + pct + '"' +
+              ' oninput="document.getElementById(\'' + vid + '\').textContent=this.value+\'%\';TModal._setLightDim(\'' + id + '\',\'on\',parseInt(this.value));TModal._previewLight(\'' + id + '\',parseInt(this.value)/100)">' +
+            '<span class="slider-val" id="' + vid + '">' + pct + '%</span>' +
+          '</div></div>';
+        var devOther = State.devices.find(function(d){return d.id===id;});
+        if (hasLightTemp(devOther)) {
+          var ctValO = TModal._lightDims[id] && TModal._lightDims[id].ct != null ? Math.round(TModal._lightDims[id].ct * 100) : 50;
+          var ctIdO = did + '_ct', ctVidO = ctIdO + '_v';
+          html += '<div class="lt-row">' +
+            '<span class="lt-label">🌡 Temp</span>' +
+            '<div class="slider-row" style="flex:1;margin-top:0">' +
+              '<input type="range" id="' + ctIdO + '" min="0" max="100" value="' + ctValO + '"' +
+                ' oninput="var v=parseInt(this.value);document.getElementById(\'' + ctVidO + '\').textContent=(v<30?\'Warm\':(v>70?\'Cool\':\'Mid\'));TModal._setLightDim(\'' + id + '\',\'ct\',v);TModal._previewLight(\'' + id + '\',v/100,\'ct\')">' +
+              '<span class="slider-val" id="' + ctVidO + '">' + (ctValO < 30 ? 'Warm' : (ctValO > 70 ? 'Cool' : 'Mid')) + '</span>' +
+            '</div></div>';
+        }
+      }
+      html += '</div>';
+    });
+    el('tmpl-lights-tab').innerHTML = html;
+  },
+
+  _setAllSceneDim: function(value) {
+    var lights = Picker.getSelected('dp-lights');
+    var defVal = (value == null) ? (el('t-bright') ? parseInt(el('t-bright').value) / 100 : 0.1) : value;
+    lights.forEach(function(id) {
+      if (!TModal._lightDims[id]) TModal._lightDims[id] = {};
+      TModal._lightDims[id].on = defVal;
+    });
+    TModal._renderLightsTab();
+  },
+
+  _setLightDim: function(deviceId, mode, pct) {
+    if (!TModal._lightDims[deviceId]) TModal._lightDims[deviceId] = {};
+    TModal._lightDims[deviceId][mode] = pct / 100;
+    // Scene: each light is independent — don't sync per-light changes back to global slider
+    if (TModal.type !== 'scene') TModal._updateGlobalFromLights(mode);
+  },
+
+  _updateGlobalFromLights: function(mode) {
+    var lights = Picker.getSelected('dp-lights');
+    if (!lights.length) return;
+    var sum = 0, count = 0;
+    lights.forEach(function(id) {
+      var v = TModal._lightDims[id] && TModal._lightDims[id][mode] != null ? Math.round(TModal._lightDims[id][mode] * 100) : null;
+      if (v != null) { sum += v; count++; }
+    });
+    if (!count) return;
+    var avg = Math.round(sum / count);
+    var slId = mode === 'day' ? 't-day-bright' : mode === 'night' ? 't-night-bright' : 't-bright';
+    var vlId = mode === 'day' ? 't-day-bval'   : mode === 'night' ? 't-night-bval'   : 't-bval';
+    if (el(slId)) { el(slId).value = avg; TModal._prevGlobal[mode] = avg; }
+    if (el(vlId)) el(vlId).textContent = (TModal.type === 'scene' && avg === 0) ? 'OFF' : avg + '%';
+  },
+
+  _globalChanged: function(mode, newPct) {
+    var prev  = TModal._prevGlobal[mode] != null ? TModal._prevGlobal[mode] : newPct;
+    var delta = newPct - prev;
+    TModal._prevGlobal[mode] = newPct;
+    if (delta === 0) return;
+    var lights = Picker.getSelected('dp-lights');
+    lights.forEach(function(id) {
+      if (!TModal._lightDims[id]) TModal._lightDims[id] = {};
+      var cur = TModal._lightDims[id][mode] != null ? Math.round(TModal._lightDims[id][mode] * 100) : prev;
+      var nv  = Math.max(TModal.type === 'scene' ? 0 : 1, Math.min(100, cur + delta));
+      TModal._lightDims[id][mode] = nv / 100;
+    });
+    // Refresh lights tab if open
+    if (el('tmpl-lights-tab') && el('tmpl-lights-tab').style.display !== 'none') TModal._renderLightsTab();
+  },
+
+  _renderTestTab: function() {
+    var type = TModal.type;
+    var html = '';
+
+    if (type === 'switch') {
+      // Switch: one button per mapped automation group
+      var g = TModal._editingGroup;
+      if (!g) {
+        html = '<div style="padding:24px 0;text-align:center;color:#8e8e93;font-size:14px">Save the automation first, then reopen to test.</div>';
+      } else {
+        var btns = '';
+        var firstIt = g.items[0] && g.items[0].a;
+        if (firstIt && firstIt._useHomeyFlows) {
+          // Flow-mode: show manual flow instructions + test buttons
+          var mappings = firstIt._switchMappings || [];
+          var hasFlows = firstIt._homeyFlowIds && firstIt._homeyFlowIds.length;
+          var devName  = firstIt._switchDeviceId ? (State.devices.find(function(d){ return d.id === firstIt._switchDeviceId; }) || {}).name || firstIt._switchDeviceId : '';
+          if (!hasFlows && mappings.length) {
+            var rows = mappings.filter(function(m){ return m.groupId; }).map(function(m) {
+              return '<div style="background:var(--ea-card);border:1px solid var(--ea-border);border-radius:10px;padding:10px 12px;margin-bottom:8px;font-size:13px">' +
+                '<div style="font-weight:700;margin-bottom:4px">📋 ' + esc(m.triggerTitle || 'Button') + '</div>' +
+                '<div style="color:var(--ea-sub);margin-bottom:2px">Trigger: <b>' + esc(devName) + '</b> — ' + esc(m.triggerTitle || '') + '</div>' +
+                '<div style="color:var(--ea-sub);margin-bottom:6px">Action: <b>Easy Automation</b> → Run automation group → <b>' + esc(m.groupName || m.groupId) + '</b></div>' +
+                '<button class="btn btn-blue" style="width:100%;font-size:12px" onclick="TModal._runGroupTest(\'' + esc(m.groupId) + '\')">🧪 Test this automation</button>' +
+              '</div>';
+            }).join('');
+            html = '<div style="background:rgba(255,149,0,.12);border:1px solid rgba(255,149,0,.4);border-radius:10px;padding:12px 14px;margin-bottom:12px;font-size:13px">' +
+              '<b>⚠️ Manual Homey Flow required</b><br>' +
+              '<span style="color:var(--ea-sub)">The app cannot create Homey Flows automatically. Create each flow below manually in Homey → Flows → + New Flow:</span>' +
+            '</div>' + rows +
+            '<div id="tmpl-test-result" style="min-height:20px"></div>';
+          } else {
+            mappings.forEach(function(m) {
+              if (!m.groupId) return;
+              var label = (m.triggerTitle ? m.triggerTitle + ' → ' : '') + (m.groupName || m.groupId);
+              btns += '<button class="btn btn-blue" style="flex:1;min-width:120px" onclick="TModal._runGroupTest(\'' + esc(m.groupId) + '\')">' + esc(label) + '</button>';
+            });
+          }
+        } else {
+          // Cap-mode: run_group action per item
+          g.items.forEach(function(it) {
+            var runAct = (it.a.actions||[]).find(function(a){ return a.type === 'run_group'; });
+            if (!runAct) return;
+            var trig = it.a.trigger;
+            var label = trig
+              ? (trig.type === 'switch_on'    ? '⬆ Switch ON'
+               : trig.type === 'switch_off'   ? '⬇ Switch OFF'
+               : trig.type === 'button_press' ? '🔘 Button'
+               : '🔢 Button ' + (trig.capability || '').replace('button.', ''))
+              : '▶ Run';
+            btns += '<button class="btn btn-blue" style="flex:1" onclick="TModal._runGroupTest(\'' + esc(runAct.groupId) + '\')">' + esc(label) + '</button>';
+          });
+        }
+        if (!html) {
+          var flowCheckBtn = (firstIt && firstIt._useHomeyFlows && firstIt._homeyFlowIds && firstIt._homeyFlowIds.length)
+            ? '<button class="btn btn-gray" style="width:100%;margin-bottom:10px" onclick="TModal._checkSwitchFlows()">🔍 Check Homey Flows</button>'
+            : '';
+          html = btns
+            ? flowCheckBtn +
+              '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">' + btns + '</div>' +
+              '<div id="tmpl-test-result" style="min-height:40px"><p style="color:#8e8e93;font-size:13px">Press a button to run the mapped automation.</p></div>'
+            : '<div style="padding:24px 0;text-align:center;color:#8e8e93;font-size:14px">No automations mapped yet.</div>';
+        }
+      }
+      el('tmpl-test-tab').innerHTML = html;
+      return;
+    }
+
+    var lights = Picker.getSelected('dp-lights');
+    if (!lights.length) {
+      html = '<div style="padding:24px 0;text-align:center;color:#8e8e93;font-size:14px">Select lights in the ⚙️ Settings tab first.</div>';
+    } else {
+      var btns = '';
+      if (type === 'scene') {
+        btns = '<button class="btn btn-blue" style="flex:1" onclick="TModal._runModalTest(\'scene\')">💡 Run Group</button>';
+      } else if (type === 'smart_dim') {
+        btns =
+          '<button class="btn btn-blue" style="flex:1" onclick="TModal._runModalTest(\'day\')">☀️ Day scene</button>' +
+          '<button class="btn btn-blue" style="flex:1" onclick="TModal._runModalTest(\'night\')">🌙 Night scene</button>' +
+          '<button class="btn btn-gray" style="flex:1" onclick="TModal._runModalTest(\'off\')">⚫ Off</button>';
+      } else if (type === 'motion_lights') {
+        btns =
+          '<button class="btn btn-blue" style="flex:1" onclick="TModal._runModalTest(\'on\')">💡 Motion ON</button>' +
+          '<button class="btn btn-gray" style="flex:1" onclick="TModal._runModalTest(\'off\')">⚫ Off</button>';
+      } else if (type === 'door_lights') {
+        btns =
+          '<button class="btn btn-blue" style="flex:1" onclick="TModal._runModalTest(\'on\')">🚪 Door opens</button>' +
+          '<button class="btn btn-gray" style="flex:1" onclick="TModal._runModalTest(\'off\')">⚫ Off</button>';
+      } else if (type === 'schedule') {
+        btns = '<button class="btn btn-blue" style="flex:1" onclick="TModal._runModalTest(\'on\')">▶ Run schedule</button>';
+      }
+      html =
+        '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">' + btns + '</div>' +
+        '<div id="tmpl-test-result" style="min-height:40px"><p style="color:#8e8e93;font-size:13px">Press a button above to test your lights.</p></div>';
+    }
+    el('tmpl-test-tab').innerHTML = html;
+  },
+
+  _runGroupTest: async function(groupId) {
+    var resEl = el('tmpl-test-result');
+    if (!resEl) return;
+    resEl.innerHTML = '<p style="color:#8e8e93;font-size:13px">Running…</p>';
+    var ts = Date.now();
+    try {
+      await window._hSet('_testRequest', JSON.stringify({ actions: [{ type: 'run_group', groupId: groupId }], name: 'Switch test', ts: ts }));
+      await new Promise(function(r){ setTimeout(r, 2500); });
+      var raw = await window._hGet('_testResult');
+      var res = raw ? (typeof raw === 'string' ? JSON.parse(raw) : raw) : null;
+      if (!res || res.reqTs !== ts) {
+        resEl.innerHTML = '<p style="color:#ff3b30;font-size:13px">⚠️ No response — check Logs tab.</p>';
+        return;
+      }
+      resEl.innerHTML = res.ok
+        ? '<p style="color:#34c759;font-size:13px">✓ Automation ran successfully.</p>'
+        : '<p style="color:#ff3b30;font-size:13px">✗ ' + esc(res.error || 'Unknown error') + '</p>' +
+          '<p style="color:#8e8e93;font-size:11px">Group ID: ' + esc(groupId) + '</p>';
+    } catch(e) {
+      resEl.innerHTML = '<p style="color:#ff3b30;font-size:13px">✗ ' + esc(e.message) + '</p>';
+    }
+  },
+
+  _checkSwitchFlows: async function() {
+    var resEl = el('tmpl-test-result');
+    if (!resEl) return;
+    resEl.innerHTML = '<p style="color:#8e8e93;font-size:13px">Checking Homey Flows…</p>';
+    var g = TModal._editingGroup;
+    var firstIt = g && g.items[0] && g.items[0].a;
+    var flowIds = (firstIt && firstIt._homeyFlowIds) || [];
+    if (!flowIds.length) {
+      resEl.innerHTML = '<p style="color:#ff3b30;font-size:13px">⚠️ No flow IDs stored. Re-save this wall switch to create the Homey Flows.</p>';
+      return;
+    }
+    try {
+      var res = await window._hBridge('_flowCheckReq', '_flowCheckResult',
+        { flowIds: flowIds }, 10000);
+      var lines = flowIds.map(function(id) {
+        var info = res.flows && res.flows[id];
+        if (!info) return '❌ Flow <code>' + esc(id) + '</code> — not found in Homey';
+        return (info.enabled ? '✅' : '⚠️') + ' <b>' + esc(info.name) + '</b>' +
+          (info.enabled ? '' : ' — <span style="color:#ff9500">disabled</span>');
+      });
+      resEl.innerHTML = '<p style="font-size:13px;font-weight:700;margin-bottom:8px">Homey Flows for this switch:</p>' +
+        lines.map(function(l){ return '<p style="font-size:13px;margin:4px 0">' + l + '</p>'; }).join('') +
+        (res.flows && Object.values(res.flows).some(function(f){ return !f; })
+          ? '<p style="color:#ff3b30;font-size:12px;margin-top:8px">Missing flows — re-save the wall switch to recreate them.</p>'
+          : '<p style="color:#8e8e93;font-size:12px;margin-top:8px">If the physical switch still doesn\'t work, check the Logs tab while pressing the switch.</p>');
+    } catch(e) {
+      resEl.innerHTML = '<p style="color:#ff3b30;font-size:13px">✗ ' + esc(e.message) + '</p>';
+    }
+  },
+
+  _buildTestActions: function(phase) {
+    var lights = Picker.getSelected('dp-lights');
+    if (!lights.length) return [];
+    var actions = [];
+    if (phase === 'off') {
+      lights.forEach(function(id) { actions.push({ type: 'turn_off', deviceId: id }); });
+      return actions;
+    }
+    // scene: respect per-light dim (0 = OFF)
+    if (phase === 'scene') {
+      var defBrightSc = el('t-bright') ? parseInt(el('t-bright').value) / 100 : 0.1;
+      lights.forEach(function(id) {
+        var dimVal = (TModal._lightDims[id] && TModal._lightDims[id].on != null) ? TModal._lightDims[id].on : defBrightSc;
+        if (dimVal <= 0) {
+          actions.push({ type: 'turn_off', deviceId: id });
+        } else {
+          actions.push({ type: 'turn_on', deviceId: id });
+          if (dimVal < 1) actions.push({ type: 'set_dim', deviceId: id, value: dimVal });
+        }
+      });
+      return actions;
+    }
+    // ON / day / night / schedule
+    lights.forEach(function(id) { actions.push({ type: 'turn_on', deviceId: id }); });
+    var mode = (phase === 'day') ? 'day' : (phase === 'night') ? 'night' : 'on';
+    var defBright = 1;
+    if (mode === 'day')   defBright = el('t-day-bright')   ? parseInt(el('t-day-bright').value)   / 100 : 1;
+    else if (mode === 'night') defBright = el('t-night-bright') ? parseInt(el('t-night-bright').value) / 100 : 0.2;
+    else                  defBright = el('t-bright')       ? parseInt(el('t-bright').value)       / 100 : 1;
+    lights.forEach(function(id) {
+      var dimVal = (TModal._lightDims[id] && TModal._lightDims[id][mode] != null) ? TModal._lightDims[id][mode] : defBright;
+      if (dimVal < 1) actions.push({ type: 'set_dim', deviceId: id, value: dimVal });
+    });
+    return actions;
+  },
+
+  _runModalTest: async function(phase) {
+    var resEl = el('tmpl-test-result');
+    if (!resEl) { TModal._renderTestTab(); resEl = el('tmpl-test-result'); }
+    var actions = TModal._buildTestActions(phase);
+    if (!actions.length) { resEl.innerHTML = '<p style="color:#ff3b30;font-size:13px">No lights selected.</p>'; return; }
+    resEl.innerHTML = '<p style="color:#8e8e93;font-size:13px">Blinking lights… (restoring after)</p>';
+    var labels = { on:'💡 ON', day:'☀️ Day', night:'🌙 Night', off:'⚫ Off', scene:'💡 Run Group' };
+    var label  = labels[phase] || phase;
+    var ts = Date.now();
+    try {
+      await window._hSet('_testRequest', JSON.stringify({ actions: actions, name: label, ts: ts, blink: true }));
+      await new Promise(function(r) { setTimeout(r, 6000); }); // 5 blinks × 800 ms + restore
+      var raw = await window._hGet('_testResult');
+      var res = raw ? (typeof raw === 'string' ? JSON.parse(raw) : raw) : null;
+      if (!res || res.reqTs !== ts) {
+        resEl.innerHTML = '<p style="color:#ff3b30;font-size:13px">⚠️ No response — check Logs tab.</p>';
+        return;
+      }
+      // Blink test: single result, show simple summary
+      if (res.results && res.results.length === 1 && res.results[0].action === 'blink_test') {
+        var nLights = [...new Set(actions.filter(function(a){return a.deviceId;}).map(function(a){return a.deviceId;}))].length;
+        resEl.innerHTML =
+          '<div style="display:flex;align-items:center;gap:6px">' +
+            '<span>' + (res.results[0].ok ? '✅' : '⚠️') + '</span>' +
+            '<span style="font-size:13px;font-weight:700">' + nLights + ' light' + (nLights !== 1 ? 's' : '') + ' blinked — lights restored to original state</span>' +
+          '</div>';
+        return;
+      }
+      // Build per-light state from actions
+      var ls = {};
+      actions.forEach(function(a, idx) {
+        if (!a.deviceId) return;
+        if (!ls[a.deviceId]) ls[a.deviceId] = { on: null, dim: null, err: false };
+        if (a.type === 'turn_on')  ls[a.deviceId].on  = true;
+        if (a.type === 'turn_off' || a.type === 'fade_off') ls[a.deviceId].on = false;
+        if (a.type === 'set_dim'  || a.type === 'fade_to')  ls[a.deviceId].dim = a.value;
+        if (res.results[idx] && !res.results[idx].ok) ls[a.deviceId].err = true;
+      });
+      var allOk = res.results.every(function(r) { return r.ok; });
+      var bulbs = Object.keys(ls).map(function(id) {
+        var s = ls[id], nm = devName(id) || id.slice(-6);
+        var isOn = s.on !== false, pct = s.dim != null ? Math.round(s.dim * 100) : null;
+        var icon  = s.err ? '❌' : (isOn ? '💡' : '🔌');
+        var state = s.err ? 'Error' : (isOn ? (pct != null ? pct + '%' : 'ON') : 'OFF');
+        var col   = s.err ? '#ff3b30' : (isOn ? '#ff9500' : '#8e8e93');
+        return '<div class="light-tile"><span class="light-tile-icon">' + icon + '</span>' +
+          '<div class="light-tile-name">' + esc(nm) + '</div>' +
+          '<div class="light-tile-state" style="color:' + col + '">' + state + '</div></div>';
+      }).join('');
+      resEl.innerHTML =
+        '<div style="display:flex;align-items:center;gap:6px;margin-bottom:10px">' +
+          '<span>' + (allOk ? '✅' : '⚠️') + '</span>' +
+          '<span style="font-size:13px;font-weight:700">' + esc(label) + '</span>' +
+        '</div>' +
+        (bulbs ? '<div class="light-grid" style="margin:0 -0px">' + bulbs + '</div>' : '');
+    } catch(e) {
+      resEl.innerHTML = '<p style="color:#ff3b30;font-size:13px">Error: ' + esc(e.message) + '</p>';
+    }
+  },
+
+  _form: function(type) {
+    if (type === 'motion_lights') return TModal._formMotion();
+    if (type === 'smart_dim')     return TModal._formSmartDim();
+    if (type === 'door_lights')   return TModal._formDoor();
+    if (type === 'schedule')      return TModal._formSchedule();
+    if (type === 'switch')        return TModal._formSwitch();
+    if (type === 'scene')         return TModal._formScene();
+    return '';
+  },
+
+  // ── Light Group / Scene form ──
+  _formScene: function() {
+    return '<div class="fgrp"><label class="flabel">Lights in this group</label>' +
+        '<div class="dp-wrap" id="dp-lights"></div>' +
+        '<span style="font-size:11px;color:var(--ea-sub);margin-top:4px;display:block">Tip: use the 💡 Lights tab to set each light to a brightness or OFF (0%)</span>' +
+      '</div>' +
+      '<div class="fgrp"><label class="flabel">Default brightness (0% = OFF)</label>' +
+        '<div class="slider-row">' +
+          '<input type="range" id="t-bright" min="0" max="100" value="10" oninput="el(\'t-bval\').textContent=this.value==\'0\'?\'OFF\':this.value+\'%\';TModal._globalChanged(\'on\',parseInt(this.value))">' +
+          '<span class="slider-val" id="t-bval">10%</span>' +
+        '</div>' +
+      '</div>' +
+      '<div class="fgrp" style="margin-top:12px"><label class="flabel">Group name</label>' +
+        '<input class="finput" id="t-name" type="text" placeholder="e.g. Night Scene"/></div>';
+  },
+
+  // ── Motion → Lights form ──
+  _formMotion: function() {
+    var sensors = State.devices.filter(function(d) { return d.capabilities && d.capabilities.indexOf('alarm_motion') !== -1; });
+    var sensorOpts = sensors.map(function(d) { return '<option value="' + esc(d.id) + '">' + esc(d.name) + (d.zone ? ' ('+esc(d.zone)+')' : '') + '</option>'; }).join('');
+    var luxSensors = State.devices.filter(function(d) { return d.capabilities && d.capabilities.indexOf('measure_luminance') !== -1; });
+    var luxOpts = luxSensors.map(function(d) { return '<option value="' + esc(d.id) + '">' + esc(d.name) + (d.zone ? ' ('+esc(d.zone)+')' : '') + '</option>'; }).join('');
+    return '<div class="fgrp"><label class="flabel">Motion sensor</label>' +
+        '<select class="finput" id="t-sensor"><option value="">— Select sensor —</option>' + sensorOpts + '</select></div>' +
+      '<div class="fgrp"><label class="flabel">Lights to control</label>' +
+        '<div class="dp-wrap" id="dp-lights"></div></div>' +
+      '<div class="fgrp"><label class="flabel">Brightness when motion detected</label>' +
+        '<div class="slider-row"><input type="range" id="t-bright" min="10" max="100" value="100" oninput="el(\'t-bval\').textContent=this.value+\'%\';TModal._globalChanged(\'on\',parseInt(this.value))"><span class="slider-val" id="t-bval">100%</span></div></div>' +
+      '<div class="fgrp"><label class="flabel">Fade in (0 = instant)</label>' +
+        '<div class="slider-row"><input type="range" id="t-fadein" min="0" max="10" value="0" oninput="el(\'t-fadein-val\').textContent=this.value==\'0\'?\'instant\':this.value+\'s\'"><span class="slider-val" id="t-fadein-val">instant</span></div></div>' +
+      '<hr class="sep">' +
+      '<div class="check-row"><input type="checkbox" id="t-turnoff" checked onchange="el(\'t-hold-wrap\').style.display=this.checked?\'\':\'none\';el(\'t-fadeout-wrap\').style.display=this.checked?\'\':\'none\'"><label for="t-turnoff">Turn lights off when motion stops</label></div>' +
+      '<div class="fgrp" id="t-hold-wrap"><label class="flabel">Keep lights on for (after motion stops)</label>' +
+        '<div class="slider-row"><input type="range" id="t-hold" min="0" max="60" value="5" oninput="el(\'t-holdval\').textContent=this.value==\'0\'?\'off immediately\':this.value+\' min\'"><span class="slider-val" id="t-holdval">5 min</span></div></div>' +
+      '<div class="fgrp" id="t-fadeout-wrap"><label class="flabel">Fade out (0 = instant)</label>' +
+        '<div class="slider-row"><input type="range" id="t-fadeout" min="0" max="10" value="0" oninput="el(\'t-fadeout-val\').textContent=this.value==\'0\'?\'instant\':this.value+\'s\'"><span class="slider-val" id="t-fadeout-val">instant</span></div></div>' +
+      '<hr class="sep">' +
+      '<div class="check-row"><input type="checkbox" id="t-lux-en" onchange="el(\'t-lux-wrap\').style.display=this.checked?\'\':\'none\'"><label for="t-lux-en">Only trigger if lux is below threshold</label></div>' +
+      '<div id="t-lux-wrap" style="display:none">' +
+        '<div class="fgrp"><label class="flabel">Lux sensor</label><select class="finput" id="t-lux-sensor"><option value="">— Select lux sensor —</option>' + luxOpts + '</select></div>' +
+        '<div class="fgrp"><label class="flabel">Maximum lux (only trigger below this)</label><div class="slider-row"><input type="range" id="t-lux-max" min="0" max="500" value="50" oninput="el(\'t-lux-val\').textContent=this.value+\' lx\'"><span class="slider-val" id="t-lux-val">50 lx</span></div></div>' +
+      '</div>' +
+      '<hr class="sep">' +
+      '<div class="check-row"><input type="checkbox" id="t-hours-en" onchange="el(\'t-hours-wrap\').style.display=this.checked?\'\':\'none\'"><label for="t-hours-en">Only active during certain hours</label></div>' +
+      '<div id="t-hours-wrap" style="display:none">' +
+        '<div class="fgrp"><label class="flabel">Active from</label>' + mkTimePicker('t-hours-from','07:00') + '</div>' +
+        '<div class="fgrp"><label class="flabel">Until</label>' + mkTimePicker('t-hours-to','23:00') + '</div>' +
+      '</div>' +
+      '<div class="fgrp" style="margin-top:12px"><label class="flabel">Automation name</label>' +
+        '<input class="finput" id="t-name" type="text" placeholder="e.g. Hallway Motion"/></div>';
+  },
+
+  // ── Smart Dim form ──
+  _formSmartDim: function() {
+    var sensors = State.devices.filter(function(d) { return d.capabilities && d.capabilities.indexOf('alarm_motion') !== -1; });
+    var sensorOpts = sensors.map(function(d) { return '<option value="' + esc(d.id) + '">' + esc(d.name) + (d.zone ? ' ('+esc(d.zone)+')' : '') + '</option>'; }).join('');
+    var luxSensors = State.devices.filter(function(d) { return d.capabilities && d.capabilities.indexOf('measure_luminance') !== -1; });
+    var luxOpts = luxSensors.map(function(d) { return '<option value="' + esc(d.id) + '">' + esc(d.name) + (d.zone ? ' ('+esc(d.zone)+')' : '') + '</option>'; }).join('');
+    return '<div class="fgrp"><label class="flabel">Motion sensor</label>' +
+        '<select class="finput" id="t-sensor"><option value="">— Select sensor —</option>' + sensorOpts + '</select></div>' +
+      '<div class="fgrp"><label class="flabel">Lights to control</label>' +
+        '<div class="dp-wrap" id="dp-lights"></div></div>' +
+      '<hr class="sep">' +
+      '<div class="fgrp"><div style="display:flex;align-items:center;gap:8px"><label class="flabel" style="margin-bottom:0">☀️ Day starts</label>' +
+        mkTimePicker('t-day-from','07:00') + '</div></div>' +
+      '<div class="fgrp"><label class="flabel">Daytime brightness</label>' +
+        '<div class="slider-row"><input type="range" id="t-day-bright" min="10" max="100" value="100" oninput="el(\'t-day-bval\').textContent=this.value+\'%\';TModal._globalChanged(\'day\',parseInt(this.value))"><span class="slider-val" id="t-day-bval">100%</span></div></div>' +
+      '<hr class="sep">' +
+      '<div class="fgrp"><div style="display:flex;align-items:center;gap:8px"><label class="flabel" style="margin-bottom:0">🌙 Night starts</label>' +
+        mkTimePicker('t-night-from','22:00') + '</div></div>' +
+      '<div class="fgrp"><label class="flabel">Night brightness</label>' +
+        '<div class="slider-row"><input type="range" id="t-night-bright" min="1" max="80" value="20" oninput="el(\'t-night-bval\').textContent=this.value+\'%\';TModal._globalChanged(\'night\',parseInt(this.value))"><span class="slider-val" id="t-night-bval">20%</span></div></div>' +
+      '<hr class="sep">' +
+      '<div class="fgrp"><label class="flabel">Fade in (0 = instant)</label>' +
+        '<div class="slider-row"><input type="range" id="t-fadein" min="0" max="10" value="0" oninput="el(\'t-fadein-val\').textContent=this.value==\'0\'?\'instant\':this.value+\'s\'"><span class="slider-val" id="t-fadein-val">instant</span></div></div>' +
+      '<div class="check-row"><input type="checkbox" id="t-turnoff" checked onchange="el(\'t-hold-wrap\').style.display=this.checked?\'\':\'none\';el(\'t-fadeout-wrap\').style.display=this.checked?\'\':\'none\'"><label for="t-turnoff">Turn lights off when motion stops</label></div>' +
+      '<div class="fgrp" id="t-hold-wrap"><label class="flabel">Keep lights on for (after motion stops)</label>' +
+        '<div class="slider-row"><input type="range" id="t-hold" min="0" max="60" value="5" oninput="el(\'t-holdval\').textContent=this.value==\'0\'?\'off immediately\':this.value+\' min\'"><span class="slider-val" id="t-holdval">5 min</span></div></div>' +
+      '<div class="fgrp" id="t-fadeout-wrap"><label class="flabel">Fade out (0 = instant)</label>' +
+        '<div class="slider-row"><input type="range" id="t-fadeout" min="0" max="10" value="0" oninput="el(\'t-fadeout-val\').textContent=this.value==\'0\'?\'instant\':this.value+\'s\'"><span class="slider-val" id="t-fadeout-val">instant</span></div></div>' +
+      '<hr class="sep">' +
+      '<div class="check-row"><input type="checkbox" id="t-lux-en" onchange="el(\'t-lux-wrap\').style.display=this.checked?\'\':\'none\'"><label for="t-lux-en">Only trigger if lux is below threshold</label></div>' +
+      '<div id="t-lux-wrap" style="display:none">' +
+        '<div class="fgrp"><label class="flabel">Lux sensor</label><select class="finput" id="t-lux-sensor"><option value="">— Select lux sensor —</option>' + luxOpts + '</select></div>' +
+        '<div class="fgrp"><label class="flabel">Maximum lux (only trigger below this)</label><div class="slider-row"><input type="range" id="t-lux-max" min="0" max="500" value="50" oninput="el(\'t-lux-val\').textContent=this.value+\' lx\'"><span class="slider-val" id="t-lux-val">50 lx</span></div></div>' +
+      '</div>' +
+      '<div class="fgrp" style="margin-top:12px"><label class="flabel">Name prefix (e.g. room name)</label>' +
+        '<input class="finput" id="t-name" type="text" placeholder="e.g. Hallway"/></div>';
+  },
+
+  // ── Door → Lights form ──
+  _formDoor: function() {
+    var sensors = State.devices.filter(function(d) { return d.capabilities && d.capabilities.indexOf('alarm_contact') !== -1; });
+    var sensorOpts = sensors.map(function(d) { return '<option value="' + esc(d.id) + '">' + esc(d.name) + (d.zone ? ' ('+esc(d.zone)+')' : '') + '</option>'; }).join('');
+    return '<div class="fgrp"><label class="flabel">Door / contact sensor</label>' +
+        '<select class="finput" id="t-sensor"><option value="">— Select sensor —</option>' + sensorOpts + '</select></div>' +
+      '<div class="fgrp"><label class="flabel">Lights to control</label>' +
+        '<div class="dp-wrap" id="dp-lights"></div></div>' +
+      '<div class="fgrp"><label class="flabel">Brightness when door opens</label>' +
+        '<div class="slider-row"><input type="range" id="t-bright" min="10" max="100" value="100" oninput="el(\'t-bval\').textContent=this.value+\'%\';TModal._globalChanged(\'on\',parseInt(this.value))"><span class="slider-val" id="t-bval">100%</span></div></div>' +
+      '<div class="fgrp"><label class="flabel">Fade in (0 = instant)</label>' +
+        '<div class="slider-row"><input type="range" id="t-fadein" min="0" max="10" value="0" oninput="el(\'t-fadein-val\').textContent=this.value==\'0\'?\'instant\':this.value+\'s\'"><span class="slider-val" id="t-fadein-val">instant</span></div></div>' +
+      '<hr class="sep">' +
+      '<div class="check-row"><input type="checkbox" id="t-turnoff" checked onchange="el(\'t-fadeout-wrap\').style.display=this.checked?\'\':\'none\'"><label for="t-turnoff">Turn lights off when door closes</label></div>' +
+      '<div class="fgrp" id="t-fadeout-wrap"><label class="flabel">Fade out (0 = instant)</label>' +
+        '<div class="slider-row"><input type="range" id="t-fadeout" min="0" max="10" value="0" oninput="el(\'t-fadeout-val\').textContent=this.value==\'0\'?\'instant\':this.value+\'s\'"><span class="slider-val" id="t-fadeout-val">instant</span></div></div>' +
+      '<hr class="sep">' +
+      '<div class="check-row"><input type="checkbox" id="t-hours-en" onchange="el(\'t-hours-wrap\').style.display=this.checked?\'\':\'none\'"><label for="t-hours-en">Only active during certain hours</label></div>' +
+      '<div id="t-hours-wrap" style="display:none">' +
+        '<div class="fgrp"><label class="flabel">Active from</label>' + mkTimePicker('t-hours-from','07:00') + '</div>' +
+        '<div class="fgrp"><label class="flabel">Until</label>' + mkTimePicker('t-hours-to','23:00') + '</div>' +
+      '</div>' +
+      '<div class="fgrp" style="margin-top:12px"><label class="flabel">Automation name</label>' +
+        '<input class="finput" id="t-name" type="text" placeholder="e.g. Front Door Lights"/></div>';
+  },
+
+  // ── Schedule form ──
+  _formSchedule: function() {
+    var days = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+    var dayBtns = days.map(function(d, i) {
+      var val = i === 6 ? 0 : i + 1; // 0=Sun,1=Mon...6=Sat
+      return '<label class="day-btn"><input type="checkbox" class="day-chk" value="' + val + '" checked><span>' + d + '</span></label>';
+    }).join('');
+    return '<div class="fgrp"><label class="flabel">Run every day at</label>' +
+        mkTimePicker('t-time','07:00') + '</div>' +
+      '<div class="fgrp"><label class="flabel">Days</label>' +
+        '<div class="day-row" id="t-days">' + dayBtns + '</div></div>' +
+      '<div class="fgrp"><label class="flabel">Action</label>' +
+        '<select class="finput" id="t-sched-action" onchange="TModal._schedActionChanged()">' +
+          '<option value="on">Turn lights ON</option>' +
+          '<option value="dim">Turn lights ON and dim to level</option>' +
+          '<option value="off">Turn lights OFF</option>' +
+        '</select></div>' +
+      '<div id="t-sched-bright-wrap" style="display:none" class="fgrp"><label class="flabel">Brightness</label>' +
+        '<div class="slider-row"><input type="range" id="t-bright" min="1" max="100" value="50" oninput="el(\'t-bval\').textContent=this.value+\'%\'"><span class="slider-val" id="t-bval">50%</span></div></div>' +
+      '<div class="fgrp"><label class="flabel">Lights</label>' +
+        '<div class="dp-wrap" id="dp-lights"></div></div>' +
+      '<div class="fgrp"><label class="flabel">Automation name</label>' +
+        '<input class="finput" id="t-name" type="text" placeholder="e.g. Morning routine"/></div>';
+  },
+
+  _schedActionChanged: function() {
+    var v = el('t-sched-action') && el('t-sched-action').value;
+    el('t-sched-bright-wrap').style.display = (v === 'dim') ? '' : 'none';
+  },
+
+  // ── Save ──────────────────────────────────────────────────────────────────
+  save: async function() {
+    var automations;
+    try {
+      switch (TModal.type) {
+        case 'motion_lights': automations = TModal._saveMotion(); break;
+        case 'smart_dim':     automations = TModal._saveSmartDim(); break;
+        case 'door_lights':   automations = TModal._saveDoor(); break;
+        case 'schedule':      automations = TModal._saveSchedule(); break;
+        case 'scene':         automations = TModal._saveScene(); break;
+        case 'switch':        automations = await TModal._saveSwitch(); break;
+        default: return;
+      }
+    } catch(e) { window._hAlert(e.message); return; }
+
+    // Apply enabled state from the Active toggle
+    var enabled = el('tmpl-enabled') ? el('tmpl-enabled').checked : true;
+    automations.forEach(function(a){ a.enabled = enabled; });
+
+    // If editing an existing group, remove old automations first
+    if (TModal._editingGroup) {
+      var indices = TModal._editingGroup.items.map(function(it){return it.i;}).sort(function(a,b){return b-a;});
+      indices.forEach(function(i){ State.automations.splice(i,1); });
+      TModal._editingGroup = null;
+    }
+
+    TModal.close();
+    await AutoList.addAll(automations);
+  },
+
+  testGroup: function(gi) {
+    var computed = computeGroups();
+    var g = computed.groups[gi];
+    if (!g) return;
+    TModal.openEdit(g);
+    TModal._modalTab('test');
+  },
+
+  _mkId: function() { return 'a' + Date.now() + Math.floor(Math.random()*1000); },
+
+  _saveMotion: function() {
+    var sensor  = el('t-sensor').value; if (!sensor) throw new Error('Please select a motion sensor');
+    var lights  = Picker.getSelected('dp-lights'); if (!lights.length) throw new Error('Please select at least one light');
+    var bright  = parseInt(el('t-bright').value) / 100;
+    var fadeIn  = parseInt(el('t-fadein') ? el('t-fadein').value : 0) || 0;
+    var turnOff = el('t-turnoff').checked;
+    var hold    = el('t-hold') ? parseInt(el('t-hold').value) : 0;
+    var fadeOut = parseInt(el('t-fadeout') ? el('t-fadeout').value : 0) || 0;
+    var name    = el('t-name').value.trim() || 'Motion Lights';
+    var hoursEn   = el('t-hours-en') && el('t-hours-en').checked;
+    var hoursFrom = hoursEn ? (el('t-hours-from') ? el('t-hours-from').value : '07:00') : null;
+    var hoursTo   = hoursEn ? (el('t-hours-to')   ? el('t-hours-to').value   : '23:00') : null;
+    var luxEn     = el('t-lux-en') && el('t-lux-en').checked;
+    var luxSensorId = luxEn ? (el('t-lux-sensor') ? el('t-lux-sensor').value : '') : null;
+    var luxMax    = luxEn ? parseInt(el('t-lux-max') ? el('t-lux-max').value : 50) : null;
+    var onConditions = [];
+    if (hoursEn && hoursFrom && hoursTo) onConditions.push({ type: 'time_between', from: hoursFrom, to: hoursTo });
+    if (luxEn && luxSensorId) onConditions.push({ type: 'lux_below', deviceId: luxSensorId, maxLux: luxMax });
+    var gid = TModal._mkId();
+    var list = [];
+
+    // Turn on all lights first, then apply per-light dim (fallback to global bright)
+    var onActs = lights.map(function(id) { return { type: 'turn_on', deviceId: id }; });
+    lights.forEach(function(id) {
+      var dimVal = (TModal._lightDims[id] && TModal._lightDims[id].on != null) ? TModal._lightDims[id].on : bright;
+      if (fadeIn > 0) {
+        onActs.push({ type: 'fade_to', deviceId: id, value: dimVal, duration: fadeIn });
+      } else if (dimVal < 1) {
+        onActs.push({ type: 'set_dim', deviceId: id, value: dimVal });
+      }
+      if (TModal._lightDims[id] && TModal._lightDims[id].ct != null) {
+        onActs.push({ type: 'set_color_temp', deviceId: id, value: TModal._lightDims[id].ct });
+      }
+    });
+    list.push({ id: TModal._mkId(), name: name + ' — ON', enabled: true,
+      _groupId: gid, _groupName: name, _templateType: 'motion_lights',
+      trigger: { type: 'motion_start', deviceId: sensor }, conditions: onConditions, actions: onActs });
+
+    if (turnOff) {
+      var offActs = lights.map(function(id) {
+        return fadeOut > 0 ? { type: 'fade_off', deviceId: id, duration: fadeOut } : { type: 'turn_off', deviceId: id };
+      });
+      list.push({ id: TModal._mkId(), name: name + ' — OFF', enabled: true,
+        _groupId: gid, _groupName: name, _templateType: 'motion_lights',
+        _holdMinutes: hold,
+        trigger: { type: 'motion_stop', deviceId: sensor }, conditions: [], actions: offActs });
+    }
+    return list;
+  },
+
+  _saveSmartDim: function() {
+    var sensor     = el('t-sensor').value;     if (!sensor) throw new Error('Please select a motion sensor');
+    var lights     = Picker.getSelected('dp-lights'); if (!lights.length) throw new Error('Please select at least one light');
+    var luxEn     = el('t-lux-en') && el('t-lux-en').checked;
+    var luxSensorId = luxEn ? (el('t-lux-sensor') ? el('t-lux-sensor').value : '') : null;
+    var luxMax    = luxEn ? parseInt(el('t-lux-max') ? el('t-lux-max').value : 50) : null;
+    var dayFrom    = el('t-day-from').value   || '07:00';
+    var nightFrom  = el('t-night-from').value || '22:00';
+    var dayBright  = parseInt(el('t-day-bright').value)   / 100;
+    var nightBright= parseInt(el('t-night-bright').value) / 100;
+    var turnOff    = el('t-turnoff').checked;
+    var hold       = el('t-hold') ? parseInt(el('t-hold').value) : 0;
+    var fadeIn     = parseInt(el('t-fadein') ? el('t-fadein').value : 0) || 0;
+    var fadeOut    = parseInt(el('t-fadeout') ? el('t-fadeout').value : 0) || 0;
+    var prefix     = el('t-name').value.trim() || 'Smart Lights';
+    var gid = TModal._mkId();
+    var list = [];
+
+    function makeOnActs(brightness, mode) {
+      var acts = lights.map(function(id) { return { type: 'turn_on', deviceId: id }; });
+      lights.forEach(function(id) {
+        var dimVal = (TModal._lightDims[id] && TModal._lightDims[id][mode] != null) ? TModal._lightDims[id][mode] : brightness;
+        if (fadeIn > 0) {
+          acts.push({ type: 'fade_to', deviceId: id, value: dimVal, duration: fadeIn });
+        } else {
+          acts.push({ type: 'set_dim', deviceId: id, value: dimVal });
+        }
+        var ctKey = 'ct_' + mode;
+        if (TModal._lightDims[id] && TModal._lightDims[id][ctKey] != null) {
+          acts.push({ type: 'set_color_temp', deviceId: id, value: TModal._lightDims[id][ctKey] });
+        }
+      });
+      return acts;
+    }
+
+    var dayConditions   = [{ type: 'time_between', from: dayFrom, to: nightFrom }];
+    var nightConditions = [{ type: 'time_between', from: nightFrom, to: dayFrom }];
+    if (luxEn && luxSensorId) {
+      dayConditions.push(  { type: 'lux_below', deviceId: luxSensorId, maxLux: luxMax });
+      nightConditions.push({ type: 'lux_below', deviceId: luxSensorId, maxLux: luxMax });
+    }
+
+    // Day automation (motion + time condition)
+    list.push({ id: TModal._mkId(), name: prefix + ' — Day', enabled: true,
+      _groupId: gid, _groupName: prefix, _templateType: 'smart_dim',
+      trigger: { type: 'motion_start', deviceId: sensor },
+      conditions: dayConditions,
+      actions: makeOnActs(dayBright, 'day') });
+
+    // Night automation (motion + time condition)
+    list.push({ id: TModal._mkId(), name: prefix + ' — Night', enabled: true,
+      _groupId: gid, _groupName: prefix, _templateType: 'smart_dim',
+      trigger: { type: 'motion_start', deviceId: sensor },
+      conditions: nightConditions,
+      actions: makeOnActs(nightBright, 'night') });
+
+    // Off automation
+    if (turnOff) {
+      var offActsSD = lights.map(function(id) {
+        return fadeOut > 0 ? { type: 'fade_off', deviceId: id, duration: fadeOut } : { type: 'turn_off', deviceId: id };
+      });
+      list.push({ id: TModal._mkId(), name: prefix + ' — OFF', enabled: true,
+        _groupId: gid, _groupName: prefix, _templateType: 'smart_dim',
+        _holdMinutes: hold,
+        trigger: { type: 'motion_stop', deviceId: sensor }, conditions: [], actions: offActsSD });
+    }
+    return list;
+  },
+
+  _saveDoor: function() {
+    var sensor  = el('t-sensor').value; if (!sensor) throw new Error('Please select a door sensor');
+    var lights  = Picker.getSelected('dp-lights'); if (!lights.length) throw new Error('Please select at least one light');
+    var bright  = parseInt(el('t-bright').value) / 100;
+    var fadeIn  = parseInt(el('t-fadein') ? el('t-fadein').value : 0) || 0;
+    var turnOff = el('t-turnoff').checked;
+    var fadeOut = parseInt(el('t-fadeout') ? el('t-fadeout').value : 0) || 0;
+    var name    = el('t-name').value.trim() || 'Door Lights';
+    var hoursEn   = el('t-hours-en') && el('t-hours-en').checked;
+    var hoursFrom = hoursEn ? (el('t-hours-from') ? el('t-hours-from').value : '07:00') : null;
+    var hoursTo   = hoursEn ? (el('t-hours-to')   ? el('t-hours-to').value   : '23:00') : null;
+    var doorConditions = [];
+    if (hoursEn && hoursFrom && hoursTo) doorConditions.push({ type: 'time_between', from: hoursFrom, to: hoursTo });
+    var gid = TModal._mkId();
+    var list = [];
+
+    var onActs = lights.map(function(id) { return { type: 'turn_on', deviceId: id }; });
+    lights.forEach(function(id) {
+      var dimVal = (TModal._lightDims[id] && TModal._lightDims[id].on != null) ? TModal._lightDims[id].on : bright;
+      if (fadeIn > 0) {
+        onActs.push({ type: 'fade_to', deviceId: id, value: dimVal, duration: fadeIn });
+      } else if (dimVal < 1) {
+        onActs.push({ type: 'set_dim', deviceId: id, value: dimVal });
+      }
+      if (TModal._lightDims[id] && TModal._lightDims[id].ct != null) {
+        onActs.push({ type: 'set_color_temp', deviceId: id, value: TModal._lightDims[id].ct });
+      }
+    });
+    list.push({ id: TModal._mkId(), name: name + ' — ON', enabled: true,
+      _groupId: gid, _groupName: name, _templateType: 'door_lights',
+      trigger: { type: 'door_open', deviceId: sensor }, conditions: doorConditions, actions: onActs });
+
+    if (turnOff) {
+      var offActsDoor = lights.map(function(id) {
+        return fadeOut > 0 ? { type: 'fade_off', deviceId: id, duration: fadeOut } : { type: 'turn_off', deviceId: id };
+      });
+      list.push({ id: TModal._mkId(), name: name + ' — OFF', enabled: true,
+        _groupId: gid, _groupName: name, _templateType: 'door_lights',
+        trigger: { type: 'door_close', deviceId: sensor }, conditions: [], actions: offActsDoor });
+    }
+    return list;
+  },
+
+  _saveSchedule: function() {
+    var time   = el('t-time').value;   if (!time) throw new Error('Please set a time');
+    var lights = Picker.getSelected('dp-lights'); if (!lights.length) throw new Error('Please select at least one light');
+    var action = el('t-sched-action').value;
+    var bright = action === 'dim' ? parseInt(el('t-bright').value) / 100 : null;
+    var name   = el('t-name').value.trim() || 'Schedule';
+    var gid    = TModal._mkId();
+    var allDays = [0,1,2,3,4,5,6];
+    var checkedDays = Array.from(el('t-days').querySelectorAll('.day-chk:checked')).map(function(cb){ return parseInt(cb.value); });
+    var days = checkedDays.length === 7 ? [] : checkedDays; // empty = every day
+
+    var acts = [];
+    lights.forEach(function(id) {
+      if (action === 'off') {
+        acts.push({ type: 'turn_off', deviceId: id });
+      } else {
+        acts.push({ type: 'turn_on', deviceId: id });
+        if (bright !== null) acts.push({ type: 'set_dim', deviceId: id, value: bright });
+        if (TModal._lightDims[id] && TModal._lightDims[id].ct != null) {
+          acts.push({ type: 'set_color_temp', deviceId: id, value: TModal._lightDims[id].ct });
+        }
+      }
+    });
+    return [{ id: TModal._mkId(), name: name, enabled: true,
+      _groupId: gid, _groupName: name, _templateType: 'schedule',
+      trigger: { type: 'time', time: time, days: days }, conditions: [], actions: acts }];
+  },
+
+  _saveScene: function() {
+    var lights = Picker.getSelected('dp-lights'); if (!lights.length) throw new Error('Please select at least one light');
+    var defBright = parseInt(el('t-bright') ? el('t-bright').value : 10) / 100;
+    var name = el('t-name').value.trim() || 'Light Group';
+    var gid  = TModal._editingGroup ? TModal._editingGroup.id : TModal._mkId();
+    var acts = [];
+    lights.forEach(function(id) {
+      var dimVal = (TModal._lightDims[id] && TModal._lightDims[id].on != null) ? TModal._lightDims[id].on : defBright;
+      if (dimVal <= 0) {
+        acts.push({ type: 'turn_off', deviceId: id });
+      } else {
+        acts.push({ type: 'turn_on', deviceId: id });
+        if (dimVal < 1) acts.push({ type: 'set_dim', deviceId: id, value: dimVal });
+      }
+      if (TModal._lightDims[id] && TModal._lightDims[id].ct != null) {
+        acts.push({ type: 'set_color_temp', deviceId: id, value: TModal._lightDims[id].ct });
+      }
+    });
+    return [{ id: TModal._mkId(), name: name, enabled: true,
+      _groupId: gid, _groupName: name, _templateType: 'scene',
+      trigger: { type: 'manual' }, conditions: [], actions: acts }];
+  },
+
+  // ── Wall Switch / Button form ──
+  _formSwitch: function() {
+    var switches = State.devices.filter(function(d) {
+      return d.class === 'remote';
+    });
+    var swList = switches.length ? switches : State.devices;
+    var swOpts = swList.map(function(d) {
+      return '<option value="' + esc(d.id) + '">' + esc(d.name) + (d.zone ? ' (' + esc(d.zone) + ')' : '') + '</option>';
+    }).join('');
+    return '<div class="fgrp"><label class="flabel">Wall switch / button device</label>' +
+        '<select class="finput" id="t-switch" onchange="TModal._switchDeviceChanged()">' +
+          '<option value="">— Select device —</option>' + swOpts +
+        '</select></div>' +
+      '<div id="t-sw-mappings"></div>' +
+      '<div class="fgrp" style="margin-top:12px"><label class="flabel">Automation name</label>' +
+        '<input class="finput" id="t-name" type="text" placeholder="e.g. Living Room Switch"/></div>';
+  },
+
+  _switchDeviceChanged: async function() {
+    var devId = el('t-switch') && el('t-switch').value;
+    var wrap  = el('t-sw-mappings');
+    if (!wrap) return;
+    if (!devId) { wrap.innerHTML = ''; return; }
+    var device = State.devices.find(function(d){ return d.id === devId; });
+    if (!device) { wrap.innerHTML = ''; return; }
+
+    var editingId = TModal._editingGroup ? TModal._editingGroup.id : null;
+    var groups = computeGroups().groups.filter(function(g){ return g.id !== editingId && g.type !== 'switch'; });
+    var groupOpts = groups.map(function(g){
+      return '<option value="' + esc(g.id) + '">' + esc(g.name || 'Automation') + '</option>';
+    }).join('');
+
+    // Always try Flow trigger cards first — they expose all buttons for any brand
+    wrap.innerHTML = '<p style="color:#8e8e93;font-size:13px;padding:6px 0">Loading buttons…</p>';
+    try {
+      var res = await window._hBridge('_flowTriggersReq', '_flowTriggersResult', { deviceId: devId });
+      var flowCards = (!res.error && res.cards) ? res.cards.filter(function(c) {
+        var t = (c.title || '').toLowerCase();
+        var i = (c.id    || '').toLowerCase();
+        // Only exclude battery % triggers — keep everything else (buttons, scenes, groups, alarms)
+        if (t.indexOf('batteri') !== -1 || t.indexOf('battery') !== -1 ||
+            i.indexOf('batteri') !== -1 || i.indexOf('battery') !== -1) return false;
+        return true;
+      }) : [];
+
+      if (flowCards.length) {
+        var flowRows = [];
+        flowCards.forEach(function(c) {
+          var groupArg = (c.args || []).find(function(a) { return a.name === 'group' && a.values && a.values.length; });
+          var modeArg  = (c.args || []).find(function(a) { return a.name === 'mode'  && a.values && a.values.length; });
+          var defaultMode = modeArg && modeArg.values[0] ? modeArg.values[0].id : null;
+
+          if (groupArg && groupArg.values.length) {
+            // Expand one row per group
+            groupArg.values.forEach(function(gv) {
+              var tArgs = { group: gv.id };
+              if (defaultMode !== null) tArgs.mode = defaultMode;
+              flowRows.push({ triggerType: 'flow_card', triggerId: c.id, triggerUri: c.uri,
+                label: gv.title + ' — ' + c.title, triggerArgs: tArgs });
+            });
+          } else {
+            flowRows.push({ triggerType: 'flow_card', triggerId: c.id, triggerUri: c.uri,
+              label: c.title, triggerArgs: {} });
+          }
+        });
+        TModal._switchRenderRows(flowRows, groupOpts, true);
+        return;
+      }
+    } catch(e) { /* fall through to standard caps */ }
+
+    // Fallback: standard capability rows (simple on/off or button devices)
+    var rows = [];
+    var caps = device.capabilities || [];
+    if (caps.indexOf('onoff') !== -1) {
+      rows.push({ triggerType: 'switch_on',    cap: 'onoff',  label: 'When switched ON'  });
+      rows.push({ triggerType: 'switch_off',   cap: 'onoff',  label: 'When switched OFF' });
+    }
+    if (caps.indexOf('button') !== -1) {
+      rows.push({ triggerType: 'button_press', cap: 'button', label: 'Button press'      });
+    }
+    caps.filter(function(c){ return /^button\./.test(c); }).sort().forEach(function(c) {
+      rows.push({ triggerType: 'button_key', cap: c, label: 'Button ' + c.replace('button.', '') });
+    });
+
+    if (rows.length) {
+      TModal._switchRenderRows(rows, groupOpts, false);
+    } else {
+      wrap.innerHTML = '<p style="color:#ff3b30;font-size:13px">No buttons found for this device.<br>Check Logs tab for details.</p>';
+    }
+  },
+
+  _switchRenderRows: function(rows, groupOpts, isFlowMode) {
+    var wrap = el('t-sw-mappings');
+    if (!wrap) return;
+    var html = '<div class="sec-hdr" style="margin-top:12px">Button → Automation mapping</div>';
+    if (isFlowMode) {
+      html += '<p style="color:#8e8e93;font-size:12px;margin-bottom:8px">Homey Flows will be created automatically when you save.</p>';
+    }
+    rows.forEach(function(r, i) {
+      html += '<div class="fgrp">' +
+        '<label class="flabel">' + esc(r.label) + '</label>' +
+        '<select class="finput" id="t-sw-map-' + i + '" ' +
+          'data-trigger-type="' + esc(r.triggerType) + '" ' +
+          'data-cap="' + esc(r.cap || '') + '" ' +
+          'data-trigger-id="' + esc(r.triggerId || '') + '" ' +
+          'data-trigger-uri="' + esc(r.triggerUri || '') + '" ' +
+          'data-trigger-title="' + esc(r.label) + '" ' +
+          'data-trigger-args="' + esc(JSON.stringify(r.triggerArgs || {})) + '">' +
+          '<option value="">— no action —</option>' + groupOpts +
+        '</select></div>';
+    });
+    wrap.innerHTML = html;
+  },
+
+  _saveSwitch: async function() {
+    var swDev = el('t-switch') && el('t-switch').value;
+    if (!swDev) throw new Error('Please select a switch or button device');
+    var name = (el('t-name') && el('t-name').value.trim()) || 'Wall Switch';
+    var gid  = TModal._editingGroup ? TModal._editingGroup.id : TModal._mkId();
+    var list = [];
+    var isFlowMode = false;
+    var flowMappings = [];
+    var i = 0;
+
+    while (el('t-sw-map-' + i)) {
+      var sel     = el('t-sw-map-' + i);
+      var groupId = sel.value;
+      var trigType = sel.getAttribute('data-trigger-type');
+
+      if (trigType === 'flow_card') {
+        isFlowMode = true;
+        if (groupId) {
+          var grp = computeGroups().groups.find(function(g){ return g.id === groupId; });
+          var savedTriggerArgs = {};
+          try { savedTriggerArgs = JSON.parse(sel.getAttribute('data-trigger-args') || '{}'); } catch(e) {}
+          flowMappings.push({
+            triggerId:    sel.getAttribute('data-trigger-id'),
+            triggerUri:   sel.getAttribute('data-trigger-uri'),
+            triggerTitle: sel.getAttribute('data-trigger-title') || '',
+            triggerArgs:  savedTriggerArgs,
+            groupId:      groupId,
+            groupName:    grp ? (grp.name || 'Automation') : groupId
+          });
+        }
+      } else if (groupId) {
+        var cap = sel.getAttribute('data-cap');
+        var trigger = { type: trigType, deviceId: swDev };
+        if (trigType === 'button_key')        trigger.capability = cap;
+        if (trigType === 'device_capability') { trigger.capability = cap; trigger.value = true; }
+        list.push({
+          id: TModal._mkId(), name: name, enabled: true,
+          _groupId: gid, _groupName: name, _templateType: 'switch',
+          trigger: trigger, conditions: [],
+          actions: [{ type: 'run_group', groupId: groupId }]
+        });
+      }
+      i++;
+    }
+
+    if (isFlowMode) {
+      if (!flowMappings.length) throw new Error('Please map at least one button to an automation');
+      var existingFlowIds = TModal._editingGroup && TModal._editingGroup._homeyFlowIds || [];
+      var result = await window._hBridge('_flowSyncReq', '_flowSyncResult', {
+        deviceId: swDev, mappings: flowMappings, existingFlowIds: existingFlowIds
+      }, 20000);
+      if (!result.ok) window._hAlert('Could not create Homey Flows:\n' + (result.error || 'Unknown error') + '\n\nFix: Go to the Help tab and add a Personal Access Token with Flows permission.');
+      // Store as a single virtual automation entry (no direct trigger — Flows handle it)
+      list.push({
+        id: TModal._mkId(), name: name, enabled: true,
+        _groupId: gid, _groupName: name, _templateType: 'switch',
+        _useHomeyFlows: true, _homeyFlowIds: result.flowIds || [],
+        _switchDeviceId: swDev, _switchMappings: flowMappings,
+        trigger: { type: 'homey_flow', deviceId: swDev },
+        conditions: [], actions: []
+      });
+    }
+
+    if (!list.length) throw new Error('Please map at least one button to an automation');
+    return list;
+  }
+};
+
+// ── Custom (advanced) editor ────────────────────────────────────────────────────
+var CustomEditor = {
+  idx: -1, conds: [], acts: [],
+
+  open: function(i) {
+    CustomEditor.idx   = (i === undefined) ? -1 : i;
+    CustomEditor.conds = [];
+    CustomEditor.acts  = [];
+    var a = (CustomEditor.idx >= 0) ? State.automations[CustomEditor.idx] : {};
+
+    el('tmpl-title').textContent = CustomEditor.idx >= 0 ? '⚙️ Edit Automation' : '⚙️ Custom Automation';
+    el('tmpl-save-btn').textContent = CustomEditor.idx >= 0 ? 'Save' : 'Add';
+    CustomEditor.conds = JSON.parse(JSON.stringify(a.conditions || []));
+    CustomEditor.acts  = JSON.parse(JSON.stringify(a.actions    || []));
+    el('tmpl-body').innerHTML = CustomEditor._form(a);
+    el('tmpl-overlay').classList.add('on');
+    TModal.type = 'custom';
+  },
+
+  _form: function(a) {
+    var t = a.trigger || {};
+    var trigType = t.type || 'motion_start';
+    var sensors = State.devices.filter(function(d) {
+      return d.capabilities && (d.capabilities.indexOf('alarm_motion') !== -1 || d.capabilities.indexOf('alarm_contact') !== -1);
+    });
+    var sensorOpts = sensors.map(function(d) {
+      return '<option value="'+esc(d.id)+'"'+(d.id===t.deviceId?' selected':'')+'>'+esc(d.name)+(d.zone?' ('+esc(d.zone)+')':'')+' ['+esc(d.class||'')+']</option>';
+    }).join('');
+    var allOpts = State.devices.map(function(d) {
+      return '<option value="'+esc(d.id)+'"'+(d.id===t.deviceId?' selected':'')+'>'+esc(d.name)+(d.zone?' ('+esc(d.zone)+')':'')+' ['+esc(d.class||'')+']</option>';
+    }).join('');
+
+    var html = '<div class="fgrp"><label class="flabel">Name</label><input class="finput" id="ce-name" value="'+esc(a.name||'')+'"/></div>' +
+      '<div class="fgrp"><label class="flabel">Trigger type</label>' +
+        '<select class="finput" id="ce-trig-type" onchange="CustomEditor._trigChanged()">' +
+          '<option value="motion_start"'+(trigType==='motion_start'?' selected':'')+'>Motion detected</option>' +
+          '<option value="motion_stop"'+(trigType==='motion_stop'?' selected':'')+'>Motion stopped</option>' +
+          '<option value="door_open"'+(trigType==='door_open'?' selected':'')+'>Door opens</option>' +
+          '<option value="door_close"'+(trigType==='door_close'?' selected':'')+'>Door closes</option>' +
+          '<option value="time"'+(trigType==='time'?' selected':'')+'>Every day at time</option>' +
+        '</select></div>' +
+      '<div id="ce-trig-extra"></div>' +
+      '<hr class="sep">' +
+      '<div style="font-size:11px;font-weight:700;color:#8e8e93;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Conditions (optional)</div>' +
+      '<div id="ce-conds"></div>' +
+      '<button style="width:100%;padding:8px;border:1.5px dashed #c7c7cc;border-radius:8px;background:none;color:#8e8e93;cursor:pointer;font-size:13px;margin-bottom:12px" onclick="CustomEditor._addCond()">+ Add condition</button>' +
+      '<hr class="sep">' +
+      '<div style="font-size:11px;font-weight:700;color:#8e8e93;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Actions</div>' +
+      '<div id="ce-acts"></div>' +
+      '<button style="width:100%;padding:8px;border:1.5px dashed #c7c7cc;border-radius:8px;background:none;color:#8e8e93;cursor:pointer;font-size:13px" onclick="CustomEditor._addAct()">+ Add action</button>';
+
+    setTimeout(function() {
+      CustomEditor._trigChanged(a.trigger);
+      CustomEditor._renderConds();
+      CustomEditor._renderActs();
+    }, 0);
+    return html;
+  },
+
+  _trigChanged: function(existing) {
+    existing = existing || {};
+    var type = el('ce-trig-type') ? el('ce-trig-type').value : 'motion_start';
+    var allOpts = State.devices.map(function(d) {
+      return '<option value="'+esc(d.id)+'"'+(d.id===existing.deviceId?' selected':'')+'>'+esc(d.name)+(d.zone?' ('+esc(d.zone)+')':'')+' ['+esc(d.class||'')+']</option>';
+    }).join('');
+    var extra = '';
+    if (type === 'time') {
+      extra = '<div class="fgrp"><label class="flabel">Time</label><input class="finput" type="text" pattern="\d{2}:\d{2}" placeholder="HH:MM" id="ce-t-time" value="'+(existing.time||'08:00')+'"/></div>';
+    } else {
+      extra = '<div class="fgrp"><label class="flabel">Device</label><select class="finput" id="ce-t-dev"><option value="">— Select —</option>'+allOpts+'</select></div>';
+    }
+    if (el('ce-trig-extra')) el('ce-trig-extra').innerHTML = extra;
+  },
+
+  _getTrigger: function() {
+    var type = el('ce-trig-type').value;
+    if (type === 'time') return { type: type, time: (el('ce-t-time')||{}).value||'' };
+    return { type: type, deviceId: (el('ce-t-dev')||{}).value||'' };
+  },
+
+  _renderConds: function() {
+    if (!el('ce-conds')) return;
+    el('ce-conds').innerHTML = CustomEditor.conds.map(function(c, i) {
+      if (c.type === 'time_between') {
+        return '<div class="fgrp" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">' +
+          '<span style="font-size:13px;color:#8e8e93">Between</span>' +
+          '<input type="text" pattern="\d{2}:\d{2}" placeholder="HH:MM" style="border:1.5px solid #e0e0e5;border-radius:8px;padding:6px;font-size:13px" value="'+(c.from||'08:00')+'" oninput="CustomEditor.conds['+i+'].from=this.value"/>' +
+          '<span style="font-size:13px;color:#8e8e93">and</span>' +
+          '<input type="text" pattern="\d{2}:\d{2}" placeholder="HH:MM" style="border:1.5px solid #e0e0e5;border-radius:8px;padding:6px;font-size:13px" value="'+(c.to||'22:00')+'" oninput="CustomEditor.conds['+i+'].to=this.value"/>' +
+          '<button onclick="CustomEditor._rmCond('+i+')" style="background:none;border:none;color:#ff3b30;cursor:pointer;font-size:18px">×</button>' +
+        '</div>';
+      }
+      return '';
+    }).join('');
+  },
+
+  _addCond: function() {
+    CustomEditor.conds.push({ type: 'time_between', from: '08:00', to: '22:00' });
+    CustomEditor._renderConds();
+  },
+  _rmCond: function(i) { CustomEditor.conds.splice(i,1); CustomEditor._renderConds(); },
+
+  _renderActs: function() {
+    if (!el('ce-acts')) return;
+    var allOpts = function(selId) {
+      return State.devices.map(function(d) {
+        return '<option value="'+esc(d.id)+'"'+(d.id===selId?' selected':'')+'>'+esc(d.name)+(d.zone?' ('+esc(d.zone)+')':'')+' ['+esc(d.class||'')+']</option>';
+      }).join('');
+    };
+    el('ce-acts').innerHTML = CustomEditor.acts.map(function(a, i) {
+      var typeOpts = [['turn_on','Turn ON'],['turn_off','Turn OFF'],['set_dim','Set brightness'],
+        ['set_color_temp','Set color temp'],['notify','Notification'],['wait','Wait (seconds)']].map(function(p) {
+        return '<option value="'+p[0]+'"'+(a.type===p[0]?' selected':'')+'>'+p[1]+'</option>';
+      }).join('');
+      var extra = '';
+      switch(a.type) {
+        case 'turn_on': case 'turn_off':
+          extra = '<select style="flex:1;border:1.5px solid #e0e0e5;border-radius:8px;padding:6px;font-size:13px" onchange="CustomEditor.acts['+i+'].deviceId=this.value"><option value="">— Device —</option>'+allOpts(a.deviceId)+'</select>'; break;
+        case 'set_dim': case 'set_color_temp':
+          extra = '<select style="flex:1;border:1.5px solid #e0e0e5;border-radius:8px;padding:6px;font-size:13px" onchange="CustomEditor.acts['+i+'].deviceId=this.value"><option value="">— Device —</option>'+allOpts(a.deviceId)+'</select>' +
+            '<input type="number" min="0" max="1" step="0.05" value="'+(a.value!=null?a.value:1)+'" style="width:65px;border:1.5px solid #e0e0e5;border-radius:8px;padding:6px;font-size:13px" oninput="CustomEditor.acts['+i+'].value=parseFloat(this.value)"/>'; break;
+        case 'notify':
+          extra = '<input type="text" value="'+esc(a.message||'')+'" placeholder="Message" style="flex:1;border:1.5px solid #e0e0e5;border-radius:8px;padding:6px;font-size:13px" oninput="CustomEditor.acts['+i+'].message=this.value"/>'; break;
+        case 'wait':
+          extra = '<input type="number" min="1" value="'+(a.seconds||5)+'" style="width:70px;border:1.5px solid #e0e0e5;border-radius:8px;padding:6px;font-size:13px" oninput="CustomEditor.acts['+i+'].seconds=parseInt(this.value)"/> <span style="font-size:13px;color:#8e8e93">sec</span>'; break;
+      }
+      return '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:#f2f2f7;border-radius:10px;padding:10px;margin-bottom:8px">' +
+        '<select style="border:1.5px solid #e0e0e5;border-radius:8px;padding:6px;font-size:13px" onchange="CustomEditor._actType('+i+',this.value)">'+typeOpts+'</select>' +
+        extra +
+        '<button onclick="CustomEditor._rmAct('+i+')" style="background:none;border:none;color:#ff3b30;cursor:pointer;font-size:20px;margin-left:auto">×</button>' +
+      '</div>';
+    }).join('');
+  },
+
+  _addAct: function() { CustomEditor.acts.push({ type:'turn_on', deviceId:'' }); CustomEditor._renderActs(); },
+  _rmAct: function(i) { CustomEditor.acts.splice(i,1); CustomEditor._renderActs(); },
+  _actType: function(i, type) {
+    var prev = CustomEditor.acts[i];
+    var n = { type: type };
+    if (type !== 'notify' && type !== 'wait') n.deviceId = prev.deviceId || '';
+    if (type === 'set_dim' || type === 'set_color_temp') n.value = 1;
+    if (type === 'notify') n.message = '';
+    if (type === 'wait') n.seconds = 5;
+    CustomEditor.acts[i] = n;
+    CustomEditor._renderActs();
+  },
+
+  save: async function() {
+    var name = el('ce-name').value.trim();
+    if (!name) { window._hAlert('Please enter a name.'); return; }
+    if (!CustomEditor.acts.length) { window._hAlert('Add at least one action.'); return; }
+    var auto = {
+      id: (CustomEditor.idx >= 0 && State.automations[CustomEditor.idx].id) || TModal._mkId(),
+      name: name, enabled: CustomEditor.idx >= 0 ? State.automations[CustomEditor.idx].enabled : true,
+      trigger: CustomEditor._getTrigger(),
+      conditions: JSON.parse(JSON.stringify(CustomEditor.conds)),
+      actions: JSON.parse(JSON.stringify(CustomEditor.acts))
+    };
+    if (CustomEditor.idx >= 0) { State.automations[CustomEditor.idx] = auto; }
+    else { State.automations.push(auto); }
+    TModal.close();
+    await AutoList.persist('Saved');
+  }
+};
+
+// ── Override modal ──────────────────────────────────────────────────────────────
+var OverrideModal = {
+  _gid: null,
+
+  openByIndex: function(gi) {
+    var computed = computeGroups();
+    var g = computed.groups[gi];
+    if (!g) return;
+    OverrideModal.open(g.id, g.name || 'Automation');
+  },
+
+  open: function(gid, name) {
+    this._gid = gid;
+    el('ov-title').textContent = '⏸  ' + (name || 'Automation');
+    var expiresAt = (State.overrides || {})[gid];
+    var hasActive = expiresAt && Date.now() < expiresAt;
+    if (hasActive) {
+      var rem  = expiresAt - Date.now();
+      var h    = Math.floor(rem / 3600000);
+      var m    = Math.floor((rem % 3600000) / 60000);
+      var disp = h > 0 ? h + 'h ' + m + 'm remaining' : m + 'm remaining';
+      el('ov-active-label').textContent = '⏸ Override active — ' + disp;
+      el('ov-resume-wrap').style.display = '';
+    } else {
+      el('ov-resume-wrap').style.display = 'none';
+    }
+    el('ov-overlay').classList.add('on');
+  },
+
+  bgClose: function(e) { if (e.target === el('ov-overlay')) this.close(); },
+  close:   function()  { el('ov-overlay').classList.remove('on'); },
+
+  set: function(mins) {
+    var expiresAt = Date.now() + mins * 60 * 1000;
+    var ov = Object.assign({}, State.overrides || {});
+    ov[this._gid] = expiresAt;
+    State.overrides = ov;
+    window._hSet('_overrides', JSON.stringify(ov)).catch(function(){});
+    this.close();
+    Countdown.tick();
+  },
+
+  setMidnight: function() {
+    var now = new Date();
+    var midnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 0).getTime();
+    var ov = Object.assign({}, State.overrides || {});
+    ov[this._gid] = midnight;
+    State.overrides = ov;
+    window._hSet('_overrides', JSON.stringify(ov)).catch(function(){});
+    this.close();
+    Countdown.tick();
+  },
+
+  cancel: function() {
+    var ov = Object.assign({}, State.overrides || {});
+    delete ov[this._gid];
+    State.overrides = ov;
+    window._hSet('_overrides', JSON.stringify(ov)).catch(function(){});
+    this.close();
+    Countdown.tick();
+  }
+};
+
+// Override TModal.save to handle custom editor
+var _origSave = TModal.save;
+TModal.save = async function() {
+  if (TModal.type === 'custom') { await CustomEditor.save(); return; }
+  await _origSave.call(TModal);
+};
+
+// ── Lights tab (removed from nav — kept only for modal inner tab) ───────────────
+var LightsTab = {
+  _saveTimer: null,
+
+  render: function() {
+    var computed = computeGroups();
+    var html = '';
+
+    computed.groups.forEach(function(g) {
+      // Collect unique light deviceIds that are turned ON in this group
+      var lightIds = [], seen = {};
+      g.items.forEach(function(it) {
+        (it.a.actions || []).forEach(function(ac) {
+          if (ac.type === 'turn_on' && ac.deviceId && !seen[ac.deviceId]) {
+            seen[ac.deviceId] = true;
+            lightIds.push(ac.deviceId);
+          }
+        });
+      });
+      if (!lightIds.length) return;
+
+      var icons = { motion_lights:'🏃', smart_dim:'🌙', door_lights:'🚪', schedule:'⏰', switch:'🔘' };
+      html += '<div class="sec-hdr">' + esc((icons[g.type] || '⚙️') + '  ' + (g.name || 'Automation')) + '</div>';
+      html += '<div class="auto-list-wrap">';
+
+      lightIds.forEach(function(deviceId) {
+        var dname   = devName(deviceId) || deviceId;
+        var safeGid = g.id.replace(/[^a-zA-Z0-9]/g, '_');
+        var safeDid = deviceId.replace(/[^a-zA-Z0-9]/g, '_');
+        var prefix  = 'lt_' + safeGid + '_' + safeDid;
+
+        html += '<div class="lt-card">';
+        html += '<div class="lt-name">💡 ' + esc(dname) + '</div>';
+
+        if (g.type === 'smart_dim') {
+          // Two sliders: Day and Night
+          var modes = [
+            { key: 'day',   label: '☀️ Day',   part: ' — Day'   },
+            { key: 'night', label: '🌙 Night', part: ' — Night' }
+          ];
+          modes.forEach(function(m) {
+            var modeItem = g.items.find(function(it) { return it.a.name && it.a.name.indexOf(m.part) !== -1; });
+            var dimAc = modeItem && (modeItem.a.actions || []).find(function(ac) {
+              return (ac.type === 'set_dim' || ac.type === 'fade_to') && ac.deviceId === deviceId;
+            });
+            var pct = dimAc ? Math.round((dimAc.value || 1) * 100) : 100;
+            var sid = prefix + '_' + m.key;
+            var vid = sid + '_v';
+            html += '<div class="lt-row">' +
+              '<span class="lt-label">' + m.label + '</span>' +
+              '<div class="slider-row" style="flex:1;margin-top:0">' +
+                '<input type="range" id="' + sid + '" min="1" max="100" value="' + pct + '"' +
+                  ' oninput="document.getElementById(\'' + vid + '\').textContent=this.value+\'%\';' +
+                  'LightsTab.updateDim(' + JSON.stringify(g.id) + ',' + JSON.stringify(deviceId) + ',' + JSON.stringify(m.key) + ',parseInt(this.value))">' +
+                '<span class="slider-val" id="' + vid + '">' + pct + '%</span>' +
+              '</div>' +
+            '</div>';
+          });
+        } else {
+          // Single brightness slider (motion, door, switch)
+          var dimAc = null;
+          g.items.forEach(function(it) {
+            if (!dimAc) dimAc = (it.a.actions || []).find(function(ac) {
+              return (ac.type === 'set_dim' || ac.type === 'fade_to') && ac.deviceId === deviceId;
+            });
+          });
+          var pct = dimAc ? Math.round((dimAc.value || 1) * 100) : 100;
+          var sid = prefix + '_on';
+          var vid = sid + '_v';
+          html += '<div class="lt-row">' +
+            '<span class="lt-label">💡 ON</span>' +
+            '<div class="slider-row" style="flex:1;margin-top:0">' +
+              '<input type="range" id="' + sid + '" min="1" max="100" value="' + pct + '"' +
+                ' oninput="document.getElementById(\'' + vid + '\').textContent=this.value+\'%\';' +
+                'LightsTab.updateDim(' + JSON.stringify(g.id) + ',' + JSON.stringify(deviceId) + ',\'on\',parseInt(this.value))">' +
+              '<span class="slider-val" id="' + vid + '">' + pct + '%</span>' +
+            '</div>' +
+          '</div>';
+        }
+
+        html += '</div>'; // lt-card
+      });
+
+      html += '</div>'; // auto-list-wrap
+    });
+
+    if (!html) {
+      html = '<div class="empty"><div class="icon">💡</div><p>No lights configured yet.<br>Add a Motion, Smart Dim, Door, or Switch automation first.</p></div>';
+    }
+    el('lights-list').innerHTML = html;
+  },
+
+  updateDim: function(groupId, deviceId, mode, pct) {
+    var val = pct / 100;
+    State.automations.forEach(function(a) {
+      if (a._groupId !== groupId) return;
+      // For smart_dim, only update the Day or Night part
+      if (mode === 'day'   && !(a.name && a.name.indexOf(' — Day')   !== -1)) return;
+      if (mode === 'night' && !(a.name && a.name.indexOf(' — Night') !== -1)) return;
+      // Skip automations that don't touch this device at all
+      var hasDev = (a.actions || []).some(function(ac) { return ac.deviceId === deviceId; });
+      if (!hasDev) return;
+      // Update existing dim action
+      var dimAc = (a.actions || []).find(function(ac) {
+        return (ac.type === 'set_dim' || ac.type === 'fade_to') && ac.deviceId === deviceId;
+      });
+      if (dimAc) {
+        dimAc.value = val;
+      } else if (val < 1) {
+        // Insert set_dim right after the turn_on for this device
+        var toIdx = (a.actions || []).findIndex(function(ac) {
+          return ac.type === 'turn_on' && ac.deviceId === deviceId;
+        });
+        if (toIdx >= 0) a.actions.splice(toIdx + 1, 0, { type: 'set_dim', deviceId: deviceId, value: val });
+      }
+    });
+    clearTimeout(LightsTab._saveTimer);
+    LightsTab._saveTimer = setTimeout(function() {
+      AutoList.persist('Dim saved').catch(function(){});
+    }, 800);
+  }
+};
+
+// ── Test tab ───────────────────────────────────────────────────────────────────
+var TestTab = {
+
+  render: function() {
+    // Automation list with Run buttons
+    var list = el('test-auto-list');
+    var computed = computeGroups();
+    var groups  = computed.groups;
+    var orphans = computed.orphans;
+
+    if (!groups.length && !orphans.length) {
+      list.innerHTML = '<div class="empty"><div class="icon">⚡</div><p>No automations yet.</p></div>';
+    } else {
+      var html = '<div class="auto-list-wrap">';
+      groups.forEach(function(g, gi) {
+        html += '<div class="card">' +
+          '<div class="card-body" style="flex:1">' +
+            '<div class="card-name">' + esc(g.name || 'Automation') + '</div>' +
+            '<div class="card-sub">' + esc(groupSummary(g)) + '</div>' +
+          '</div>' +
+          '<button class="btn btn-blue" style="padding:6px 14px;font-size:13px" onclick="TestTab.runGroup(' + gi + ')">▶ Run</button>' +
+        '</div>';
+      });
+      orphans.forEach(function(item) {
+        html += '<div class="card">' +
+          '<div class="card-body" style="flex:1">' +
+            '<div class="card-name">' + esc(item.a.name || 'Unnamed') + '</div>' +
+            '<div class="card-sub">' + esc(AutoList._singleSummary(item.a)) + '</div>' +
+          '</div>' +
+          '<button class="btn btn-blue" style="padding:6px 14px;font-size:13px" onclick="TestTab.runSingle(' + item.i + ')">▶ Run</button>' +
+        '</div>';
+      });
+      html += '</div>';
+      list.innerHTML = html;
+    }
+
+    // Device selector — all controllable devices
+    var sel = el('test-dev-sel');
+    var saved = sel.value;
+    var controllable = State.devices.filter(function(d) {
+      return d.capabilities && (d.capabilities.indexOf('onoff') !== -1 || d.capabilities.indexOf('dim') !== -1);
+    });
+    var zones = {}, noZone = [];
+    controllable.forEach(function(d) {
+      if (d.zone) { if (!zones[d.zone]) zones[d.zone] = []; zones[d.zone].push(d); }
+      else noZone.push(d);
+    });
+    var opts = '<option value="">— Select device —</option>';
+    Object.keys(zones).sort().forEach(function(z) {
+      opts += '<optgroup label="' + esc(z) + '">';
+      zones[z].forEach(function(d) { opts += '<option value="' + esc(d.id) + '">' + esc(d.name) + '</option>'; });
+      opts += '</optgroup>';
+    });
+    noZone.forEach(function(d) { opts += '<option value="' + esc(d.id) + '">' + esc(d.name) + '</option>'; });
+    sel.innerHTML = opts;
+    if (saved) sel.value = saved;
+  },
+
+  runGroup: async function(gi) {
+    var computed = computeGroups();
+    var g = computed.groups[gi];
+    var allActions = [];
+    g.items.forEach(function(it) {
+      (it.a.actions || []).forEach(function(ac) { allActions.push(ac); });
+    });
+    await TestTab._run(allActions, g.name || 'Automation');
+  },
+
+  runSingle: async function(i) {
+    var a = State.automations[i];
+    await TestTab._run(a.actions || [], a.name || 'Automation');
+  },
+
+  runDevice: async function() {
+    var devId = el('test-dev-sel').value;
+    if (!devId) { window._hAlert('Please select a device first.'); return; }
+    var act   = el('test-act-sel').value;
+    var actions = [];
+    if (act === 'turn_on')  { actions = [{ type: 'turn_on',  deviceId: devId }]; }
+    if (act === 'turn_off') { actions = [{ type: 'turn_off', deviceId: devId }]; }
+    if (act === 'dim_10')   { actions = [{ type: 'turn_on', deviceId: devId }, { type: 'set_dim', deviceId: devId, value: 0.1 }]; }
+    if (act === 'dim_30')   { actions = [{ type: 'turn_on', deviceId: devId }, { type: 'set_dim', deviceId: devId, value: 0.3 }]; }
+    if (act === 'dim_50')   { actions = [{ type: 'turn_on', deviceId: devId }, { type: 'set_dim', deviceId: devId, value: 0.5 }]; }
+    if (act === 'dim_100')  { actions = [{ type: 'turn_on', deviceId: devId }, { type: 'set_dim', deviceId: devId, value: 1.0 }]; }
+    var dname = devName(devId) || devId;
+    await TestTab._run(actions, 'Device: ' + dname);
+  },
+
+  _run: async function(actions, label) {
+    var resultEl = el('test-result');
+    resultEl.innerHTML = '<div class="loader">Running…</div>';
+    var ts = Date.now();
+    try {
+      await window._hSet('_testRequest', JSON.stringify({ actions: actions, name: label, ts: ts }));
+      // Wait for backend to process
+      await new Promise(function(r) { setTimeout(r, 2500); });
+      var raw = await window._hGet('_testResult');
+      var res = raw ? (typeof raw === 'string' ? JSON.parse(raw) : raw) : null;
+      if (!res || res.reqTs !== ts) {
+        resultEl.innerHTML = '<p style="color:#ff3b30;font-size:14px">⚠️ No response from app. Check the Logs tab for errors.</p>';
+        return;
+      }
+      // Build per-light final state from the actions list
+      var lightStates = {};
+      actions.forEach(function(a, idx) {
+        if (!a.deviceId) return;
+        if (!lightStates[a.deviceId]) lightStates[a.deviceId] = { on: null, dim: null, err: false };
+        if (a.type === 'turn_on')                              lightStates[a.deviceId].on  = true;
+        if (a.type === 'turn_off' || a.type === 'fade_off')    lightStates[a.deviceId].on  = false;
+        if (a.type === 'set_dim'  || a.type === 'fade_to')   { lightStates[a.deviceId].dim = a.value != null ? a.value : null; }
+        if (res.results[idx] && !res.results[idx].ok)          lightStates[a.deviceId].err = true;
+      });
+
+      var lightIds = Object.keys(lightStates);
+      var bulbsHtml = '';
+      if (lightIds.length) {
+        bulbsHtml = '<div class="light-grid">';
+        lightIds.forEach(function(id) {
+          var s   = lightStates[id];
+          var nm  = devName(id) || id.slice(-6);
+          var isOn = s.on !== false;
+          var pct  = s.dim != null ? Math.round(s.dim * 100) : null;
+          var icon  = s.err ? '❌' : (isOn ? '💡' : '🔌');
+          var state = s.err ? 'Error' : (isOn ? (pct != null ? pct + '%' : 'ON') : 'OFF');
+          var col   = s.err ? '#ff3b30' : (isOn ? '#ff9500' : '#8e8e93');
+          bulbsHtml += '<div class="light-tile">' +
+            '<span class="light-tile-icon">' + icon + '</span>' +
+            '<div class="light-tile-name">' + esc(nm) + '</div>' +
+            '<div class="light-tile-state" style="color:' + col + '">' + esc(state) + '</div>' +
+          '</div>';
+        });
+        bulbsHtml += '</div>';
+      }
+
+      var allOk = res.results.every(function(r) { return r.ok; });
+      var rows = res.results.map(function(r, idx) {
+        var a = actions[idx] || {};
+        return '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #f2f2f7">' +
+          '<span style="font-size:14px">' + (r.ok ? '✅' : '❌') + '</span>' +
+          '<div style="flex:1;font-size:12px">' +
+            '<span style="font-weight:600">' + esc(r.action || a.type || '') + '</span>' +
+            (a.deviceId ? ' → <span style="color:#8e8e93">' + esc(devName(a.deviceId) || a.deviceId) + '</span>' : '') +
+            (r.error ? '<div style="color:#ff3b30;font-size:11px">' + esc(r.error) + '</div>' : '') +
+          '</div>' +
+        '</div>';
+      });
+      resultEl.innerHTML =
+        '<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">' +
+          '<span style="font-size:18px">' + (allOk ? '✅' : '⚠️') + '</span>' +
+          '<div style="font-size:14px;font-weight:700">' + esc(label) + '</div>' +
+        '</div>' +
+        bulbsHtml +
+        (rows.length ? '<div>' + rows.join('') + '</div>' : '<p style="color:#8e8e93;font-size:14px">No actions were run.</p>');
+    } catch(e) {
+      resultEl.innerHTML = '<p style="color:#ff3b30;font-size:14px">Error: ' + esc(e.message) + '</p>';
+    }
+  }
+};
+
+// ── Devices tab ────────────────────────────────────────────────────────────────
+var DevTab = {
+  _activeFilters: [],   // empty = All
+
+  _meta: {
+    light:          { icon: '💡', label: 'Lights' },
+    sensor:         { icon: '📡', label: 'Sensors' },
+    socket:         { icon: '🔌', label: 'Sockets' },
+    button:         { icon: '🔘', label: 'Buttons' },
+    remote:         { icon: '🎮', label: 'Remotes' },
+    speaker:        { icon: '🔊', label: 'Speakers' },
+    thermostat:     { icon: '🌡', label: 'Thermostats' },
+    lock:           { icon: '🔒', label: 'Locks' },
+    camera:         { icon: '📷', label: 'Cameras' },
+    blinds:         { icon: '🪟', label: 'Blinds' },
+    fan:            { icon: '💨', label: 'Fans' },
+    airconditioning:{ icon: '❄️',  label: 'AC' },
+    heater:         { icon: '🔥', label: 'Heaters' },
+    evcharger:      { icon: '⚡', label: 'EV Charger' },
+    washer:         { icon: '🫧', label: 'Washers' },
+    other:          { icon: '⚙️', label: 'Other' }
+  },
+
+  _classInfo: function(cls) {
+    return DevTab._meta[cls] || { icon: '⚙️', label: cls.charAt(0).toUpperCase() + cls.slice(1) };
+  },
+
+  _visibleDevices: function() {
+    var af = DevTab._activeFilters;
+    if (!af.length) return State.devices;
+    var knownClasses = Object.keys(DevTab._meta).filter(function(k){ return k !== 'other'; });
+    return State.devices.filter(function(d) {
+      var cls = d.class || 'other';
+      if (af.indexOf(cls) !== -1) return true;
+      if (af.indexOf('other') !== -1 && knownClasses.indexOf(cls) === -1) return true;
+      return false;
+    });
+  },
+
+  render: function() {
+    var list = el('device-list');
+    if (!State.devices.length) {
+      list.innerHTML = '<div class="empty"><div class="icon">📡</div><p>No devices cached yet.<br>Press <strong>Refresh</strong> to load them from Homey.</p></div>';
+      DevTab._renderFilterBar([]);
+      return;
+    }
+
+    var classes = [];
+    State.devices.forEach(function(d) {
+      var cls = d.class || 'other';
+      if (classes.indexOf(cls) === -1) classes.push(cls);
+    });
+    classes.sort(function(a,b) {
+      var order = ['light','sensor','button','remote','socket','thermostat','lock','camera','blinds','fan','airconditioning','heater','evcharger','washer','speaker','other'];
+      return (order.indexOf(a)+99) - (order.indexOf(b)+99);
+    });
+    DevTab._renderFilterBar(classes);
+
+    var visible = DevTab._visibleDevices();
+    var zones = {}, noZone = [];
+    visible.forEach(function(d) {
+      if (d.zone) { if (!zones[d.zone]) zones[d.zone] = []; zones[d.zone].push(d); }
+      else noZone.push(d);
+    });
+
+    var renderGroup = function(devs) {
+      return devs.map(function(d) {
+        var checked = State.pinnedDevices.indexOf(d.id) !== -1 ? ' checked' : '';
+        var info = DevTab._classInfo(d.class || 'other');
+        return '<label class="device-card" style="cursor:pointer;display:flex;align-items:center;gap:12px">' +
+          '<input type="checkbox" value="' + esc(d.id) + '"' + checked + ' onchange="DevTab.toggle(this.value,this.checked)" style="width:18px;height:18px;flex-shrink:0;accent-color:var(--ea-accent)">' +
+          '<div class="device-card-info" style="flex:1">' +
+            '<div class="device-card-name">' + info.icon + ' ' + esc(d.name) + '</div>' +
+            '<div class="device-card-sub">' + esc(info.label) + (d.zone ? ' · ' + esc(d.zone) : '') + '</div>' +
+          '</div>' +
+          '<span class="badge" style="' + (d.available ? 'background:#34c759' : 'background:#8e8e93') + ';color:#fff;border:none">' + (d.available ? 'Online' : 'Offline') + '</span>' +
+        '</label>';
+      }).join('');
+    };
+
+    var html = '';
+    Object.keys(zones).sort().forEach(function(z) {
+      html += '<div class="sec-hdr">' + esc(z) + '</div>' + renderGroup(zones[z]);
+    });
+    if (noZone.length) { if (Object.keys(zones).length) html += '<div class="sec-hdr">Other</div>'; html += renderGroup(noZone); }
+    if (!html) html = '<div style="padding:20px 0;text-align:center;color:var(--ea-sub);font-size:14px">No devices in this category.</div>';
+    list.innerHTML = html;
+  },
+
+  _renderFilterBar: function(classes) {
+    var bar = el('dev-filter-bar');
+    if (!bar) return;
+    var af = DevTab._activeFilters;
+    var html = classes.map(function(cls) {
+      var info = DevTab._classInfo(cls);
+      var active = af.indexOf(cls) !== -1;
+      return '<button onclick="DevTab.toggleFilter(\'' + cls + '\')" style="' +
+        'display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:20px;border:2px solid ' +
+        (active ? 'var(--ea-accent)' : 'var(--ea-border)') + ';background:' +
+        (active ? 'var(--ea-accent)' : 'var(--ea-surface)') + ';color:' +
+        (active ? '#fff' : 'var(--ea-text)') + ';font-size:13px;font-weight:600;cursor:pointer;transition:.15s">' +
+        info.icon + ' ' + info.label +
+      '</button>';
+    }).join('');
+    bar.innerHTML = html;
+  },
+
+  toggleFilter: function(cls) {
+    var i = DevTab._activeFilters.indexOf(cls);
+    if (i === -1) DevTab._activeFilters.push(cls);
+    else DevTab._activeFilters.splice(i, 1);
+    DevTab.render();
+  },
+
+  toggle: function(deviceId, checked) {
+    if (checked) {
+      if (State.pinnedDevices.indexOf(deviceId) === -1) State.pinnedDevices.push(deviceId);
+    } else {
+      State.pinnedDevices = State.pinnedDevices.filter(function(id){ return id !== deviceId; });
+    }
+    window._hSet('_pinnedDevices', JSON.stringify(State.pinnedDevices)).catch(function(){});
+  },
+
+  selectVisible: function() {
+    DevTab._visibleDevices().forEach(function(d) {
+      if (State.pinnedDevices.indexOf(d.id) === -1) State.pinnedDevices.push(d.id);
+    });
+    window._hSet('_pinnedDevices', JSON.stringify(State.pinnedDevices)).catch(function(){});
+    DevTab.render();
+  },
+
+  uncheckVisible: function() {
+    var visIds = DevTab._visibleDevices().map(function(d){ return d.id; });
+    State.pinnedDevices = State.pinnedDevices.filter(function(id){ return visIds.indexOf(id) === -1; });
+    window._hSet('_pinnedDevices', JSON.stringify(State.pinnedDevices)).catch(function(){});
+    DevTab.render();
+  },
+
+  selectNone: function() {
+    State.pinnedDevices = [];
+    window._hSet('_pinnedDevices', JSON.stringify(State.pinnedDevices)).catch(function(){});
+    DevTab.render();
+  },
+
+  refresh: async function() {
+    var btn = el('btn-refresh-dev');
+    btn.textContent = 'Refreshing…'; btn.disabled = true;
+    try {
+      await window._hSet('_refreshDevices', Date.now());
+      await new Promise(function(r) { setTimeout(r, 2500); });
+      var raw = await window._hGet('_deviceCache');
+      State.devices = raw ? (typeof raw === 'string' ? JSON.parse(raw) : raw) : [];
+      DevTab.render();
+    } catch(e) {
+      el('device-list').innerHTML = '<div class="loader" style="color:#ff3b30">Error: ' + e.message + '</div>';
+    } finally { btn.textContent = 'Refresh'; btn.disabled = false; }
+  }
+};
+
+// ── 24h time picker helpers (dropdown) ──────────────────────────────────────────
+function mkTimePicker(id, defaultVal) {
+  var parts = (defaultVal || '00:00').split(':');
+  var h = Math.max(0, Math.min(23, parseInt(parts[0]) || 0));
+  var rawM = Math.max(0, Math.min(59, parseInt(parts[1]) || 0));
+  var m = Math.round(rawM / 5) * 5; if (m >= 60) m = 55;
+  var hOpts = '', mOpts = '';
+  for (var i = 0; i < 24; i++) {
+    var hv = String(i).padStart(2,'0');
+    hOpts += '<option value="' + hv + '"' + (i === h ? ' selected' : '') + '>' + hv + '</option>';
+  }
+  for (var j = 0; j < 60; j += 5) {
+    var mv = String(j).padStart(2,'0');
+    mOpts += '<option value="' + mv + '"' + (j === m ? ' selected' : '') + '>' + mv + '</option>';
+  }
+  return '<div class="tp-wrap">' +
+    '<select class="tp-sel" id="' + id + '-h" onchange="tpSync(\'' + id + '\')">' + hOpts + '</select>' +
+    '<span class="tp-sep">:</span>' +
+    '<select class="tp-sel" id="' + id + '-m" onchange="tpSync(\'' + id + '\')">' + mOpts + '</select>' +
+    '<input type="hidden" id="' + id + '" value="' + String(h).padStart(2,'0') + ':' + String(Math.round(m/5)*5).padStart(2,'0') + '">' +
+    '</div>';
+}
+function tpSync(id) {
+  var h = el(id+'-h') ? el(id+'-h').value : '00';
+  var m = el(id+'-m') ? el(id+'-m').value : '00';
+  if (el(id)) el(id).value = h + ':' + m;
+}
+function tpStep() {} // deprecated, kept for compat
+function tpSet(id, val) {
+  var parts = (val || '00:00').split(':');
+  var h = String(Math.max(0, Math.min(23, parseInt(parts[0]) || 0))).padStart(2,'0');
+  var m = parseInt(parts[1]) || 0;
+  m = String(Math.round(m / 5) * 5).padStart(2,'0');
+  if (el(id+'-h')) el(id+'-h').value = h;
+  if (el(id+'-m')) el(id+'-m').value = m;
+  if (el(id))      el(id).value = h + ':' + m;
+}
+
+// ── Logs tab ───────────────────────────────────────────────────────────────────
+var LogTab = {
+  load: async function() {
+    el('log-list').innerHTML = '<div class="loader">Loading…</div>';
+    try {
+      var raw  = await window._hGet('_appLog');
+      var logs = raw ? (typeof raw === 'string' ? JSON.parse(raw) : raw) : [];
+      if (!logs.length) { el('log-list').innerHTML = '<div class="loader">No log entries yet.</div>'; return; }
+      LogTab._logs = logs;
+      el('log-list').innerHTML = logs.map(function(l) {
+        var d  = new Date(l.ts);
+        var ts = d.toLocaleDateString([],{month:'short',day:'numeric'}) + ' ' + d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',hour12:false});
+        return '<div class="log-row">' +
+          '<span class="log-ts">' + ts + '</span>' +
+          '<span class="log-lv ' + esc(l.level) + '">' + esc(l.level) + '</span>' +
+          '<span class="log-msg">' + esc(l.message) + '</span>' +
+        '</div>';
+      }).join('');
+    } catch(e) { el('log-list').innerHTML = '<div class="loader">Error: ' + e.message + '</div>'; }
+  },
+  copy: async function() {
+    if (!LogTab._logs) await LogTab.load();
+    var text = LogTab._logs.map(function(l) {
+      return l.ts + ' [' + l.level + '] ' + l.message;
+    }).join('\n');
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0';
+    document.body.appendChild(ta);
+    ta.focus();
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    alert('Log copied to clipboard');
+  }
+};
+</script>
+</div><!-- #app -->
+</body>
+</html>

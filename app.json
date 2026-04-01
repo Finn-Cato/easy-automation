@@ -1,0 +1,145 @@
+
+{
+  "id": "no.easy.automation",
+  "version": "0.1.0",
+  "compatibility": ">=5.0.0",
+  "sdk": 3,
+  "platforms": ["local", "cloud"],
+  "name": {
+    "en": "Easy Automation",
+    "no": "Easy Automation"
+  },
+  "description": {
+    "en": "Create room automations for lights, doors and more - all configured inside the app, no flows needed.",
+    "no": "Lag romautomasjoner for lys, dører og mer - alt konfigureres inne i appen, ingen flyter nødvendig."
+  },
+  "tags": {
+    "en": ["light", "automation", "room", "motion", "sensor", "door", "garage"],
+    "no": ["lys", "automasjon", "rom", "bevegelse", "sensor", "dor", "garasje"]
+  },
+  "category": ["tools"],
+  "permissions": ["homey:manager:api"],
+  "author": {
+    "name": "Finn Cato Andersen",
+    "email": "fca@finnlyden.no"
+  },
+  "support": "mailto:fca@finnlyden.no",
+  "homepage": "https://github.com/Finn-Cato/easy-automation",
+  "source": "https://github.com/Finn-Cato/easy-automation",
+  "api": {
+    "getDevices": {
+      "method": "GET",
+      "path": "/devices"
+    },
+    "getAutomations": {
+      "method": "GET",
+      "path": "/automations"
+    },
+    "saveAutomations": {
+      "method": "POST",
+      "path": "/automations"
+    },
+    "testAutomation": {
+      "method": "POST",
+      "path": "/test"
+    },
+    "getLogs": {
+      "method": "GET",
+      "path": "/logs"
+    }
+  },
+  "flow": {
+    "actions": [
+      {
+        "id": "run_group",
+        "title": {
+          "en": "Run automation group",
+          "no": "Kjør automasjonsgruppe"
+        },
+        "titleFormatted": {
+          "en": "Run automation group [[group]]",
+          "no": "Kjør automasjonsgruppe [[group]]"
+        },
+        "args": [
+          {
+            "name": "group",
+            "type": "autocomplete",
+            "placeholder": {
+              "en": "Select automation...",
+              "no": "Velg automasjon..."
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "drivers": [
+    {
+      "id": "room",
+      "name": {
+        "en": "Room",
+        "no": "Rom"
+      },
+      "class": "sensor",
+      "platforms": ["local", "cloud"],
+      "capabilities": ["alarm_motion", "onoff"],
+      "capabilitiesOptions": {
+        "alarm_motion": {
+          "title": {
+            "en": "Occupied",
+            "no": "Opptatt"
+          },
+          "setable": false,
+          "getable": true
+        },
+        "onoff": {
+          "title": {
+            "en": "Automation active",
+            "no": "Automasjon aktiv"
+          },
+          "titleTrue": {
+            "en": "Automation enabled",
+            "no": "Automasjon aktivert"
+          },
+          "titleFalse": {
+            "en": "Automation disabled",
+            "no": "Automasjon deaktivert"
+          }
+        }
+      },
+      "pair": [
+        {
+          "id": "start",
+          "navigation": {
+            "next": "add_devices"
+          }
+        },
+        {
+          "id": "add_devices",
+          "template": "add_devices"
+        }
+      ],
+      "settings": [
+        {
+          "id": "motion_timeout",
+          "type": "number",
+          "label": {
+            "en": "Motion timeout (minutes)",
+            "no": "Bevegelsestimeout (minutter)"
+          },
+          "hint": {
+            "en": "Fire the no-motion trigger after this many minutes without motion.",
+            "no": "Utlos ingen-bevegelse-triggeren etter dette antall minutter uten bevegelse."
+          },
+          "value": 5,
+          "min": 1,
+          "max": 120,
+          "units": {
+            "en": "min",
+            "no": "min"
+          }
+        }
+      ]
+    }
+  ]
+}

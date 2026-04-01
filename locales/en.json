@@ -1,0 +1,13 @@
+{
+  "pair": {
+    "title": "Add Room",
+    "description": "Create a virtual room device to track occupancy and automate lights & other devices.",
+    "room_name_label": "Room Name",
+    "timeout_label": "Turn off after no motion for",
+    "timeout_unit": "minutes",
+    "timeout_hint": "The \"No motion\" flow trigger fires after this many minutes without motion.",
+    "add_button": "Add Room",
+    "default_name": "New Room",
+    "error_name": "Please enter a room name."
+  }
+}
