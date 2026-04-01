@@ -1,0 +1,7 @@
+node_modules/
+.git/
+.gitignore
+.homeybuild/
+CLAUDE.md
+*.code-workspace
+*.bak-before-ui-redesign
