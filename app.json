@@ -1,10 +1,12 @@
-
 {
   "id": "no.easy.automation",
   "version": "0.1.0",
   "compatibility": ">=5.0.0",
   "sdk": 3,
-  "platforms": ["local", "cloud"],
+  "platforms": [
+    "local",
+    "cloud"
+  ],
   "name": {
     "en": "Easy Automation",
     "no": "Easy Automation"
@@ -14,11 +16,31 @@
     "no": "Lag romautomasjoner for lys, dører og mer - alt konfigureres inne i appen, ingen flyter nødvendig."
   },
   "tags": {
-    "en": ["light", "automation", "room", "motion", "sensor", "door", "garage"],
-    "no": ["lys", "automasjon", "rom", "bevegelse", "sensor", "dor", "garasje"]
+    "en": [
+      "light",
+      "automation",
+      "room",
+      "motion",
+      "sensor",
+      "door",
+      "garage"
+    ],
+    "no": [
+      "lys",
+      "automasjon",
+      "rom",
+      "bevegelse",
+      "sensor",
+      "dor",
+      "garasje"
+    ]
   },
-  "category": ["tools"],
-  "permissions": ["homey:manager:api"],
+  "category": [
+    "tools"
+  ],
+  "permissions": [
+    "homey:manager:api"
+  ],
   "author": {
     "name": "Finn Cato Andersen",
     "email": "fca@finnlyden.no"
@@ -76,13 +98,23 @@
   "drivers": [
     {
       "id": "room",
+      "images": {
+        "small": "/drivers/room/assets/images/small.jpg",
+        "large": "/drivers/room/assets/images/large.jpg"
+      },
       "name": {
         "en": "Room",
         "no": "Rom"
       },
       "class": "sensor",
-      "platforms": ["local", "cloud"],
-      "capabilities": ["alarm_motion", "onoff"],
+      "platforms": [
+        "local",
+        "cloud"
+      ],
+      "capabilities": [
+        "alarm_motion",
+        "onoff"
+      ],
       "capabilitiesOptions": {
         "alarm_motion": {
           "title": {
