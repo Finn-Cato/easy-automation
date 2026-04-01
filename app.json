@@ -42,6 +42,7 @@
     "small": "/assets/images/small.jpg",
     "large": "/assets/images/large.jpg"
   },
+  "brandColor": "#1565C0",
   "permissions": [
     "homey:manager:api"
   ],
