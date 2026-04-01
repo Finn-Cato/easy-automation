@@ -1,6 +1,6 @@
 {
   "id": "no.easy.automation",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "compatibility": ">=5.0.0",
   "sdk": 3,
   "platforms": [
@@ -40,7 +40,8 @@
   ],
   "images": {
     "small": "/assets/images/small.jpg",
-    "large": "/assets/images/large.jpg"
+    "large": "/assets/images/large.jpg",
+    "xlarge": "/assets/images/xlarge.jpg"
   },
   "brandColor": "#1565C0",
   "permissions": [
@@ -105,7 +106,8 @@
       "id": "room",
       "images": {
         "small": "/drivers/room/assets/images/small.jpg",
-        "large": "/drivers/room/assets/images/large.jpg"
+        "large": "/drivers/room/assets/images/large.jpg",
+        "xlarge": "/drivers/room/assets/images/xlarge.jpg"
       },
       "name": {
         "en": "Room",

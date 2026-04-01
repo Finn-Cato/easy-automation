@@ -2,5 +2,9 @@
   "0.1.1": {
     "en": "Initial release of Easy Automation. More updates coming soon.",
     "no": "Første versjon av Easy Automation. Flere oppdateringer kommer snart."
+  },
+  "0.1.2": {
+    "en": "Added missing XLarge images, updated driver images with white background, and improved README per App Store guidelines.",
+    "no": "La til manglende XLarge-bilder, oppdaterte driverbilder med hvit bakgrunn, og forbedret README i henhold til App Store-retningslinjene."
   }
 }
