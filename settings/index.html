@@ -910,7 +910,10 @@ var AutoList = {
 var Picker = {
   render: function(containerId, selectedIds, cap) {
     var pinned = State.pinnedDevices;
+    var selected = selectedIds || [];
     var list = State.devices.filter(function(d) {
+      // Always include already-selected devices so editing never loses pre-checked lights
+      if (selected.indexOf(d.id) !== -1) return true;
       if (pinned.length && pinned.indexOf(d.id) === -1) return false;
       if (cap && !(d.capabilities && d.capabilities.indexOf(cap) !== -1)) return false;
       return true;
@@ -1084,6 +1087,15 @@ var TModal = {
           el('t-hours-en').checked = true; el('t-hours-wrap').style.display = '';
           tpSet('t-hours-from', hoursCond.from||'07:00'); tpSet('t-hours-to', hoursCond.to||'23:00');
         }
+        if (el('t-ov-en') && onItem._overrideSwitch && onItem._overrideSwitch.deviceId) {
+          el('t-ov-en').checked = true; el('t-ov-wrap').style.display = '';
+          if (el('t-ov-device')) el('t-ov-device').value = onItem._overrideSwitch.deviceId;
+          var _ovB = Math.round((onItem._overrideSwitch.brightness||1)*100);
+          var _ovD = onItem._overrideSwitch.durationMinutes||30;
+          if (el('t-ov-bright')) { el('t-ov-bright').value = _ovB; if(el('t-ov-bval')) el('t-ov-bval').textContent = _ovB+'%'; }
+          if (el('t-ov-dur'))    { el('t-ov-dur').value = _ovD;    if(el('t-ov-durval')) el('t-ov-durval').textContent = _ovD+' min'; }
+          TModal._ovDeviceChanged({ onMapping: onItem._overrideSwitch.onMapping || null, offMapping: onItem._overrideSwitch.offMapping || null });
+        }
         if (el('t-name'))     el('t-name').value = g.name || '';
       }, 0);
 
@@ -1146,6 +1158,16 @@ var TModal = {
           el('t-lux-en').checked = true; el('t-lux-wrap').style.display = '';
           if(el('t-lux-sensor')) el('t-lux-sensor').value = luxCondSD.deviceId;
           if(el('t-lux-max')) { el('t-lux-max').value = luxCondSD.maxLux||50; if(el('t-lux-val')) el('t-lux-val').textContent = (luxCondSD.maxLux||50)+' lx'; }
+        }
+        var _ovItemSD = dayItem._overrideSwitch || nightItem._overrideSwitch;
+        if (el('t-ov-en') && _ovItemSD && _ovItemSD.deviceId) {
+          el('t-ov-en').checked = true; el('t-ov-wrap').style.display = '';
+          if (el('t-ov-device')) el('t-ov-device').value = _ovItemSD.deviceId;
+          var _ovBSD = Math.round((_ovItemSD.brightness||1)*100);
+          var _ovDSD = _ovItemSD.durationMinutes||30;
+          if (el('t-ov-bright')) { el('t-ov-bright').value = _ovBSD; if(el('t-ov-bval')) el('t-ov-bval').textContent = _ovBSD+'%'; }
+          if (el('t-ov-dur'))    { el('t-ov-dur').value = _ovDSD;    if(el('t-ov-durval')) el('t-ov-durval').textContent = _ovDSD+' min'; }
+          TModal._ovDeviceChanged({ onMapping: _ovItemSD.onMapping || null, offMapping: _ovItemSD.offMapping || null });
         }
         if (el('t-name'))    el('t-name').value = g.name || '';
       }, 0);
@@ -1283,7 +1305,21 @@ var TModal = {
                     var savedArgs = m.triggerArgs || {};
                     var argsMatch = JSON.stringify(savedArgs) === JSON.stringify(rowArgs)
                                  || Object.keys(savedArgs).length === 0;
-                    if (argsMatch) { sel.value = m.groupId; break; }
+                    if (argsMatch) {
+                      sel.value = m._isOverride ? ('OVERRIDE:' + m.groupId) : m.groupId;
+                      TModal._swMapChanged(j);
+                      if (m._isOverride) {
+                        var bEl = el('t-sw-ov-bright-' + j);
+                        var dEl = el('t-sw-ov-dur-'    + j);
+                        var bVEl = el('t-sw-ov-bv-'    + j);
+                        var dVEl = el('t-sw-ov-dv-'    + j);
+                        if (bEl)  { bEl.value  = Math.round((m._overrideBright != null ? m._overrideBright : 1) * 100); }
+                        if (dEl)  { dEl.value  = m._overrideDur || 60; }
+                        if (bVEl) { bVEl.textContent = (bEl  ? bEl.value  : '100') + '%'; }
+                        if (dVEl) { dVEl.textContent = (dEl  ? dEl.value  : '60')  + ' min'; }
+                      }
+                      break;
+                    }
                   }
                   j++;
                 }
@@ -1292,7 +1328,7 @@ var TModal = {
               // Standard cap mode — match by trigger type/cap
               g.items.forEach(function(it) {
                 var trig   = it.a.trigger;
-                var runAct = (it.a.actions || []).find(function(a){ return a.type === 'run_group'; });
+                var runAct = (it.a.actions || []).find(function(a){ return a.type === 'run_group' || a.type === 'override_group'; });
                 if (!trig || !runAct) return;
                 var savedKey = trig.type === 'button_key' ? trig.type + ':' + trig.capability : trig.type;
                 var j = 0;
@@ -1301,7 +1337,21 @@ var TModal = {
                   var rowKey = sel.getAttribute('data-trigger-type') === 'button_key'
                     ? sel.getAttribute('data-trigger-type') + ':' + sel.getAttribute('data-cap')
                     : sel.getAttribute('data-trigger-type');
-                  if (rowKey === savedKey) { sel.value = runAct.groupId; break; }
+                  if (rowKey === savedKey) {
+                    sel.value = runAct.type === 'override_group' ? ('OVERRIDE:' + runAct.groupId) : runAct.groupId;
+                    TModal._swMapChanged(j);
+                    if (runAct.type === 'override_group') {
+                      var bEl = el('t-sw-ov-bright-' + j);
+                      var dEl = el('t-sw-ov-dur-'    + j);
+                      var bVEl = el('t-sw-ov-bv-'    + j);
+                      var dVEl = el('t-sw-ov-dv-'    + j);
+                      if (bEl)  { bEl.value  = Math.round((runAct.brightness != null ? runAct.brightness : 1) * 100); }
+                      if (dEl)  { dEl.value  = runAct.durationMinutes || 60; }
+                      if (bVEl) { bVEl.textContent = (bEl  ? bEl.value  : '100') + '%'; }
+                      if (dVEl) { dVEl.textContent = (dEl  ? dEl.value  : '60')  + ' min'; }
+                    }
+                    break;
+                  }
                   j++;
                 }
               });
@@ -1765,6 +1815,10 @@ var TModal = {
     var sensorOpts = sensors.map(function(d) { return '<option value="' + esc(d.id) + '">' + esc(d.name) + (d.zone ? ' ('+esc(d.zone)+')' : '') + '</option>'; }).join('');
     var luxSensors = State.devices.filter(function(d) { return d.capabilities && d.capabilities.indexOf('measure_luminance') !== -1; });
     var luxOpts = luxSensors.map(function(d) { return '<option value="' + esc(d.id) + '">' + esc(d.name) + (d.zone ? ' ('+esc(d.zone)+')' : '') + '</option>'; }).join('');
+    var _ovRaw = State.devices.filter(function(d) { return d.class === 'remote'; });
+    var _ovList = _ovRaw.length ? _ovRaw : State.devices;
+    var _ovListS = _ovList.slice().sort(function(a,b){ var za=a.zone||'',zb=b.zone||''; return za!==zb?za.localeCompare(zb):a.name.localeCompare(b.name); });
+    var ovDevOpts = _ovListS.map(function(d) { return '<option value="' + esc(d.id) + '">' + esc(d.name) + (d.zone ? ' ('+esc(d.zone)+')' : '') + '</option>'; }).join('');
     return '<div class="fgrp"><label class="flabel">Motion sensor</label>' +
         '<select class="finput" id="t-sensor"><option value="">— Select sensor —</option>' + sensorOpts + '</select></div>' +
       '<div class="fgrp"><label class="flabel">Lights to control</label>' +
@@ -1791,6 +1845,17 @@ var TModal = {
         '<div class="fgrp"><label class="flabel">Active from</label>' + mkTimePicker('t-hours-from','07:00') + '</div>' +
         '<div class="fgrp"><label class="flabel">Until</label>' + mkTimePicker('t-hours-to','23:00') + '</div>' +
       '</div>' +
+      '<hr class="sep">' +
+      '<div class="check-row"><input type="checkbox" id="t-ov-en" onchange="el(\'t-ov-wrap\').style.display=this.checked?\'\':\'none\'"><label for="t-ov-en">Button override — press a button to set a custom brightness and pause automation</label></div>' +
+      '<div id="t-ov-wrap" style="display:none">' +
+        '<div class="fgrp"><label class="flabel">Button / switch device</label>' +
+          '<select class="finput" id="t-ov-device" onchange="TModal._ovDeviceChanged()"><option value="">— Select device —</option>' + ovDevOpts + '</select></div>' +
+        '<div id="t-ov-buttons"></div>' +
+        '<div class="fgrp"><label class="flabel">Override brightness</label>' +
+          '<div class="slider-row"><input type="range" id="t-ov-bright" min="10" max="100" value="100" oninput="el(\'t-ov-bval\').textContent=this.value+\'%\'"><span class="slider-val" id="t-ov-bval">100%</span></div></div>' +
+        '<div class="fgrp"><label class="flabel">Override duration</label>' +
+          '<div class="slider-row"><input type="range" id="t-ov-dur" min="5" max="180" value="30" step="5" oninput="el(\'t-ov-durval\').textContent=this.value+\' min\'"><span class="slider-val" id="t-ov-durval">30 min</span></div></div>' +
+      '</div>' +
       '<div class="fgrp" style="margin-top:12px"><label class="flabel">Automation name</label>' +
         '<input class="finput" id="t-name" type="text" placeholder="e.g. Hallway Motion"/></div>';
   },
@@ -1801,6 +1866,10 @@ var TModal = {
     var sensorOpts = sensors.map(function(d) { return '<option value="' + esc(d.id) + '">' + esc(d.name) + (d.zone ? ' ('+esc(d.zone)+')' : '') + '</option>'; }).join('');
     var luxSensors = State.devices.filter(function(d) { return d.capabilities && d.capabilities.indexOf('measure_luminance') !== -1; });
     var luxOpts = luxSensors.map(function(d) { return '<option value="' + esc(d.id) + '">' + esc(d.name) + (d.zone ? ' ('+esc(d.zone)+')' : '') + '</option>'; }).join('');
+    var ovDevicesSD = State.devices.filter(function(d) { return d.class === 'remote'; });
+    var _ovListSD   = ovDevicesSD.length ? ovDevicesSD : State.devices;
+    var _ovListSDS  = _ovListSD.slice().sort(function(a,b){ var za=a.zone||'',zb=b.zone||''; return za!==zb?za.localeCompare(zb):a.name.localeCompare(b.name); });
+    var ovDevOptsSD = _ovListSDS.map(function(d) { return '<option value="' + esc(d.id) + '">' + esc(d.name) + (d.zone ? ' ('+esc(d.zone)+')' : '') + '</option>'; }).join('');
     return '<div class="fgrp"><label class="flabel">Motion sensor</label>' +
         '<select class="finput" id="t-sensor"><option value="">— Select sensor —</option>' + sensorOpts + '</select></div>' +
       '<div class="fgrp"><label class="flabel">Lights to control</label>' +
@@ -1828,6 +1897,17 @@ var TModal = {
       '<div id="t-lux-wrap" style="display:none">' +
         '<div class="fgrp"><label class="flabel">Lux sensor</label><select class="finput" id="t-lux-sensor"><option value="">— Select lux sensor —</option>' + luxOpts + '</select></div>' +
         '<div class="fgrp"><label class="flabel">Maximum lux (only trigger below this)</label><div class="slider-row"><input type="range" id="t-lux-max" min="0" max="500" value="50" oninput="el(\'t-lux-val\').textContent=this.value+\' lx\'"><span class="slider-val" id="t-lux-val">50 lx</span></div></div>' +
+      '</div>' +
+      '<hr class="sep">' +
+      '<div class="check-row"><input type="checkbox" id="t-ov-en" onchange="el(\'t-ov-wrap\').style.display=this.checked?\'\':\'none\'"><label for="t-ov-en">Button override — press a button to set a custom brightness and pause automation</label></div>' +
+      '<div id="t-ov-wrap" style="display:none">' +
+        '<div class="fgrp"><label class="flabel">Button / switch device</label>' +
+          '<select class="finput" id="t-ov-device" onchange="TModal._ovDeviceChanged()"><option value="">— Select device —</option>' + ovDevOptsSD + '</select></div>' +
+        '<div id="t-ov-buttons"></div>' +
+        '<div class="fgrp"><label class="flabel">Override brightness</label>' +
+          '<div class="slider-row"><input type="range" id="t-ov-bright" min="10" max="100" value="100" oninput="el(\'t-ov-bval\').textContent=this.value+\'%\'"><span class="slider-val" id="t-ov-bval">100%</span></div></div>' +
+        '<div class="fgrp"><label class="flabel">Override duration</label>' +
+          '<div class="slider-row"><input type="range" id="t-ov-dur" min="5" max="180" value="30" step="5" oninput="el(\'t-ov-durval\').textContent=this.value+\' min\'"><span class="slider-val" id="t-ov-durval">30 min</span></div></div>' +
       '</div>' +
       '<div class="fgrp" style="margin-top:12px"><label class="flabel">Name prefix (e.g. room name)</label>' +
         '<input class="finput" id="t-name" type="text" placeholder="e.g. Hallway"/></div>';
@@ -1904,6 +1984,40 @@ var TModal = {
       }
     } catch(e) { window._hAlert(e.message); return; }
 
+    // For motion_lights / smart_dim: if there's a flow-card override device, sync Homey Flows
+    if (TModal.type === 'motion_lights' || TModal.type === 'smart_dim') {
+      var onAuto = automations.find(function(a){ return a._overrideSwitch && a._overrideSwitch.deviceId; });
+      if (onAuto && onAuto._overrideSwitch) {
+        var ovSw = onAuto._overrideSwitch;
+        var ovSyncMappings = [];
+        var gidForSync  = automations[0]._groupId;
+        var gnameForSync = automations[0]._groupName || '';
+        if (ovSw.onMapping && ovSw.onMapping.triggerType === 'flow_card') {
+          ovSyncMappings.push({ triggerId: ovSw.onMapping.triggerId, triggerUri: ovSw.onMapping.triggerUri,
+            triggerTitle: ovSw.onMapping.label || ovSw.onMapping.triggerId, triggerArgs: ovSw.onMapping.triggerArgs || {},
+            groupId: gidForSync, groupName: gnameForSync, _actionType: 'override' });
+        }
+        if (ovSw.offMapping && ovSw.offMapping.triggerType === 'flow_card') {
+          ovSyncMappings.push({ triggerId: ovSw.offMapping.triggerId, triggerUri: ovSw.offMapping.triggerUri,
+            triggerTitle: ovSw.offMapping.label || ovSw.offMapping.triggerId, triggerArgs: ovSw.offMapping.triggerArgs || {},
+            groupId: gidForSync, groupName: gnameForSync, _actionType: 'cancel_override' });
+        }
+        if (ovSyncMappings.length) {
+          var existingOvFlowIds = ovSw.flowIds || [];
+          var ovResult = await window._hBridge('_flowSyncReq', '_flowSyncResult', {
+            deviceId: ovSw.deviceId, mappings: ovSyncMappings, existingFlowIds: existingOvFlowIds
+          }, 20000);
+          if (!ovResult.ok) {
+            window._hAlert('Could not create override Homey Flows:\n' + (ovResult.error || 'Unknown error') + '\n\nFix: Go to the Help tab and add a Personal Access Token with Flows permission.');
+          } else {
+            automations.forEach(function(a){
+              if (a._overrideSwitch) a._overrideSwitch.flowIds = ovResult.flowIds || [];
+            });
+          }
+        }
+      }
+    }
+
     // Apply enabled state from the Active toggle
     var enabled = el('tmpl-enabled') ? el('tmpl-enabled').checked : true;
     automations.forEach(function(a){ a.enabled = enabled; });
@@ -1944,10 +2058,16 @@ var TModal = {
     var luxEn     = el('t-lux-en') && el('t-lux-en').checked;
     var luxSensorId = luxEn ? (el('t-lux-sensor') ? el('t-lux-sensor').value : '') : null;
     var luxMax    = luxEn ? parseInt(el('t-lux-max') ? el('t-lux-max').value : 50) : null;
+    var ovEn      = el('t-ov-en') && el('t-ov-en').checked;
+    var ovDevId   = ovEn ? (el('t-ov-device') ? el('t-ov-device').value : '') : null;
+    var ovBright  = ovEn ? (parseInt(el('t-ov-bright') ? el('t-ov-bright').value : 100) / 100) : null;
+    var ovDur     = ovEn ? parseInt(el('t-ov-dur') ? el('t-ov-dur').value : 30) : null;
+    var ovOnMapping  = (ovEn && ovDevId) ? (TModal._ovLearnedOn  || null) : null;
+    var ovOffMapping = (ovEn && ovDevId) ? (TModal._ovLearnedOff || null) : null;
     var onConditions = [];
     if (hoursEn && hoursFrom && hoursTo) onConditions.push({ type: 'time_between', from: hoursFrom, to: hoursTo });
     if (luxEn && luxSensorId) onConditions.push({ type: 'lux_below', deviceId: luxSensorId, maxLux: luxMax });
-    var gid = TModal._mkId();
+    var gid = TModal._editingGroup ? TModal._editingGroup.id : TModal._mkId();
     var list = [];
 
     // Turn on all lights first, then apply per-light dim (fallback to global bright)
@@ -1963,9 +2083,18 @@ var TModal = {
         onActs.push({ type: 'set_color_temp', deviceId: id, value: TModal._lightDims[id].ct });
       }
     });
-    list.push({ id: TModal._mkId(), name: name + ' — ON', enabled: true,
+    var onAuto = { id: TModal._mkId(), name: name + ' — ON', enabled: true,
       _groupId: gid, _groupName: name, _templateType: 'motion_lights',
-      trigger: { type: 'motion_start', deviceId: sensor }, conditions: onConditions, actions: onActs });
+      trigger: { type: 'motion_start', deviceId: sensor }, conditions: onConditions, actions: onActs };
+    if (ovEn && ovDevId) {
+      var _ovExisting = TModal._editingGroup && TModal._editingGroup.items.find(function(it){ return it.a._overrideSwitch && it.a._overrideSwitch.deviceId; });
+      var _ovExistingFlowIds = _ovExisting && _ovExisting.a._overrideSwitch.flowIds || [];
+      onAuto._overrideSwitch = { deviceId: ovDevId, brightness: ovBright, durationMinutes: ovDur,
+        ...(ovOnMapping  ? { onMapping:  ovOnMapping  } : {}),
+        ...(ovOffMapping ? { offMapping: ovOffMapping } : {}),
+        ...(_ovExistingFlowIds.length ? { flowIds: _ovExistingFlowIds } : {}) };
+    }
+    list.push(onAuto);
 
     if (turnOff) {
       var offActs = lights.map(function(id) {
@@ -1994,7 +2123,13 @@ var TModal = {
     var fadeIn     = parseInt(el('t-fadein') ? el('t-fadein').value : 0) || 0;
     var fadeOut    = parseInt(el('t-fadeout') ? el('t-fadeout').value : 0) || 0;
     var prefix     = el('t-name').value.trim() || 'Smart Lights';
-    var gid = TModal._mkId();
+    var ovEnSD     = el('t-ov-en') && el('t-ov-en').checked;
+    var ovDevIdSD  = ovEnSD ? (el('t-ov-device') ? el('t-ov-device').value : '') : null;
+    var ovBrightSD = ovEnSD ? (parseInt(el('t-ov-bright') ? el('t-ov-bright').value : 100) / 100) : null;
+    var ovDurSD    = ovEnSD ? parseInt(el('t-ov-dur') ? el('t-ov-dur').value : 30) : null;
+    var ovOnMappingSD  = (ovEnSD && ovDevIdSD) ? (TModal._ovLearnedOn  || null) : null;
+    var ovOffMappingSD = (ovEnSD && ovDevIdSD) ? (TModal._ovLearnedOff || null) : null;
+    var gid = TModal._editingGroup ? TModal._editingGroup.id : TModal._mkId();
     var list = [];
 
     function makeOnActs(brightness, mode) {
@@ -2022,18 +2157,31 @@ var TModal = {
     }
 
     // Day automation (motion + time condition)
-    list.push({ id: TModal._mkId(), name: prefix + ' — Day', enabled: true,
+    var dayAuto = { id: TModal._mkId(), name: prefix + ' — Day', enabled: true,
       _groupId: gid, _groupName: prefix, _templateType: 'smart_dim',
       trigger: { type: 'motion_start', deviceId: sensor },
       conditions: dayConditions,
-      actions: makeOnActs(dayBright, 'day') });
+      actions: makeOnActs(dayBright, 'day') };
 
     // Night automation (motion + time condition)
-    list.push({ id: TModal._mkId(), name: prefix + ' — Night', enabled: true,
+    var nightAuto = { id: TModal._mkId(), name: prefix + ' — Night', enabled: true,
       _groupId: gid, _groupName: prefix, _templateType: 'smart_dim',
       trigger: { type: 'motion_start', deviceId: sensor },
       conditions: nightConditions,
-      actions: makeOnActs(nightBright, 'night') });
+      actions: makeOnActs(nightBright, 'night') };
+
+    if (ovEnSD && ovDevIdSD) {
+      var _ovExSD = TModal._editingGroup && TModal._editingGroup.items.find(function(it){ return it.a._overrideSwitch && it.a._overrideSwitch.deviceId; });
+      var _ovExFlowIdsSD = _ovExSD && _ovExSD.a._overrideSwitch.flowIds || [];
+      var _ovSwSD = { deviceId: ovDevIdSD, brightness: ovBrightSD, durationMinutes: ovDurSD,
+        ...(ovOnMappingSD  ? { onMapping:  ovOnMappingSD  } : {}),
+        ...(ovOffMappingSD ? { offMapping: ovOffMappingSD } : {}),
+        ...(_ovExFlowIdsSD.length ? { flowIds: _ovExFlowIdsSD } : {}) };
+      dayAuto._overrideSwitch   = _ovSwSD;
+      nightAuto._overrideSwitch = _ovSwSD;
+    }
+    list.push(dayAuto);
+    list.push(nightAuto);
 
     // Off automation
     if (turnOff) {
@@ -2173,6 +2321,11 @@ var TModal = {
     var groupOpts = groups.map(function(g){
       return '<option value="' + esc(g.id) + '">' + esc(g.name || 'Automation') + '</option>';
     }).join('');
+    var ovGroups = groups.filter(function(g){ return g.type === 'motion_lights' || g.type === 'smart_dim'; });
+    var overrideOptsStr = ovGroups.map(function(g){
+      return '<option value="OVERRIDE:' + esc(g.id) + '">⏸ Override: ' + esc(g.name || 'Automation') + '</option>';
+    }).join('');
+    var allGroupOpts = groupOpts + (overrideOptsStr ? '<optgroup label="— Override mode —">' + overrideOptsStr + '</optgroup>' : '');
 
     // Always try Flow trigger cards first — they expose all buttons for any brand
     wrap.innerHTML = '<p style="color:#8e8e93;font-size:13px;padding:6px 0">Loading buttons…</p>';
@@ -2207,7 +2360,7 @@ var TModal = {
               label: c.title, triggerArgs: {} });
           }
         });
-        TModal._switchRenderRows(flowRows, groupOpts, true);
+        TModal._switchRenderRows(flowRows, allGroupOpts, true);
         return;
       }
     } catch(e) { /* fall through to standard caps */ }
@@ -2227,7 +2380,7 @@ var TModal = {
     });
 
     if (rows.length) {
-      TModal._switchRenderRows(rows, groupOpts, false);
+      TModal._switchRenderRows(rows, allGroupOpts, false);
     } else {
       wrap.innerHTML = '<p style="color:#ff3b30;font-size:13px">No buttons found for this device.<br>Check Logs tab for details.</p>';
     }
@@ -2249,11 +2402,157 @@ var TModal = {
           'data-trigger-id="' + esc(r.triggerId || '') + '" ' +
           'data-trigger-uri="' + esc(r.triggerUri || '') + '" ' +
           'data-trigger-title="' + esc(r.label) + '" ' +
-          'data-trigger-args="' + esc(JSON.stringify(r.triggerArgs || {})) + '">' +
+          'data-trigger-args="' + esc(JSON.stringify(r.triggerArgs || {})) + '" ' +
+          'onchange="TModal._swMapChanged(' + i + ')">' +
           '<option value="">— no action —</option>' + groupOpts +
-        '</select></div>';
+        '</select>' +
+        '<div id="t-sw-ov-' + i + '" style="display:none;margin-top:6px;padding:8px;background:#1c1c1e;border-radius:8px">' +
+          '<div class="slider-row" style="margin-top:0">' +
+            '<span class="slider-val" style="min-width:80px;color:#8e8e93">Lysstyrke</span>' +
+            '<input type="range" id="t-sw-ov-bright-' + i + '" min="10" max="100" value="100" ' +
+              'oninput="document.getElementById(\'t-sw-ov-bv-' + i + '\').textContent=this.value+\'%\'">' +
+            '<span class="slider-val" id="t-sw-ov-bv-' + i + '">100%</span>' +
+          '</div>' +
+          '<div class="slider-row" style="margin-top:6px">' +
+            '<span class="slider-val" style="min-width:80px;color:#8e8e93">Varighet</span>' +
+            '<input type="range" id="t-sw-ov-dur-' + i + '" min="5" max="180" step="5" value="60" ' +
+              'oninput="document.getElementById(\'t-sw-ov-dv-' + i + '\').textContent=this.value+\' min\'">' +
+            '<span class="slider-val" id="t-sw-ov-dv-' + i + '">60 min</span>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
     });
     wrap.innerHTML = html;
+  },
+
+  _ovDeviceChanged: async function(savedMappings) {
+    var devId = el('t-ov-device') && el('t-ov-device').value;
+    var wrap  = el('t-ov-buttons');
+    if (!wrap) return;
+    if (!devId) {
+      TModal._ovFlowCards = [];
+      TModal._ovLearnedOn  = null;
+      TModal._ovLearnedOff = null;
+      wrap.innerHTML = '';
+      return;
+    }
+    wrap.innerHTML = '<p style="color:#8e8e93;font-size:13px;padding:4px 0">Loading device…</p>';
+
+    // Extract saved on/off mappings from savedMappings (object or legacy array)
+    var savedOn  = savedMappings && (savedMappings.onMapping  || (Array.isArray(savedMappings) && savedMappings[0]) || null);
+    var savedOff = savedMappings && (savedMappings.offMapping || null);
+
+    var rows = [];
+    try {
+      var res = await window._hBridge('_flowTriggersReq', '_flowTriggersResult', { deviceId: devId });
+      var flowCards = (!res.error && res.cards) ? res.cards.filter(function(c) {
+        var t = (c.title || '').toLowerCase(), id2 = (c.id || '').toLowerCase();
+        if (t.indexOf('batteri') !== -1 || t.indexOf('battery') !== -1 ||
+            id2.indexOf('batteri') !== -1 || id2.indexOf('battery') !== -1) return false;
+        return true;
+      }) : [];
+      if (flowCards.length) {
+        flowCards.forEach(function(c) {
+          var groupArg = (c.args || []).find(function(a) { return a.name === 'group' && a.values && a.values.length; });
+          var modeArg  = (c.args || []).find(function(a) { return a.name === 'mode'  && a.values && a.values.length; });
+          var defaultMode = modeArg && modeArg.values[0] ? modeArg.values[0].id : null;
+          if (groupArg && groupArg.values.length) {
+            groupArg.values.forEach(function(gv) {
+              var tArgs = { group: gv.id };
+              if (defaultMode !== null) tArgs.mode = defaultMode;
+              rows.push({ triggerType: 'flow_card', triggerId: c.id, triggerUri: c.uri,
+                label: gv.title + ' \u2014 ' + c.title, triggerArgs: tArgs });
+            });
+          } else {
+            rows.push({ triggerType: 'flow_card', triggerId: c.id, triggerUri: c.uri,
+              label: c.title, triggerArgs: {} });
+          }
+        });
+      }
+    } catch(e) { /* fall through to cap rows */ }
+
+    if (!rows.length) {
+      var device = State.devices.find(function(d) { return d.id === devId; });
+      var caps   = (device && device.capabilities) || [];
+      if (caps.indexOf('onoff')  !== -1) rows.push({ triggerType: 'switch_on',    cap: 'onoff',  label: 'When switched ON' });
+      if (caps.indexOf('button') !== -1) rows.push({ triggerType: 'button_press', cap: 'button', label: 'Button press' });
+      caps.filter(function(c){ return /^button\./.test(c); }).sort().forEach(function(c) {
+        rows.push({ triggerType: 'button_key', cap: c, label: 'Button ' + c.replace('button.', '') });
+      });
+    }
+
+    TModal._ovRows = rows;
+    TModal._ovRenderLearnUI(savedOn, savedOff);
+  },
+
+  _ovRenderLearnUI: function(savedOnMapping, savedOffMapping) {
+    var wrap = el('t-ov-buttons');
+    if (!wrap) return;
+    TModal._ovLearnedOn  = savedOnMapping  || null;
+    TModal._ovLearnedOff = savedOffMapping || null;
+    var rows = TModal._ovRows || [];
+
+    function matchIdx(mapping) {
+      if (!mapping) return '';
+      for (var i = 0; i < rows.length; i++) {
+        var r = rows[i];
+        if (r.triggerType === 'flow_card' && mapping.triggerType === 'flow_card') {
+          if (r.triggerId === mapping.triggerId &&
+              JSON.stringify(r.triggerArgs || {}) === JSON.stringify(mapping.triggerArgs || {})) return String(i);
+        } else if (r.triggerType === mapping.triggerType && (r.cap || '') === (mapping.cap || '')) {
+          return String(i);
+        }
+      }
+      return '';
+    }
+
+    var onIdx  = matchIdx(savedOnMapping);
+    var offIdx = matchIdx(savedOffMapping);
+    var opts = rows.map(function(r, i) {
+      return '<option value="' + i + '">' + esc(r.label) + '</option>';
+    }).join('');
+
+    wrap.innerHTML =
+      '<div class="sec-hdr" style="margin-top:8px;margin-bottom:4px">Button assignment</div>' +
+      '<div class="fgrp"><label class="flabel">Activate override (ON)</label>' +
+        '<select class="finput" id="t-ov-on-sel" onchange="TModal._ovSelChanged(\'on\')">' +
+          '<option value="">\u2014 Not set \u2014</option>' + opts +
+        '</select></div>' +
+      '<div class="fgrp"><label class="flabel">Cancel override (OFF, optional)</label>' +
+        '<select class="finput" id="t-ov-off-sel" onchange="TModal._ovSelChanged(\'off\')">' +
+          '<option value="">\u2014 Not set (optional) \u2014</option>' + opts +
+        '</select></div>';
+
+    if (onIdx  !== '') { var s1 = el('t-ov-on-sel');  if (s1) s1.value  = onIdx; }
+    if (offIdx !== '') { var s2 = el('t-ov-off-sel'); if (s2) s2.value = offIdx; }
+  },
+
+  _ovSelChanged: function(slot) {
+    var sel  = el('t-ov-' + slot + '-sel');
+    if (!sel) return;
+    var rows = TModal._ovRows || [];
+    var idx  = sel.value;
+    if (idx === '' || idx == null) {
+      if (slot === 'on')  TModal._ovLearnedOn  = null;
+      if (slot === 'off') TModal._ovLearnedOff = null;
+      return;
+    }
+    var row = rows[parseInt(idx, 10)];
+    if (!row) return;
+    var mapping = { triggerType: row.triggerType, label: row.label };
+    if (row.cap)        mapping.cap        = row.cap;
+    if (row.triggerId)  mapping.triggerId  = row.triggerId;
+    if (row.triggerUri) mapping.triggerUri = row.triggerUri;
+    if (row.triggerArgs) mapping.triggerArgs = row.triggerArgs;
+    if (slot === 'on')  TModal._ovLearnedOn  = mapping;
+    if (slot === 'off') TModal._ovLearnedOff = mapping;
+  },
+
+  _swMapChanged: function(i) {
+    var sel   = el('t-sw-map-' + i);
+    var ovDiv = el('t-sw-ov-' + i);
+    if (!ovDiv) return;
+    ovDiv.style.display = (sel && sel.value && sel.value.indexOf('OVERRIDE:') === 0) ? '' : 'none';
   },
 
   _saveSwitch: async function() {
@@ -2264,45 +2563,58 @@ var TModal = {
     var list = [];
     var isFlowMode = false;
     var flowMappings = [];
+    var allFlowMappings = [];
     var i = 0;
 
     while (el('t-sw-map-' + i)) {
-      var sel     = el('t-sw-map-' + i);
-      var groupId = sel.value;
+      var sel      = el('t-sw-map-' + i);
+      var rawVal   = sel.value;
       var trigType = sel.getAttribute('data-trigger-type');
+      var isOvM    = rawVal.indexOf('OVERRIDE:') === 0;
+      var realIdM  = isOvM ? rawVal.slice(9) : rawVal;
+      var bElM     = el('t-sw-ov-bright-' + i);
+      var dElM     = el('t-sw-ov-dur-' + i);
+      var ovBrightM = isOvM ? (parseInt(bElM ? bElM.value : '100') / 100) : null;
+      var ovDurM    = isOvM ? parseInt(dElM ? dElM.value : '60') : null;
 
       if (trigType === 'flow_card') {
         isFlowMode = true;
-        if (groupId) {
-          var grp = computeGroups().groups.find(function(g){ return g.id === groupId; });
+        if (rawVal) {
+          var grp = computeGroups().groups.find(function(g){ return g.id === realIdM; });
           var savedTriggerArgs = {};
           try { savedTriggerArgs = JSON.parse(sel.getAttribute('data-trigger-args') || '{}'); } catch(e) {}
-          flowMappings.push({
+          var mapping = {
             triggerId:    sel.getAttribute('data-trigger-id'),
             triggerUri:   sel.getAttribute('data-trigger-uri'),
             triggerTitle: sel.getAttribute('data-trigger-title') || '',
             triggerArgs:  savedTriggerArgs,
-            groupId:      groupId,
-            groupName:    grp ? (grp.name || 'Automation') : groupId
-          });
+            groupId:      realIdM,
+            groupName:    grp ? (grp.name || 'Automation') : realIdM
+          };
+          if (isOvM) { mapping._isOverride = true; mapping._overrideBright = ovBrightM; mapping._overrideDur = ovDurM; }
+          allFlowMappings.push(mapping);
+          if (!isOvM) flowMappings.push(mapping);
         }
-      } else if (groupId) {
+      } else if (rawVal) {
         var cap = sel.getAttribute('data-cap');
         var trigger = { type: trigType, deviceId: swDev };
         if (trigType === 'button_key')        trigger.capability = cap;
         if (trigType === 'device_capability') { trigger.capability = cap; trigger.value = true; }
+        var action = isOvM
+          ? { type: 'override_group', groupId: realIdM, brightness: ovBrightM, durationMinutes: ovDurM }
+          : { type: 'run_group',      groupId: rawVal };
         list.push({
           id: TModal._mkId(), name: name, enabled: true,
           _groupId: gid, _groupName: name, _templateType: 'switch',
           trigger: trigger, conditions: [],
-          actions: [{ type: 'run_group', groupId: groupId }]
+          actions: [action]
         });
       }
       i++;
     }
 
     if (isFlowMode) {
-      if (!flowMappings.length) throw new Error('Please map at least one button to an automation');
+      if (!allFlowMappings.length) throw new Error('Please map at least one button to an automation');
       var existingFlowIds = TModal._editingGroup && TModal._editingGroup._homeyFlowIds || [];
       var result = await window._hBridge('_flowSyncReq', '_flowSyncResult', {
         deviceId: swDev, mappings: flowMappings, existingFlowIds: existingFlowIds
@@ -2313,7 +2625,7 @@ var TModal = {
         id: TModal._mkId(), name: name, enabled: true,
         _groupId: gid, _groupName: name, _templateType: 'switch',
         _useHomeyFlows: true, _homeyFlowIds: result.flowIds || [],
-        _switchDeviceId: swDev, _switchMappings: flowMappings,
+        _switchDeviceId: swDev, _switchMappings: allFlowMappings,
         trigger: { type: 'homey_flow', deviceId: swDev },
         conditions: [], actions: []
       });

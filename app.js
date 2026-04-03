@@ -15,6 +15,7 @@ class EasyAutomationApp extends App {
     this._capInstances   = [];     // CapabilityInstance objects — keep refs so GC doesn't destroy subscriptions
     this._holdTimers     = new Map();
     this._safetyTimers   = new Map();
+    this._overrideTimers = new Map();
     this._minuteTimer    = null;
     this._reconnectTimer = null;
     this._cachedDevices  = [];
@@ -44,6 +45,11 @@ class EasyAutomationApp extends App {
       if (key === '_flowTriggersReq') {
         this._runFlowTriggersRequest().catch(e =>
           this._addLog('error', 'flowTriggersReq: ' + e.message)
+        );
+      }
+      if (key === '_ovLearnReq') {
+        this._runOvLearnRequest().catch(e =>
+          this._addLog('error', 'ovLearnReq: ' + e.message)
         );
       }
       if (key === '_flowSyncReq') {
@@ -86,6 +92,40 @@ class EasyAutomationApp extends App {
       const target = automations.find(a => !a.trigger || !offTypes.has(a.trigger.type)) || automations[0];
       if (!target) throw new Error(`Automation group not found: ${groupId}`);
       await this._runActions(target.actions || [], target.name);
+    });
+
+    // Flow action: "Override automation group"
+    const overrideGroupCard = this.homey.flow.getActionCard('override_group');
+    overrideGroupCard.registerArgumentAutocompleteListener('group', async query => {
+      const groups = this._getGroups();
+      return groups
+        .filter(g => (g.type === 'motion_lights' || g.type === 'smart_dim') &&
+                     g.name.toLowerCase().includes(query.toLowerCase()))
+        .map(g => ({ id: g.id, name: g.name, description: g.type }));
+    });
+    overrideGroupCard.registerRunListener(async args => {
+      const groupId = args.group.id;
+      this._addLog('trigger', `Flow action "override_group" → group "${args.group.name}"`);
+      const auto = this._getAutomations().find(a =>
+        (a._groupId || a.id) === groupId && a._overrideSwitch
+      );
+      const ov = auto && auto._overrideSwitch;
+      await this._doOverride(groupId, ov ? ov.brightness : 1, ov ? ov.durationMinutes : 60);
+    });
+
+    // Flow action: "Cancel override for automation group"
+    const cancelOverrideCard = this.homey.flow.getActionCard('cancel_override');
+    cancelOverrideCard.registerArgumentAutocompleteListener('group', async query => {
+      const groups = this._getGroups();
+      return groups
+        .filter(g => (g.type === 'motion_lights' || g.type === 'smart_dim') &&
+                     g.name.toLowerCase().includes(query.toLowerCase()))
+        .map(g => ({ id: g.id, name: g.name, description: g.type }));
+    });
+    cancelOverrideCard.registerRunListener(async args => {
+      const groupId = args.group.id;
+      this._addLog('trigger', `Flow action "cancel_override" → group "${args.group.name}"`);
+      await this._cancelOverride(groupId);
     });
 
     // Never let listener setup crash the app startup
@@ -389,13 +429,18 @@ class EasyAutomationApp extends App {
       for (const m of (req.mappings || [])) {
         if (!m.groupId) continue;
         try {
+          const actionId = m._actionType === 'cancel_override'
+            ? 'homey:app:no.easy.automation:cancel_override'
+            : m._actionType === 'override' || m._isOverride
+              ? 'homey:app:no.easy.automation:override_group'
+              : 'homey:app:no.easy.automation:run_group';
           // m.triggerId is already the fully-qualified combined ID e.g. "homey:device:{id}:sr_on_button_mode_g4"
           const flow = await api.flow.createFlow({ flow: {
             name:    `[Easy Auto] ${m.groupName} ← ${m.triggerTitle}`,
             enabled: true,
             trigger: { id: m.triggerId, args: m.triggerArgs || {} },
             conditions: [],
-            actions: [{ id: 'homey:app:no.easy.automation:run_group',
+            actions: [{ id: actionId,
                         args: { group: { id: m.groupId, name: m.groupName } } }]
           }});
           createdIds.push(flow.id);
@@ -565,6 +610,11 @@ class EasyAutomationApp extends App {
       this._addLog('error', 'restoreHoldTimers: ' + e.message)
     );
 
+    // Attach override switch listeners for groups that have a button override configured
+    await this._attachOverrideSwitchListeners(devices).catch(e =>
+      this._addLog('error', 'attachOverrideSwitchListeners: ' + e.message)
+    );
+
     this._scheduleTimeChecks();
     this._scheduleReconnect();
   }
@@ -629,6 +679,13 @@ class EasyAutomationApp extends App {
 
       // Helper: run the group for a given mapping
       const runMapping = async m => {
+        if (m._isOverride) {
+          this._addLog('trigger', `Override switch "${device.name}" → override group "${m.groupId}"`);
+          await this._doOverride(m.groupId, m._overrideBright != null ? m._overrideBright : 1, m._overrideDur || 30).catch(e =>
+            this._addLog('error', `doOverride: ${e.message}`)
+          );
+          return;
+        }
         this._addLog('trigger', `Switch "${device.name}" → group "${m.groupName}"`);
         const offTypes = new Set(['motion_stop', 'door_close', 'switch_off']);
         const allAutos = this._getAutomations().filter(
@@ -837,6 +894,232 @@ class EasyAutomationApp extends App {
     });
   }
 
+  async _attachOverrideSwitchListeners(devices) {
+    const seen = new Set();
+    for (const automation of this._getAutomations()) {
+      if (!automation.enabled) continue;
+      if (!automation._overrideSwitch || !automation._overrideSwitch.deviceId) continue;
+
+      const gid = automation._groupId || automation.id;
+      if (seen.has(gid)) continue;
+      seen.add(gid);
+
+      const ov     = automation._overrideSwitch;
+      const device = devices[ov.deviceId];
+      if (!device) {
+        this._addLog('warn', `Override switch not found: ${ov.deviceId}`);
+        continue;
+      }
+
+      const caps = device.capabilities || [];
+
+      // Normalise: support new { onMapping, offMapping } format + legacy triggerMappings[]
+      const slotMappings = [];
+      if (ov.onMapping)  slotMappings.push({ ...ov.onMapping,  _role: 'on'  });
+      if (ov.offMapping) slotMappings.push({ ...ov.offMapping, _role: 'off' });
+      if (!slotMappings.length && ov.triggerMappings && ov.triggerMappings.length) {
+        // backward compat: all legacy mappings activate override
+        ov.triggerMappings.forEach(m => slotMappings.push({ ...m, _role: 'on' }));
+      }
+
+      if (slotMappings.length) {
+        const capMappings  = slotMappings.filter(m => m.triggerType !== 'flow_card');
+        const flowMappings = slotMappings.filter(m => m.triggerType === 'flow_card');
+
+        // ── cap/socket fallback listeners (for non-Z-wave devices) ─────────
+        for (const m of capMappings) {
+          const capL = m.triggerType === 'button_key'  ? m.cap
+                     : m.triggerType === 'button_press' ? 'button'
+                     : m.triggerType === 'socket_event' ? null
+                     : 'onoff';
+          const handler = async value => {
+            if (value !== true) return;
+            this._addLog('trigger', `Override switch "${device.name}" → group "${gid}" (${capL}, ${m._role})`);
+            if (m._role === 'off') await this._cancelOverride(gid);
+            else await this._doOverride(gid, ov.brightness, ov.durationMinutes).catch(e =>
+              this._addLog('error', `doOverride: ${e.message}`)
+            );
+          };
+          if (capL) {
+            try {
+              const instance = await device.makeCapabilityInstance(capL, handler);
+              this._capInstances.push(instance);
+              this._addLog('info', `Override switch attached: "${device.name}" → group "${gid}" (${capL})`);
+            } catch (e) {
+              this._addLog('warn', `Override switch cap "${capL}": ${e.message}`);
+            }
+          }
+          if (m.triggerType === 'socket_event') {
+            try { await device.connect(); } catch (e) { /* ignore */ }
+            const evName = m.eventName;
+            device.on(evName, async data => {
+              if (!this._switchMappingMatches(m.eventData || {}, data || {})) return;
+              this._addLog('trigger', `Override switch "${device.name}" → "${evName}" → group "${gid}" (${m._role})`);
+              if (m._role === 'off') await this._cancelOverride(gid);
+              else await this._doOverride(gid, ov.brightness, ov.durationMinutes).catch(() => {});
+            });
+          }
+        }
+
+        // ── flow_card: real Homey Flows are created at save time; nothing to attach here ──
+        if (flowMappings.length) {
+          this._addLog('info', `Override switch "${device.name}" → group "${gid}" (${flowMappings.length} flow card(s) via Homey Flows)`);
+        }
+      } else {
+        // Legacy: any press on button or onoff
+        const cap = caps.includes('button') ? 'button'
+                  : caps.includes('onoff')  ? 'onoff'
+                  : null;
+        if (!cap) {
+          this._addLog('warn', `Override switch "${device.name}" has no button/onoff capability`);
+          continue;
+        }
+        const handler = async value => {
+          if (value !== true) return;
+          this._addLog('trigger', `Override switch "${device.name}" → group "${gid}"`);
+          await this._doOverride(gid, ov.brightness, ov.durationMinutes).catch(e =>
+            this._addLog('error', `doOverride: ${e.message}`)
+          );
+        };
+
+        try {
+          const instance = await device.makeCapabilityInstance(cap, handler);
+          this._capInstances.push(instance);
+          this._addLog('info', `Override switch attached: "${device.name}" → group "${gid}" (${cap})`);
+        } catch (e) {
+          this._addLog('error', `Override switch attach "${device.name}": ${e.message}`);
+        }
+      }
+    }
+  }
+
+  async _doOverride(gid, brightness, durationMinutes) {
+    const b        = brightness != null ? brightness : 1;
+    const durationMs = (durationMinutes || 30) * 60 * 1000;
+
+    // Collect light device IDs from all ON automations in this group
+    const lightIds = [];
+    for (const a of this._getAutomations()) {
+      if (!a.enabled) continue;
+      if ((a._groupId || a.id) !== gid) continue;
+      const onTypes = new Set(['motion_start', 'door_open', 'manual']);
+      if (!a.trigger || !onTypes.has(a.trigger.type)) continue;
+      for (const ac of (a.actions || [])) {
+        if (ac.type === 'turn_on' && ac.deviceId && !lightIds.includes(ac.deviceId))
+          lightIds.push(ac.deviceId);
+      }
+    }
+
+    // Set lights to override brightness
+    try {
+      if (!this._actionApi) this._actionApi = await HomeyAPI.createAppAPI({ homey: this.homey });
+      const allDevices = await this._actionApi.devices.getDevices();
+      await Promise.all(lightIds.map(async id => {
+        const d = allDevices[id];
+        if (!d) return;
+        if (d.capabilities && d.capabilities.includes('onoff'))
+          await d.setCapabilityValue('onoff', true).catch(() => {});
+        if (d.capabilities && d.capabilities.includes('dim'))
+          await d.setCapabilityValue('dim', b).catch(() => {});
+      }));
+      this._addLog('action', `Override: ${lightIds.length} light(s) → ${Math.round(b * 100)}% for ${durationMinutes}min`);
+    } catch (e) {
+      this._addLog('error', `Override set lights: ${e.message}`);
+      this._actionApi = null;
+    }
+
+    // Store override timestamp so motion triggers are skipped during the period
+    const endsAt    = Date.now() + durationMs;
+    const overrides = this._readOverrides();
+    overrides[gid]  = endsAt;
+    try { this.homey.settings.set('_overrides', JSON.stringify(overrides)); } catch (e) {}
+
+    // Cancel any previous override timer and set a new one
+    const timerKey = 'override:' + gid;
+    if (this._overrideTimers.has(timerKey))
+      this.homey.clearTimeout(this._overrideTimers.get(timerKey));
+    const timer = this.homey.setTimeout(() => {
+      this._overrideTimers.delete(timerKey);
+      const ov2 = this._readOverrides();
+      delete ov2[gid];
+      try { this.homey.settings.set('_overrides', JSON.stringify(ov2)); } catch (e) {}
+      this._addLog('info', `Override expired for group "${gid}"`);
+    }, durationMs);
+    this._overrideTimers.set(timerKey, timer);
+    this._addLog('info', `Override active for ${durationMinutes}min, group "${gid}"`);
+  }
+
+  _cancelOverride(gid) {
+    const timerKey = 'override:' + gid;
+    if (this._overrideTimers.has(timerKey))
+      this.homey.clearTimeout(this._overrideTimers.get(timerKey));
+    this._overrideTimers.delete(timerKey);
+    const overrides = this._readOverrides();
+    delete overrides[gid];
+    try { this.homey.settings.set('_overrides', JSON.stringify(overrides)); } catch (e) {}
+    this._addLog('info', `Override cancelled for group "${gid}"`);
+  }
+
+  async _runOvLearnRequest() {
+    let req;
+    try {
+      const raw = this.homey.settings.get('_ovLearnReq');
+      if (!raw) return;
+      req = JSON.parse(raw);
+    } catch (e) { return; }
+    const { deviceId, ts } = req;
+
+    const done = result =>
+      this.homey.settings.set('_ovLearnResult', JSON.stringify({ reqTs: ts, ...result }));
+
+    try {
+      if (!this._listenerApi) this._listenerApi = await HomeyAPI.createAppAPI({ homey: this.homey });
+      const devices = await this._listenerApi.devices.getDevices();
+      const device  = devices[deviceId];
+      if (!device) { done({ error: 'Device not found' }); return; }
+
+      try { await device.connect(); } catch (e) { /* ignore */ }
+
+      let fired = false;
+      const listeners = {};
+      let timerRef;
+
+      const fire = result => {
+        if (fired) return;
+        fired = true;
+        this.homey.clearTimeout(timerRef);
+        Object.entries(listeners).forEach(([evName, h]) => {
+          try { device.removeListener(evName, h); } catch (e) {}
+        });
+        done(result);
+      };
+
+      const knownEvents = ['key_action', 'action', 'button', 'scene', 'remote_key_action',
+                           'shortPress', 'longPress', 'trigger', 'pressed', 'button_action'];
+      knownEvents.forEach(evName => {
+        const h = data => {
+          this._addLog('info', `[learn] ${device.name} → "${evName}" ${JSON.stringify(data)}`);
+          fire({ eventType: 'socket', eventName: evName, data: data || {} });
+        };
+        device.on(evName, h);
+        listeners[evName] = h;
+      });
+
+      const capH = eventData => {
+        const { capabilityId, value } = eventData || {};
+        if (value !== true) return;
+        this._addLog('info', `[learn] ${device.name}.${capabilityId} = ${value}`);
+        fire({ eventType: 'capability', capabilityId, value });
+      };
+      device.on('capability', capH);
+      listeners['capability'] = capH;
+
+      timerRef = this.homey.setTimeout(() => fire({ error: 'timeout' }), 15000);
+    } catch (e) {
+      done({ error: e.message });
+    }
+  }
+
   _triggerCapability(t) {
     switch (t.type) {
       case 'motion_start':
@@ -944,6 +1227,12 @@ class EasyAutomationApp extends App {
       try { this.homey.clearTimeout(timer); } catch (e) {}
     }
     this._safetyTimers.clear();
+
+    for (const timer of this._overrideTimers.values()) {
+      try { this.homey.clearTimeout(timer); } catch (e) {}
+    }
+    this._overrideTimers.clear();
+
     try { this.homey.settings.set('_holdStatus', '{}'); } catch (e) {}
 
     if (this._minuteTimer) {
@@ -1148,6 +1437,12 @@ class EasyAutomationApp extends App {
         if (!target) throw new Error(`No automation found in group: ${action.groupId}`);
         return this._runActions(target.actions || [], target.name);
       }
+      case 'override_group':
+        return this._doOverride(
+          action.groupId,
+          action.brightness != null ? action.brightness : 1,
+          action.durationMinutes || 30
+        );
       case 'notify':
         return this.homey.notifications.createNotification({ excerpt: String(action.message) });
       case 'wait': {

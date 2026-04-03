@@ -97,6 +97,48 @@
             }
           }
         ]
+      },
+      {
+        "id": "override_group",
+        "title": {
+          "en": "Override automation group",
+          "no": "Overstyr automasjonsgruppe"
+        },
+        "titleFormatted": {
+          "en": "Override automation group [[group]]",
+          "no": "Overstyr automasjonsgruppe [[group]]"
+        },
+        "args": [
+          {
+            "name": "group",
+            "type": "autocomplete",
+            "placeholder": {
+              "en": "Select automation...",
+              "no": "Velg automasjon..."
+            }
+          }
+        ]
+      },
+      {
+        "id": "cancel_override",
+        "title": {
+          "en": "Cancel override for automation group",
+          "no": "Avbryt overstyring for automasjonsgruppe"
+        },
+        "titleFormatted": {
+          "en": "Cancel override for [[group]]",
+          "no": "Avbryt overstyring for [[group]]"
+        },
+        "args": [
+          {
+            "name": "group",
+            "type": "autocomplete",
+            "placeholder": {
+              "en": "Select automation...",
+              "no": "Velg automasjon..."
+            }
+          }
+        ]
       }
     ]
   },
