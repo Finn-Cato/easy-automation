@@ -7,12 +7,16 @@
     "en": "Added missing XLarge images, updated driver images with white background, and improved README per App Store guidelines.",
     "no": "La til manglende XLarge-bilder, oppdaterte driverbilder med hvit bakgrunn, og forbedret README i henhold til App Store-retningslinjene."
   },
+  "0.1.3": {
+    "en": "Fixed platform to Homey Pro only (local). Removed cloud platform that caused processing failure.",
+    "no": "Rettet plattform til kun Homey Pro (lokal). Fjernet sky-plattform som forårsaket prosesseringsfeil."
+  },
   "0.1.4": {
     "en": "Added override button assignment for Motion Lights and Smart Dim: select which switch button activates the override (ON) and optionally which button cancels it (OFF). Also fixed missing cloud platform removal from driver.",
     "no": "Lagt til knapptildeling for overstyring i Bevegelseslys og Smart Dim: velg hvilken bryter-knapp som aktiverer overstyringen (PÅ) og eventuelt hvilken som avbryter den (AV). Rettet også manglende fjerning av sky-plattform fra driver."
   },
-  "0.1.3": {
-    "en": "Fixed platform to Homey Pro only (local). Removed cloud platform that caused processing failure.",
-    "no": "Rettet plattform til kun Homey Pro (lokal). Fjernet sky-plattform som forårsaket prosesseringsfeil."
+  "0.1.5": {
+    "en": "Full Norwegian (Bokmål) localization: the entire settings UI now switches to Norwegian automatically when Homey is set to Norwegian. Added Zone Control template (auto-fills all dimmable lights from a Homey zone, supports optional motion sensor, lux threshold, active hours and button override). Added Custom/Advanced template for building automations from scratch with custom triggers, conditions and actions. Updated Help tab to document all templates and optional features (lux threshold, active hours, button override). Responsive template picker: 4 columns on small screens.",
+    "no": "Full norsk (bokmål) oversettelse: hele innstillingsgrensesnittet bytter automatisk til norsk når Homey er satt til norsk. Lagt til Sonekontroll-mal (fyller automatisk inn alle dimbare lys fra en Homey-sone, støtter valgfri bevegelsessensor, lux-terskel, aktive timer og knappoverstyr). Lagt til Egendefinert/Avansert-mal for å bygge automatiseringer fra bunnen med egendefinerte utløsere, betingelser og handlinger. Oppdatert Hjelp-fanen med dokumentasjon av alle maler og valgfrie funksjoner. Responsivt mal-panel: 4 kolonner på små skjermer."
   }
 }

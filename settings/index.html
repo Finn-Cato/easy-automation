@@ -43,6 +43,7 @@
         }
         throw new Error('Timeout waiting for response');
       };
+      translateDOM();
       App.init();
     }
   </script>
@@ -55,8 +56,8 @@
       --ea-card:     #ffffff;
       --ea-border:   #e0e0e5;
       --ea-divider:  #f2f2f7;
-      --ea-text:     #1c1c1e;
-      --ea-sub:      #8e8e93;
+      --ea-text:     #000000;
+      --ea-sub:      #000000;
       --ea-accent:   #e8622a;
       --ea-accent2:  #c94e1e;
       --ea-green:    #34c759;
@@ -71,7 +72,7 @@
         --ea-border:   #2e2e2e;
         --ea-divider:  #252525;
         --ea-text:     #f0f0f0;
-        --ea-sub:      #888;
+        --ea-sub:      #ffffff;
         --ea-input-bg: #252525;
       }
     }
@@ -82,29 +83,30 @@
       --ea-border:   #2e2e2e;
       --ea-divider:  #252525;
       --ea-text:     #f0f0f0;
-      --ea-sub:      #888;
+      --ea-sub:      #ffffff;
       --ea-input-bg: #252525;
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 14px; background-color: var(--ea-bg); color: var(--ea-text); }
+    label { color: var(--ea-text) !important; }
     #app { background-color: var(--ea-bg); color: var(--ea-text); min-height: 100vh; }
 
     /* Top bar */
     .topbar { background-color: var(--ea-surface); border-bottom: 1px solid var(--ea-border); padding: 10px 16px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 5; }
     .topbar h1 { font-size: 15px; font-weight: 700; color: var(--ea-text); }
     .topbar h1 span { color: var(--ea-accent); }
-    #status-msg { font-size: 11px; color: var(--ea-sub); min-width: 60px; text-align: right; }
+    #status-msg { font-size: 11px; color: var(--ea-text); min-width: 60px; text-align: right; }
 
     /* Tabs */
     .tabs { display: flex; background-color: var(--ea-surface); border-bottom: 1px solid var(--ea-border); padding: 0 14px; }
-    .tab { padding: 8px 12px; background: none; border: none; border-bottom: 2px solid transparent; font-size: 12px; font-weight: 600; color: var(--ea-sub); cursor: pointer; margin-bottom: -1px; }
+    .tab { padding: 8px 12px; background: none; border: none; border-bottom: 2px solid transparent; font-size: 12px; font-weight: 600; color: var(--ea-text); cursor: pointer; margin-bottom: -1px; }
     .tab.on { color: var(--ea-accent); border-bottom-color: var(--ea-accent); }
 
     /* Views */
     .view { display: none; padding: 14px; max-width: 640px; margin: 0 auto; background-color: var(--ea-bg); color: var(--ea-text); }
     .view.on { display: block; }
-    .sec-hdr { font-size: 11px; font-weight: 700; color: var(--ea-sub); text-transform: uppercase; letter-spacing: .5px; margin: 14px 0 8px; }
+    .sec-hdr { font-size: 13px; font-weight: 700; color: var(--ea-text); text-transform: uppercase; letter-spacing: .5px; margin: 14px 0 8px; }
 
     /* Template cards */
     .templates { display: grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap: 8px; margin-bottom: 6px; }
@@ -112,20 +114,27 @@
     .tmpl-btn:hover { border-color: var(--ea-accent); box-shadow: 0 2px 12px rgba(232,98,42,.2); }
     .tmpl-icon { font-size: 22px; line-height: 1; }
     .tmpl-name { font-size: 11px; font-weight: 600; color: var(--ea-text); line-height: 1.3; }
+    @media (max-width: 480px) {
+      .templates { grid-template-columns: repeat(4, 1fr); gap: 5px; }
+      .tmpl-btn { padding: 7px 4px 6px; border-radius: 8px; gap: 3px; }
+      .tmpl-icon { font-size: 18px; }
+      .tmpl-name { font-size: 10px; }
+    }
 
     /* Automation cards */
     .auto-list-wrap { background-color: var(--ea-surface); border-radius: 10px; box-shadow: 0 1px 4px rgba(0,0,0,.3); overflow: hidden; border: 1px solid var(--ea-border); }
     .card { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-bottom: 1px solid var(--ea-divider); cursor: default; border-left: 3px solid transparent; }
     .card:last-child { border-bottom: none; }
+    .card-type-icon { font-size: 22px; line-height: 1; flex-shrink: 0; width: 28px; text-align: center; }
     .card-active   { border-left-color: var(--ea-green); }
-    .card-paused   { border-left-color: #444; }
+    .card-paused   { border-left-color: var(--ea-text); }
     .card-override { border-left-color: var(--ea-accent); }
     .card-body { flex: 1; min-width: 0; cursor: pointer; padding: 2px 0; }
     .card-body:hover .card-name { color: var(--ea-accent); }
     .card-name { font-weight: 600; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: color .15s; color: var(--ea-text); }
-    .card-sub { font-size: 11px; color: var(--ea-sub); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .card-chevron { color: #444; font-size: 14px; flex-shrink: 0; pointer-events: none; }
-    .ico { -webkit-appearance: none; appearance: none; background-color: transparent !important; border: none; cursor: pointer; color: var(--ea-sub); font-size: 14px; padding: 6px; border-radius: 6px; flex-shrink: 0; min-width: 28px; min-height: 28px; display: flex; align-items: center; justify-content: center; }
+    .card-sub { font-size: 13px; font-weight: 600; color: var(--ea-text); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .card-chevron { color: var(--ea-text); font-size: 14px; flex-shrink: 0; pointer-events: none; }
+    .ico { -webkit-appearance: none; appearance: none; background-color: transparent !important; border: none; cursor: pointer; color: var(--ea-text); font-size: 14px; padding: 6px; border-radius: 6px; flex-shrink: 0; min-width: 28px; min-height: 28px; display: flex; align-items: center; justify-content: center; }
     .ico:hover { background: rgba(255,59,48,.15); color: var(--ea-red); }
     .ico-run:hover { background: rgba(232,98,42,.15) !important; color: var(--ea-accent) !important; }
     .ico-pause:hover { background: rgba(232,98,42,.15) !important; color: var(--ea-accent) !important; }
@@ -143,7 +152,7 @@
     /* Toggle */
     .tog { position: relative; width: 36px; height: 20px; flex-shrink: 0; }
     .tog input { opacity: 0; width: 0; height: 0; position: absolute; }
-    .tog-track { position: absolute; inset: 0; background: #333; border-radius: 10px; cursor: pointer; transition: background .2s; }
+    .tog-track { position: absolute; inset: 0; background: var(--ea-border); border-radius: 10px; cursor: pointer; transition: background .2s; }
     .tog-track::after { content: ''; position: absolute; width: 16px; height: 16px; background: #888; border-radius: 50%; top: 2px; left: 2px; transition: transform .2s; box-shadow: 0 1px 3px rgba(0,0,0,.5); }
     .tog input:checked + .tog-track { background-color: var(--ea-green); }
     .tog input:checked + .tog-track::after { transform: translateX(16px); background: #fff; }
@@ -163,12 +172,12 @@
     .modal-hdr { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
     .modal-hdr h2 { font-size: 15px; font-weight: 700; color: var(--ea-text); }
     .modal-ftr { display: flex; gap: 8px; justify-content: flex-end; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--ea-border); }
-    .close-btn { background: none; border: none; cursor: pointer; color: var(--ea-sub); font-size: 18px; padding: 2px 6px; border-radius: 6px; }
+    .close-btn { background: none; border: none; cursor: pointer; color: var(--ea-text); font-size: 18px; padding: 2px 6px; border-radius: 6px; }
     .close-btn:hover { background-color: var(--ea-border); color: var(--ea-text); }
 
     /* Form */
     .fgrp { margin-bottom: 10px; }
-    .flabel { display: block; font-size: 11px; font-weight: 700; color: var(--ea-sub); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 4px; }
+    .flabel { display: block; font-size: 13px; font-weight: 800; color: var(--ea-text) !important; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 4px; }
     .finput { width: 100%; padding: 7px 10px; border: 1.5px solid var(--ea-border); border-radius: 8px; font-size: 14px; color: var(--ea-text); background-color: var(--ea-input-bg); outline: none; font-family: inherit; transition: border-color .15s; }
     .finput:focus { border-color: var(--ea-accent); background-color: var(--ea-card); }
     select.finput { cursor: pointer; }
@@ -182,20 +191,20 @@
     .day-row { display:flex; gap:6px; flex-wrap:wrap; }
     .day-btn { cursor:pointer; }
     .day-btn input { display:none; }
-    .day-btn span { display:inline-block; padding:4px 8px; border-radius:6px; font-size:12px; font-weight:600; background-color:var(--ea-input-bg); border:1.5px solid var(--ea-border); color:var(--ea-sub); transition:all 0.15s; }
+    .day-btn span { display:inline-block; padding:4px 8px; border-radius:6px; font-size:12px; font-weight:600; background-color:var(--ea-input-bg); border:1.5px solid var(--ea-border); color:var(--ea-text); transition:all 0.15s; }
     .day-btn input:checked + span { background-color:var(--ea-accent); border-color:var(--ea-accent); color:#fff; }
 
     /* Custom 24h time picker (dropdown) */
     .tp-wrap { display:inline-flex; align-items:center; gap:2px; user-select:none; }
-    .tp-sel  { font-size:13px; font-weight:600; color:var(--ea-text); background-color:var(--ea-input-bg); border:1px solid var(--ea-border); border-radius:4px; padding:3px 2px; cursor:pointer; font-family:inherit; -webkit-appearance:none; appearance:none; text-align:center; width:40px; }
+    .tp-sel  { font-size:15px; font-weight:600; color:var(--ea-text); background-color:var(--ea-input-bg); border:1px solid var(--ea-border); border-radius:4px; padding:4px 3px; cursor:pointer; font-family:inherit; -webkit-appearance:none; appearance:none; text-align:center; width:44px; }
     .tp-sel:focus { border-color:var(--ea-accent); outline:none; }
-    .tp-sep  { font-size:13px; font-weight:700; color:var(--ea-sub); }
+    .tp-sep  { font-size:15px; font-weight:700; color:var(--ea-text); }
 
     /* Brightness slider */
     .slider-row { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
-    .slider-row input[type=range] { flex: 1; -webkit-appearance: none; height: 4px; background: #333; border-radius: 2px; outline: none; cursor: pointer; }
+    .slider-row input[type=range] { flex: 1; -webkit-appearance: none; height: 4px; background: var(--ea-border); border-radius: 2px; outline: none; cursor: pointer; }
     .slider-row input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 20px; height: 20px; background-color: var(--ea-accent); border-radius: 50%; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,.4); }
-    .slider-val { font-size: 13px; font-weight: 700; color: var(--ea-accent); min-width: 36px; text-align: right; }
+    .slider-val { font-size: 15px; font-weight: 700; color: var(--ea-accent); min-width: 36px; text-align: right; }
 
     /* Device picker */
     .dp-wrap { max-height: 180px; overflow-y: auto; border: 1.5px solid var(--ea-border); border-radius: 8px; background-color: var(--ea-input-bg); }
@@ -204,45 +213,45 @@
     .dp-item:hover { background: rgba(232,98,42,.1); }
     .dp-item input[type=checkbox] { width: 16px; height: 16px; cursor: pointer; accent-color: var(--ea-accent); }
     .dp-name { font-size: 13px; flex: 1; color: var(--ea-text); }
-    .dp-zone { font-size: 11px; color: var(--ea-sub); }
-    .dp-empty { padding: 12px; text-align: center; color: var(--ea-sub); font-size: 12px; }
-    .dp-grp { padding: 4px 10px 2px; font-size: 10px; font-weight: 700; color: var(--ea-sub); text-transform: uppercase; letter-spacing: .4px; background-color: var(--ea-card); }
+    .dp-zone { font-size: 11px; color: var(--ea-text); }
+    .dp-empty { padding: 12px; text-align: center; color: var(--ea-text); font-size: 12px; }
+    .dp-grp { padding: 4px 10px 2px; font-size: 10px; font-weight: 700; color: var(--ea-text); text-transform: uppercase; letter-spacing: .4px; background-color: var(--ea-card); }
     .dp-selall { font-size: 11px; color: var(--ea-accent); cursor: pointer; margin-top: 4px; display: inline-block; }
 
     /* Check row */
     .check-row { display: flex; align-items: center; gap: 8px; padding: 6px 0; }
     .check-row input[type=checkbox] { width: 16px; height: 16px; accent-color: var(--ea-accent); cursor: pointer; flex-shrink: 0; }
-    .check-row label { font-size: 13px; cursor: pointer; color: var(--ea-text); }
+    .check-row label { font-size: 14px; font-weight: 700; cursor: pointer; color: var(--ea-text) !important; }
 
     /* Devices tab */
     .device-card { background-color: var(--ea-card); border: 1px solid var(--ea-border); border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,.2); margin-bottom: 6px; padding: 8px 10px; display: flex; align-items: center; gap: 8px; }
     .device-card-info { flex: 1; }
     .device-card-name { font-weight: 600; font-size: 13px; color: var(--ea-text); }
-    .device-card-sub { font-size: 11px; color: var(--ea-sub); margin-top: 1px; }
+    .device-card-sub { font-size: 13px; color: var(--ea-text); margin-top: 1px; }
     .badge { font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 5px; background: rgba(232,98,42,.15); color: var(--ea-accent); }
 
     /* Log */
     .log-row { display: flex; gap: 8px; padding: 5px 12px; border-bottom: 1px solid var(--ea-divider); font-size: 12px; align-items: baseline; }
-    .log-ts { color: var(--ea-sub); font-size: 10px; white-space: nowrap; flex-shrink: 0; }
+    .log-ts { color: var(--ea-text); font-size: 10px; white-space: nowrap; flex-shrink: 0; }
     .log-lv { font-size: 9px; font-weight: 700; text-transform: uppercase; border-radius: 3px; padding: 1px 5px; flex-shrink: 0; width: 48px; text-align: center; }
     .log-lv.info { background: rgba(41,128,185,.2); color: #5dade2; }
     .log-lv.error { background: rgba(255,59,48,.2); color: #ff6b60; }
     .log-lv.warn { background: rgba(255,149,0,.2); color: #ffb340; }
     .log-lv.trigger { background: rgba(52,199,89,.2); color: #4cd964; }
     .log-lv.action { background: rgba(232,98,42,.2); color: var(--ea-accent); }
-    .log-lv.skipped { background-color: var(--ea-divider); color: var(--ea-sub); }
+    .log-lv.skipped { background-color: var(--ea-divider); color: var(--ea-text); }
     .log-lv.test { background: rgba(255,149,0,.2); color: #ffb340; }
     .log-msg { flex: 1; color: var(--ea-text); }
 
-    .loader { text-align: center; padding: 28px; color: var(--ea-sub); font-size: 13px; }
-    .empty { text-align: center; padding: 30px 16px; color: var(--ea-sub); }
+    .loader { text-align: center; padding: 28px; color: var(--ea-text); font-size: 13px; }
+    .empty { text-align: center; padding: 30px 16px; color: var(--ea-text); }
     .empty .icon { font-size: 28px; margin-bottom: 8px; }
     .empty p { font-size: 13px; line-height: 1.6; }
     .row-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
     .row-top h2 { font-size: 14px; font-weight: 700; color: var(--ea-text); }
 
     /* Modal inner tabs */
-    .modal-tab { background: none; border: none; border-bottom: 2px solid transparent; padding: 7px 12px; font-size: 12px; font-weight: 600; color: var(--ea-sub); cursor: pointer; margin-bottom: -1px; font-family: inherit; }
+    .modal-tab { background: none; border: none; border-bottom: 2px solid transparent; padding: 7px 12px; font-size: 12px; font-weight: 600; color: var(--ea-text); cursor: pointer; margin-bottom: -1px; font-family: inherit; }
     .modal-tab.on { color: var(--ea-accent); border-bottom-color: var(--ea-accent); }
 
     /* Small action button */
@@ -255,7 +264,7 @@
     .lt-name { font-weight: 600; font-size: 13px; margin-bottom: 6px; color: var(--ea-text); }
     .lt-row { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
     .lt-row:last-child { margin-bottom: 0; }
-    .lt-label { font-size: 11px; font-weight: 700; color: var(--ea-sub); width: 48px; flex-shrink: 0; }
+    .lt-label { font-size: 13px; font-weight: 700; color: var(--ea-text); width: 52px; flex-shrink: 0; }
 
     /* ── Mobile: prevent iOS zoom on input focus ── */
     @media (max-width: 480px) {
@@ -272,65 +281,69 @@
 </div>
 
 <div class="tabs">
-  <button class="tab on"  id="tab-auto"    onclick="UI.tab('auto')">Automations</button>
-  <button class="tab"     id="tab-devices" onclick="UI.tab('devices')">Devices</button>
-  <button class="tab"     id="tab-logs"    onclick="UI.tab('logs')">Logs</button>
-  <button class="tab"     id="tab-help"    onclick="UI.tab('help')">Help</button>
+  <button class="tab on"  id="tab-auto"    onclick="UI.tab('auto')" data-i18n="tab_auto">Automations</button>
+  <button class="tab"     id="tab-devices" onclick="UI.tab('devices')" data-i18n="tab_devices">Devices</button>
+  <button class="tab"     id="tab-logs"    onclick="UI.tab('logs')" data-i18n="tab_logs">Logs</button>
+  <button class="tab"     id="tab-help"    onclick="UI.tab('help')" data-i18n="tab_help">Help</button>
 </div>
 
 <!-- Automations -->
 <div class="view on" id="view-auto">
-  <div class="sec-hdr">Add new automation</div>
+  <div class="sec-hdr" data-i18n="sec_add_auto">Add new automation</div>
   <div class="templates">
     <button class="tmpl-btn" onclick="TModal.open('motion_lights')">
       <span class="tmpl-icon">🏃</span>
-      <span class="tmpl-name">Motion<br>→ Lights</span>
+      <span class="tmpl-name" data-i18n-html="tmpl_motion">Motion<br>→ Lights</span>
     </button>
     <button class="tmpl-btn" onclick="TModal.open('smart_dim')">
       <span class="tmpl-icon">🌙</span>
-      <span class="tmpl-name">Smart Dim<br>Day / Night</span>
+      <span class="tmpl-name" data-i18n-html="tmpl_smart_dim">Smart Dim<br>Day / Night</span>
     </button>
     <button class="tmpl-btn" onclick="TModal.open('door_lights')">
       <span class="tmpl-icon">🚪</span>
-      <span class="tmpl-name">Door<br>→ Lights</span>
+      <span class="tmpl-name" data-i18n-html="tmpl_door">Door<br>→ Lights</span>
     </button>
     <button class="tmpl-btn" onclick="TModal.open('schedule')">
       <span class="tmpl-icon">⏰</span>
-      <span class="tmpl-name">Schedule<br>Lights</span>
+      <span class="tmpl-name" data-i18n-html="tmpl_schedule">Schedule<br>Lights</span>
     </button>
     <button class="tmpl-btn" onclick="TModal.open('scene')">
       <span class="tmpl-icon">💡</span>
-      <span class="tmpl-name">Light<br>Group</span>
+      <span class="tmpl-name" data-i18n-html="tmpl_scene">Light<br>Group</span>
     </button>
     <button class="tmpl-btn" onclick="TModal.open('switch')">
       <span class="tmpl-icon">🔘</span>
-      <span class="tmpl-name">Wall Switch<br>/ Button</span>
+      <span class="tmpl-name" data-i18n-html="tmpl_switch">Wall Switch<br>/ Button</span>
+    </button>
+    <button class="tmpl-btn" onclick="TModal.open('zone_control')">
+      <span class="tmpl-icon">🏠</span>
+      <span class="tmpl-name" data-i18n-html="tmpl_zone">Zone<br>Control</span>
     </button>
     <button class="tmpl-btn" onclick="TModal.open('custom')">
       <span class="tmpl-icon">⚙️</span>
-      <span class="tmpl-name">Custom<br>Advanced</span>
+      <span class="tmpl-name" data-i18n-html="tmpl_custom">Custom<br>Advanced</span>
     </button>
   </div>
 
-  <div class="sec-hdr">My automations</div>
+  <div class="sec-hdr" data-i18n="sec_my_autos">My automations</div>
   <div id="auto-list"><div class="loader">Loading…</div></div>
 </div>
 
 <!-- Devices tab -->
 <div class="view" id="view-devices">
   <div class="row-top">
-    <h2>Devices</h2>
-    <button class="btn btn-blue" id="btn-refresh-dev" onclick="DevTab.refresh()">Refresh</button>
+    <h2 data-i18n="tab_devices">Devices</h2>
+    <button class="btn btn-blue" id="btn-refresh-dev" onclick="DevTab.refresh()" data-i18n="btn_refresh">Refresh</button>
   </div>
-  <div style="font-size:13px;color:var(--ea-sub);margin-bottom:12px">Check the devices you want to use in automations. Unchecked devices are hidden from all pickers. If nothing is checked, all devices are shown.</div>
+  <div style="font-size:13px;color:var(--ea-text);margin-bottom:12px" data-i18n="dev_desc">Check the devices you want to use in automations. Unchecked devices are hidden from all pickers. If nothing is checked, all devices are shown.</div>
   <div id="dev-filter-bar" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px"></div>
   <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;flex-wrap:wrap">
-    <span style="font-size:11px;font-weight:600;color:var(--ea-sub);text-transform:uppercase;letter-spacing:.5px;white-space:nowrap">Filtered:</span>
-    <button class="btn-sm" onclick="DevTab.selectVisible()">✓ Check all</button>
-    <button class="btn-sm" onclick="DevTab.uncheckVisible()">✗ Uncheck all</button>
+    <span style="font-size:11px;font-weight:600;color:var(--ea-text);text-transform:uppercase;letter-spacing:.5px;white-space:nowrap" data-i18n="dev_filtered">Filtered:</span>
+    <button class="btn-sm" onclick="DevTab.selectVisible()" data-i18n="dev_check_all">✓ Check all</button>
+    <button class="btn-sm" onclick="DevTab.uncheckVisible()" data-i18n="dev_uncheck_all">✗ Uncheck all</button>
     <div style="width:1px;height:20px;background:var(--ea-border);flex-shrink:0"></div>
-    <span style="font-size:11px;font-weight:600;color:var(--ea-sub);text-transform:uppercase;letter-spacing:.5px;white-space:nowrap">All:</span>
-    <button class="btn-sm" onclick="DevTab.selectNone()">Clear selection</button>
+    <span style="font-size:11px;font-weight:600;color:var(--ea-text);text-transform:uppercase;letter-spacing:.5px;white-space:nowrap" data-i18n="dev_all">All:</span>
+    <button class="btn-sm" onclick="DevTab.selectNone()" data-i18n="dev_clear">Clear selection</button>
   </div>
   <div id="device-list"><div class="loader">Loading…</div></div>
 </div>
@@ -341,10 +354,10 @@
 <!-- Logs tab -->
 <div class="view" id="view-logs">
   <div class="row-top">
-    <h2>Activity Log</h2>
+    <h2 data-i18n="log_title">Activity Log</h2>
     <div style="display:flex;gap:8px">
-      <button class="btn btn-gray" onclick="LogTab.copy()">Copy Log</button>
-      <button class="btn btn-gray" onclick="LogTab.load()">Refresh</button>
+      <button class="btn btn-gray" onclick="LogTab.copy()" data-i18n="btn_copy_log">Copy Log</button>
+      <button class="btn btn-gray" onclick="LogTab.load()" data-i18n="btn_refresh">Refresh</button>
     </div>
   </div>
   <div style="background:var(--ea-surface);border:1px solid var(--ea-border);border-radius:14px;overflow:hidden">
@@ -359,13 +372,13 @@
     <div style="text-align:center;padding:28px 0 20px">
       <div style="font-size:48px;line-height:1">⚡</div>
       <div style="font-size:22px;font-weight:800;color:var(--ea-text);margin-top:10px">Easy Automation</div>
-      <div style="font-size:13px;color:var(--ea-sub);margin-top:4px">Control your lights and automations from Homey</div>
+      <div style="font-size:13px;color:var(--ea-text);margin-top:4px" data-i18n="help_subtitle">Control your lights and automations from Homey</div>
     </div>
 
     <!-- Getting started -->
     <div style="background:var(--ea-surface);border:1px solid var(--ea-border);border-radius:14px;padding:20px 22px;margin-bottom:14px">
-      <div style="font-size:13px;font-weight:700;color:var(--ea-sub);text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px">Getting started</div>
-      <ol style="padding-left:18px;line-height:1.9;font-size:14px;color:var(--ea-text)">
+      <div style="font-size:13px;font-weight:700;color:var(--ea-text);text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px" data-i18n="help_gs_hdr">Getting started</div>
+      <ol style="padding-left:18px;line-height:1.9;font-size:14px;color:var(--ea-text)" data-i18n-html="help_gs_body">
         <li>Go to the <strong>Devices</strong> tab and press <strong>Refresh</strong> to load all your Homey devices.</li>
         <li>Go to <strong>Automations</strong> and pick a template to create your first automation.</li>
         <li>Give it a name, choose your lights, and press <strong>Add</strong>.</li>
@@ -375,13 +388,13 @@
 
     <!-- Templates -->
     <div style="background:var(--ea-surface);border:1px solid var(--ea-border);border-radius:14px;padding:20px 22px;margin-bottom:14px">
-      <div style="font-size:13px;font-weight:700;color:var(--ea-sub);text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px">Automation templates</div>
+      <div style="font-size:13px;font-weight:700;color:var(--ea-text);text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px" data-i18n="help_tmpl_hdr">Automation templates</div>
 
       <div style="display:flex;gap:12px;margin-bottom:14px;align-items:flex-start">
         <span style="font-size:26px;line-height:1;flex-shrink:0">🏃</span>
         <div>
-          <div style="font-weight:700;font-size:14px;color:var(--ea-text)">Motion → Lights</div>
-          <div style="font-size:13px;color:var(--ea-sub);margin-top:2px;line-height:1.5">Turns lights on when a motion sensor detects movement, and optionally off again after motion stops. You can set a hold time (e.g. keep lights on for 5 minutes after the last movement) and a fade-in / fade-out duration.</div>
+          <div style="font-weight:700;font-size:14px;color:var(--ea-text)" data-i18n="help_t1_name">Motion → Lights</div>
+          <div style="font-size:13px;color:var(--ea-text);margin-top:2px;line-height:1.5" data-i18n-html="help_t1_desc">Turns lights on when a motion sensor detects movement, and optionally off again after motion stops. You can set a hold time (e.g. keep lights on for 5 minutes after the last movement) and a fade-in / fade-out duration.</div>
         </div>
       </div>
 
@@ -390,8 +403,8 @@
       <div style="display:flex;gap:12px;margin-bottom:14px;align-items:flex-start">
         <span style="font-size:26px;line-height:1;flex-shrink:0">🌙</span>
         <div>
-          <div style="font-weight:700;font-size:14px;color:var(--ea-text)">Smart Dim — Day &amp; Night</div>
-          <div style="font-size:13px;color:var(--ea-sub);margin-top:2px;line-height:1.5">Same as Motion → Lights but uses two brightness levels: a bright level during the day and a dim level at night. You set the times when day starts and when night starts. Great for hallways and bathrooms.</div>
+          <div style="font-weight:700;font-size:14px;color:var(--ea-text)" data-i18n="help_t2_name">Smart Dim — Day &amp; Night</div>
+          <div style="font-size:13px;color:var(--ea-text);margin-top:2px;line-height:1.5" data-i18n-html="help_t2_desc">Same as Motion → Lights but uses two brightness levels: a bright level during the day and a dim level at night. You set the times when day starts and when night starts. Great for hallways and bathrooms.</div>
         </div>
       </div>
 
@@ -400,8 +413,8 @@
       <div style="display:flex;gap:12px;margin-bottom:14px;align-items:flex-start">
         <span style="font-size:26px;line-height:1;flex-shrink:0">🚪</span>
         <div>
-          <div style="font-weight:700;font-size:14px;color:var(--ea-text)">Door → Lights</div>
-          <div style="font-size:13px;color:var(--ea-sub);margin-top:2px;line-height:1.5">Turns lights on when a door or contact sensor opens, and optionally off when it closes again. Useful for cupboards, storage rooms, or garage lights.</div>
+          <div style="font-weight:700;font-size:14px;color:var(--ea-text)" data-i18n="help_t3_name">Door → Lights</div>
+          <div style="font-size:13px;color:var(--ea-text);margin-top:2px;line-height:1.5" data-i18n-html="help_t3_desc">Turns lights on when a door or contact sensor opens, and optionally off when it closes again. Useful for cupboards, storage rooms, or garage lights.</div>
         </div>
       </div>
 
@@ -410,8 +423,8 @@
       <div style="display:flex;gap:12px;margin-bottom:14px;align-items:flex-start">
         <span style="font-size:26px;line-height:1;flex-shrink:0">⏰</span>
         <div>
-          <div style="font-weight:700;font-size:14px;color:var(--ea-text)">Schedule Lights</div>
-          <div style="font-size:13px;color:var(--ea-sub);margin-top:2px;line-height:1.5">Runs an action on a fixed time every day (or selected days of the week). You can turn lights ON, OFF, or dim them to a specific level. Good for morning routines or turning everything off at bedtime.</div>
+          <div style="font-weight:700;font-size:14px;color:var(--ea-text)" data-i18n="help_t4_name">Schedule Lights</div>
+          <div style="font-size:13px;color:var(--ea-text);margin-top:2px;line-height:1.5" data-i18n-html="help_t4_desc">Runs an action on a fixed time every day (or selected days of the week). You can turn lights ON, OFF, or dim them to a specific level. Good for morning routines or turning everything off at bedtime.</div>
         </div>
       </div>
 
@@ -420,26 +433,56 @@
       <div style="display:flex;gap:12px;margin-bottom:14px;align-items:flex-start">
         <span style="font-size:26px;line-height:1;flex-shrink:0">💡</span>
         <div>
-          <div style="font-weight:700;font-size:14px;color:var(--ea-text)">Light Group / Scene</div>
-          <div style="font-size:13px;color:var(--ea-sub);margin-top:2px;line-height:1.5">A group of lights with a fixed state. You choose what each light does when the scene runs: set it to a brightness (1–100%) or fully off (0%). The scene does nothing on its own — it is meant to be triggered by a <strong>Wall Switch</strong> button, another automation, or the Test button. Perfect for a night scene where some lights dim low and others turn off completely.</div>
+          <div style="font-weight:700;font-size:14px;color:var(--ea-text)" data-i18n="help_t5_name">Light Group / Scene</div>
+          <div style="font-size:13px;color:var(--ea-text);margin-top:2px;line-height:1.5" data-i18n-html="help_t5_desc">A group of lights with a fixed state. You choose what each light does when the scene runs: set it to a brightness (1–100%) or fully off (0%). The scene does nothing on its own — it is meant to be triggered by a <strong>Wall Switch</strong> button, another automation, or the Test button. Perfect for a night scene where some lights dim low and others turn off completely.</div>
+        </div>
+      </div>
+
+      <div style="border-top:1px solid var(--ea-divider);margin:12px 0"></div>
+
+      <div style="display:flex;gap:12px;margin-bottom:14px;align-items:flex-start">
+        <span style="font-size:26px;line-height:1;flex-shrink:0">🔘</span>
+        <div>
+          <div style="font-weight:700;font-size:14px;color:var(--ea-text)" data-i18n="help_t6_name">Wall Switch / Button</div>
+          <div style="font-size:13px;color:var(--ea-text);margin-top:2px;line-height:1.5" data-i18n-html="help_t6_desc">Links a physical switch or button to one or more automations. Each button action (press, on, off, hold) can be mapped to any group you have already created. For devices without standard capabilities, Homey Flows are created automatically.</div>
+        </div>
+      </div>
+
+      <div style="border-top:1px solid var(--ea-divider);margin:12px 0"></div>
+
+      <div style="display:flex;gap:12px;margin-bottom:14px;align-items:flex-start">
+        <span style="font-size:26px;line-height:1;flex-shrink:0">🏠</span>
+        <div>
+          <div style="font-weight:700;font-size:14px;color:var(--ea-text)" data-i18n="help_t7_name">Zone Control</div>
+          <div style="font-size:13px;color:var(--ea-text);margin-top:2px;line-height:1.5" data-i18n-html="help_t7_desc">Automatically fills in all dimmable lights from a selected Homey zone. Pick the zone and every dimmable light in it is added for you. Optionally attach a motion sensor to trigger it — works exactly like Motion → Lights but scoped to a zone. Also supports lux threshold, active hours, and button override.</div>
         </div>
       </div>
 
       <div style="border-top:1px solid var(--ea-divider);margin:12px 0"></div>
 
       <div style="display:flex;gap:12px;margin-bottom:0;align-items:flex-start">
-        <span style="font-size:26px;line-height:1;flex-shrink:0">🔘</span>
+        <span style="font-size:26px;line-height:1;flex-shrink:0">⚙️</span>
         <div>
-          <div style="font-weight:700;font-size:14px;color:var(--ea-text)">Wall Switch / Button</div>
-          <div style="font-size:13px;color:var(--ea-sub);margin-top:2px;line-height:1.5">Links a physical switch or button to one or more automations. Each button action (press, on, off, hold) can be mapped to any group you have already created. For devices without standard capabilities, Homey Flows are created automatically.</div>
+          <div style="font-weight:700;font-size:14px;color:var(--ea-text)" data-i18n="help_t8_name">Custom / Advanced</div>
+          <div style="font-size:13px;color:var(--ea-text);margin-top:2px;line-height:1.5" data-i18n-html="help_t8_desc">Build your own automation from scratch. Choose a trigger (motion detected, motion stopped, door opens, door closes, or a fixed time), optionally add a time-range condition, and define one or more light actions. Use this for setups that don’t fit any of the other templates.</div>
         </div>
+      </div>
+    </div>
+
+    <!-- Optional features -->
+    <div style="background:var(--ea-surface);border:1px solid var(--ea-border);border-radius:14px;padding:20px 22px;margin-bottom:14px">
+      <div style="font-size:13px;font-weight:700;color:var(--ea-text);text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px" data-i18n="help_opt_hdr">⚙️ Optional features (Motion, Smart Dim, Zone Control)</div>
+      <div style="font-size:14px;color:var(--ea-text);line-height:1.8" data-i18n-html="help_opt_body">
+        <strong>Lux threshold</strong> — Enable “Only trigger if lux is below threshold” to stop the automation from turning lights on when the room is already bright. Pick a lux sensor and set a maximum lux level.<br><br>
+        <strong>Active hours</strong> — Enable “Only active during certain hours” to restrict the automation to a time window (e.g. 07:00–23:00). Outside those hours triggers are ignored.<br><br>
+        <strong>Button override</strong> — Enable “Button override” to assign a wall switch or remote button as a manual override. Pressing the ON button sets a custom brightness and pauses the automation for a set time. Pressing the OFF button (optional) cancels the override early.
       </div>
     </div>
 
     <!-- Lights tab -->
     <div style="background:var(--ea-surface);border:1px solid var(--ea-border);border-radius:14px;padding:20px 22px;margin-bottom:14px">
-      <div style="font-size:13px;font-weight:700;color:var(--ea-sub);text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px">💡 Lights tab (inside an automation)</div>
-      <div style="font-size:14px;color:var(--ea-text);line-height:1.7">
+      <div style="font-size:13px;font-weight:700;color:var(--ea-text);text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px" data-i18n="help_lt_hdr">💡 Lights tab (inside an automation)</div>
+      <div style="font-size:14px;color:var(--ea-text);line-height:1.7" data-i18n-html="help_lt_body">
         When editing an automation you will see a <strong>Lights</strong> tab. Here you can set individual brightness levels per light — overriding the global slider. This lets you have one light at 80% and another at 20% in the same automation.<br><br>
         For a <strong>Light Group</strong>, dragging a slider to <strong>0% turns that specific light OFF</strong> when the scene runs, while others stay on at their set level.
       </div>
@@ -447,16 +490,16 @@
 
     <!-- Pause / override -->
     <div style="background:var(--ea-surface);border:1px solid var(--ea-border);border-radius:14px;padding:20px 22px;margin-bottom:14px">
-      <div style="font-size:13px;font-weight:700;color:var(--ea-sub);text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px">⏸ Pausing an automation</div>
-      <div style="font-size:14px;color:var(--ea-text);line-height:1.7">
+      <div style="font-size:13px;font-weight:700;color:var(--ea-text);text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px" data-i18n="help_pause_hdr">⏸ Pausing an automation</div>
+      <div style="font-size:14px;color:var(--ea-text);line-height:1.7" data-i18n-html="help_pause_body">
         Press the <strong>⏸</strong> icon on an automation card to pause it for 30 min, 1 hour, 2 hours, 4 hours, or until midnight. While paused, the automation will not react to any triggers. Useful when you want to override the lights manually for a while. Press <strong>Resume</strong> to cancel early.
       </div>
     </div>
 
     <!-- Tips -->
     <div style="background:var(--ea-surface);border:1px solid var(--ea-border);border-radius:14px;padding:20px 22px;margin-bottom:14px">
-      <div style="font-size:13px;font-weight:700;color:var(--ea-sub);text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px">💬 Tips &amp; common setups</div>
-      <div style="font-size:14px;color:var(--ea-text);line-height:1.8">
+      <div style="font-size:13px;font-weight:700;color:var(--ea-text);text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px" data-i18n="help_tips_hdr">💬 Tips &amp; common setups</div>
+      <div style="font-size:14px;color:var(--ea-text);line-height:1.8" data-i18n-html="help_tips_body">
         <strong>Night scene via wall switch:</strong><br>
         1. Create a <em>Light Group</em> called "Night Scene". Add all lights you want to control. In the Lights tab set hallway lights to 5%, bedroom lights to 0%.<br>
         2. Create a <em>Wall Switch</em> automation. Map one button to the Night Scene group.<br>
@@ -475,26 +518,26 @@
 
     <!-- Log tab -->
     <div style="background:var(--ea-surface);border:1px solid var(--ea-border);border-radius:14px;padding:20px 22px;margin-bottom:14px">
-      <div style="font-size:13px;font-weight:700;color:var(--ea-sub);text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px">📋 Logs tab</div>
-      <div style="font-size:14px;color:var(--ea-text);line-height:1.7">
+      <div style="font-size:13px;font-weight:700;color:var(--ea-text);text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px" data-i18n="help_log_hdr">📋 Logs tab</div>
+      <div style="font-size:14px;color:var(--ea-text);line-height:1.7" data-i18n-html="help_log_body">
         The Logs tab shows a timestamped activity log of everything the app has done: triggers fired, conditions checked, actions executed, and any errors. Press <strong>Copy Log</strong> to copy the full log to your clipboard for troubleshooting.
       </div>
     </div>
 
     <!-- PAT section -->
     <div style="background:var(--ea-surface);border:1px solid var(--ea-border);border-radius:14px;padding:20px 22px;margin-bottom:0">
-      <div style="font-size:13px;font-weight:700;color:var(--ea-sub);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">🔑 Personal Access Token</div>
-      <div style="font-size:13px;color:var(--ea-sub);margin-bottom:14px;line-height:1.6">
+      <div style="font-size:13px;font-weight:700;color:var(--ea-text);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px" data-i18n="help_pat_hdr">🔑 Personal Access Token</div>
+      <div style="font-size:13px;color:var(--ea-text);margin-bottom:14px;line-height:1.6" data-i18n-html="help_pat_desc">
         Required for <strong>Wall Switch</strong> automations that use Homey Flows (e.g. Z-Wave remotes like NAMRON). Without this token the app cannot create the flows automatically.<br><br>
         To create a token: go to <strong>my.homey.app</strong> → Settings → API → <em>Create a Personal Access Token</em> and enable the <strong>Flows</strong> permission.
       </div>
       <div style="display:flex;gap:8px;align-items:center">
-        <input id="pat-input" type="password" placeholder="Paste token here…"
+        <input id="pat-input" type="password" placeholder="Paste token here…" data-i18n-ph="help_pat_ph"
           style="flex:1;padding:9px 12px;border:1.5px solid var(--ea-border);border-radius:10px;background:var(--ea-input-bg);color:var(--ea-text);font-size:14px;font-family:inherit;outline:none"/>
-        <button class="btn btn-blue" onclick="PATSettings.save()" style="white-space:nowrap">Save</button>
-        <button class="btn btn-gray" onclick="PATSettings.clear()" id="pat-clear-btn" style="display:none;white-space:nowrap">Remove</button>
+        <button class="btn btn-blue" onclick="PATSettings.save()" style="white-space:nowrap" data-i18n="btn_save">Save</button>
+        <button class="btn btn-gray" onclick="PATSettings.clear()" id="pat-clear-btn" style="display:none;white-space:nowrap" data-i18n="btn_remove">Remove</button>
       </div>
-      <div id="pat-status" style="font-size:12px;color:var(--ea-sub);margin-top:8px"></div>
+      <div id="pat-status" style="font-size:12px;color:var(--ea-text);margin-top:8px"></div>
     </div>
 
   </div>
@@ -504,21 +547,21 @@
 <div class="overlay" id="ov-overlay" onclick="OverrideModal.bgClose(event)">
   <div class="modal" style="max-width:360px">
     <div class="modal-hdr">
-      <h2 id="ov-title" style="font-size:16px">Pause automation</h2>
+      <h2 id="ov-title" style="font-size:16px" data-i18n="ov_title">Pause automation</h2>
       <button class="close-btn" onclick="OverrideModal.close()">✕</button>
     </div>
-    <p style="font-size:13px;color:#8e8e93;margin-bottom:14px">Triggers are paused — lights stay as you set them manually. Automation resumes when the override expires.</p>
+    <p style="font-size:13px;color:var(--ea-text);margin-bottom:14px" data-i18n="ov_para">Triggers are paused — lights stay as you set them manually. Automation resumes when the override expires.</p>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
       <button class="ov-time-btn" onclick="OverrideModal.set(30)">⏸ 30 min</button>
       <button class="ov-time-btn" onclick="OverrideModal.set(60)">⏸ 1 hour</button>
       <button class="ov-time-btn" onclick="OverrideModal.set(120)">⏸ 2 hours</button>
       <button class="ov-time-btn" onclick="OverrideModal.set(240)">⏸ 4 hours</button>
     </div>
-    <button class="ov-time-btn" style="width:100%;margin-top:8px" onclick="OverrideModal.setMidnight()">🌙 Until midnight</button>
+    <button class="ov-time-btn" style="width:100%;margin-top:8px" onclick="OverrideModal.setMidnight()" data-i18n="ov_midnight">🌙 Until midnight</button>
     <div id="ov-resume-wrap" style="display:none">
       <hr class="sep" style="margin:14px 0">
       <div style="font-size:12px;color:#af52de;font-weight:600;margin-bottom:8px" id="ov-active-label"></div>
-      <button class="ov-resume-btn" onclick="OverrideModal.cancel()">▶ Resume automation now</button>
+      <button class="ov-resume-btn" onclick="OverrideModal.cancel()" data-i18n="ov_resume">▶ Resume automation now</button>
     </div>
   </div>
 </div>
@@ -531,9 +574,9 @@
       <button class="close-btn" onclick="TModal.close()">✕</button>
     </div>
     <div id="tmpl-inner-tabs" style="display:none;border-bottom:1px solid #2a2a2a;margin:0 -24px 16px;padding:0 24px">
-      <button id="tmpl-tab-settings" class="modal-tab on" onclick="TModal._modalTab('settings')">⚙️ Settings</button>
-      <button id="tmpl-tab-lights"   class="modal-tab"    onclick="TModal._modalTab('lights')">💡 Lights</button>
-      <button id="tmpl-tab-test"     class="modal-tab"    onclick="TModal._modalTab('test')">🧪 Test</button>
+      <button id="tmpl-tab-settings" class="modal-tab on" onclick="TModal._modalTab('settings')" data-i18n="modal_settings">⚙️ Settings</button>
+      <button id="tmpl-tab-lights"   class="modal-tab"    onclick="TModal._modalTab('lights')" data-i18n="modal_lights">💡 Lights</button>
+      <button id="tmpl-tab-test"     class="modal-tab"    onclick="TModal._modalTab('test')" data-i18n="modal_test">🧪 Test</button>
     </div>
     <div id="tmpl-settings-tab">
       <div id="tmpl-body"></div>
@@ -542,10 +585,10 @@
     <div id="tmpl-test-tab"   style="display:none;padding:4px 0 8px"></div>
     <div class="modal-ftr" id="tmpl-ftr">
       <label style="display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer">
-        <input type="checkbox" id="tmpl-enabled" checked> Active
+        <input type="checkbox" id="tmpl-enabled" checked> <span data-i18n="lbl_active">Active</span>
       </label>
       <div style="display:flex;gap:8px;margin-left:auto">
-        <button class="btn btn-gray" onclick="TModal.close()">Cancel</button>
+        <button class="btn btn-gray" onclick="TModal.close()" data-i18n="btn_cancel">Cancel</button>
         <button class="btn btn-blue" id="tmpl-save-btn" onclick="TModal.save()">Add</button>
       </div>
     </div>
@@ -556,6 +599,244 @@
 'use strict';
 
 var el = function(id) { return document.getElementById(id); };
+
+// ── i18n / Localization ────────────────────────────────────────────────────────
+window.EA_LANG = (function() {
+  var l = (navigator.language || 'en').toLowerCase();
+  return (l === 'nb' || l === 'nn' || l === 'no' || l.slice(0,3) === 'nb-' || l.slice(0,3) === 'nn-' || l.slice(0,3) === 'no-') ? 'no' : 'en';
+})();
+var I18N = {
+  en: {
+    tab_auto:'Automations', tab_devices:'Devices', tab_logs:'Logs', tab_help:'Help',
+    sec_add_auto:'Add new automation', sec_my_autos:'My automations',
+    sec_custom_autos:'Custom automations', loading:'Loading\u2026',
+    btn_refresh:'Refresh', btn_cancel:'Cancel', lbl_active:'Active',
+    btn_copy_log:'Copy Log', log_title:'Activity Log',
+    tmpl_motion:'Motion<br>\u2192 Lights', tmpl_smart_dim:'Smart Dim<br>Day / Night',
+    tmpl_door:'Door<br>\u2192 Lights', tmpl_schedule:'Schedule<br>Lights',
+    tmpl_scene:'Light<br>Group', tmpl_switch:'Wall Switch<br>/ Button',
+    tmpl_zone:'Zone<br>Control', tmpl_custom:'Custom<br>Advanced',
+    title_motion:'\ud83c\udfc3  Motion \u2192 Lights', title_smart_dim:'\ud83c\udf19  Smart Dim \u2014 Day & Night',
+    title_door:'\ud83d\udeaa  Door \u2192 Lights', title_schedule:'\u23f0  Schedule Lights',
+    title_switch:'\ud83d\udd18  Wall Switch / Button', title_scene:'\ud83d\udca1  Light Group / Scene',
+    title_zone:'\ud83c\udfe0  Zone Control',
+    modal_settings:'\u2699\ufe0f Settings', modal_lights:'\ud83d\udca1 Lights', modal_test:'\ud83e\uddea Test',
+    ov_title:'Pause automation', ov_midnight:'\ud83c\udf19 Until midnight', ov_resume:'\u25b6 Resume automation now',
+    dev_filtered:'Filtered:', dev_check_all:'\u2713 Check all', dev_uncheck_all:'\u2717 Uncheck all',
+    dev_all:'All:', dev_clear:'Clear selection',
+    err_select_motion:'Please select a motion sensor',
+    err_select_lights:'Please select at least one light',
+    err_select_door:'Please select a door sensor',
+    err_select_time:'Please set a time',
+    err_select_zone:'Please select a zone',
+    err_no_zone_lights:'No lights found in this zone',
+    err_select_switch:'Please select a switch or button device',
+    err_map_button:'Please map at least one button to an automation',
+    empty_auto:'No automations yet.<br>Choose a template above to get started.',
+    empty_auto_test:'No automations yet.',
+    err_flows_ov:'Could not create override Homey Flows:\n{0}\n\nFix: Go to the Help tab and add a Personal Access Token with Flows permission.',
+    err_flows_sw:'Could not create Homey Flows:\n{0}\n\nFix: Go to the Help tab and add a Personal Access Token with Flows permission.',
+    days:['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],
+    lbl_light_s:'light', lbl_lights_pl:'lights', lbl_btn_s:'button', lbl_btns_pl:'buttons',
+    lbl_via_flows:'(via Flows)',
+    // form labels – used in translateFormDOM() text lookup
+    'Motion sensor':'Motion sensor', 'Lights to control':'Lights to control',
+    'Brightness when motion detected':'Brightness when motion detected',
+    'Fade in (0 = instant)':'Fade in (0 = instant)',
+    'Turn lights off when motion stops':'Turn lights off when motion stops',
+    'Keep lights on for (after motion stops)':'Keep lights on for (after motion stops)',
+    'Fade out (0 = instant)':'Fade out (0 = instant)',
+    'Only trigger if lux is below threshold':'Only trigger if lux is below threshold',
+    'Lux sensor':'Lux sensor',
+    'Maximum lux (only trigger below this)':'Maximum lux (only trigger below this)',
+    'Only active during certain hours':'Only active during certain hours',
+    'Active from':'Active from', 'Until':'Until',
+    'Button override \u2014 press a button to set a custom brightness and pause automation':'Button override \u2014 press a button to set a custom brightness and pause automation',
+    'Button / switch device':'Button / switch device',
+    'Override brightness':'Override brightness', 'Override duration':'Override duration',
+    'Automation name':'Automation name', 'Name prefix (e.g. room name)':'Name prefix (e.g. room name)',
+    '\u2600\ufe0f Day starts':'\u2600\ufe0f Day starts', 'Daytime brightness':'Daytime brightness',
+    '\ud83c\udf19 Night starts':'\ud83c\udf19 Night starts', 'Night brightness':'Night brightness',
+    'Door / contact sensor':'Door / contact sensor',
+    'Brightness when door opens':'Brightness when door opens',
+    'Turn lights off when door closes':'Turn lights off when door closes',
+    'Run every day at':'Run every day at', 'Days':'Days', 'Action':'Action',
+    'Brightness':'Brightness', 'Lights':'Lights',
+    'Lights in this group':'Lights in this group',
+    'Default brightness (0% = OFF)':'Default brightness (0% = OFF)',
+    'Group name':'Group name', 'Zone':'Zone', 'Lights in zone':'Lights in zone',
+    'Motion sensor (optional)':'Motion sensor (optional)',
+    'Wall switch / button device':'Wall switch / button device',
+    '\u2014 Select sensor \u2014':'\u2014 Select sensor \u2014',
+    '\u2014 Select lux sensor \u2014':'\u2014 Select lux sensor \u2014',
+    '\u2014 Select device \u2014':'\u2014 Select device \u2014',
+    '\u2014 No sensor (manual only) \u2014':'\u2014 No sensor (manual only) \u2014',
+    '\u2014 Select zone \u2014':'\u2014 Select zone \u2014',
+    'Select lights in the \u2699\ufe0f Settings tab first.':'Select lights in the \u2699\ufe0f Settings tab first.',
+    '\ud83d\udca1 Level':'\ud83d\udca1 Level', '\ud83d\udca1 ON':'\ud83d\udca1 ON',
+    '\ud83c\udf21 Temp':'\ud83c\udf21 Temp',
+    '\u2600\ufe0f Day':'\u2600\ufe0f Day', '\ud83c\udf19 Night':'\ud83c\udf19 Night',
+    'Set all OFF':'Set all OFF', 'Reset to default':'Reset to default',
+    'Button \u2192 Automation mapping':'Button \u2192 Automation mapping',
+    'Homey Flows will be created automatically when you save.':'Homey Flows will be created automatically when you save.',
+    'Loading buttons\u2026':'Loading buttons\u2026',
+    'Activate override (ON)':'Activate override (ON)',
+    'Cancel override (OFF, optional)':'Cancel override (OFF, optional)',
+    'Button assignment':'Button assignment',
+    '\u2014 Not set \u2014':'\u2014 Not set \u2014',
+    '\u2014 Not set (optional) \u2014':'\u2014 Not set (optional) \u2014',
+    'Tip: use the \ud83d\udca1 Lights tab to set each light to a brightness or OFF (0%)':'Tip: use the \ud83d\udca1 Lights tab to set each light to a brightness or OFF (0%)',
+    'No matching devices found.\nGo to Devices tab and press Refresh.':'No matching devices found.\nGo to Devices tab and press Refresh.',
+    'Select a zone first':'Select a zone first',
+    'slider_instant':'instant', 'slider_off_now':'off immediately',
+    btn_add:'Add', btn_save:'Save', btn_remove:'Remove',
+    help_t7_name:'Zone Control',
+    help_t7_desc:'Automatically fills in all dimmable lights from a selected Homey zone. Pick the zone and every dimmable light in it is added for you. Optionally attach a motion sensor to trigger it — works exactly like Motion \u2192 Lights but scoped to a zone. Also supports lux threshold, active hours, and button override.',
+    help_t8_name:'Custom / Advanced',
+    help_t8_desc:'Build your own automation from scratch. Choose a trigger (motion detected, motion stopped, door opens, door closes, or a fixed time), optionally add a time-range condition, and define one or more light actions. Use this for setups that don\u2019t fit any of the other templates.',
+    help_opt_hdr:'\u2699\ufe0f Optional features (Motion, Smart Dim, Zone Control)',
+    help_opt_body:'<strong>Lux threshold</strong> \u2014 Enable \u201cOnly trigger if lux is below threshold\u201d to stop the automation from turning lights on when the room is already bright. Pick a lux sensor and set a maximum lux level.<br><br><strong>Active hours</strong> \u2014 Enable \u201cOnly active during certain hours\u201d to restrict the automation to a time window (e.g. 07:00\u201323:00). Outside those hours triggers are ignored.<br><br><strong>Button override</strong> \u2014 Enable \u201cButton override\u201d to assign a wall switch or remote button as a manual override. Pressing the ON button sets a custom brightness and pauses the automation for a set time. Pressing the OFF button (optional) cancels the override early.'
+  },
+  no: {
+    tab_auto:'Automatiseringer', tab_devices:'Enheter', tab_logs:'Logger', tab_help:'Hjelp',
+    sec_add_auto:'Legg til ny automatisering', sec_my_autos:'Mine automatiseringer',
+    sec_custom_autos:'Egendefinerte automatiseringer', loading:'Laster\u2026',
+    btn_refresh:'Oppdater', btn_cancel:'Avbryt', lbl_active:'Aktiv',
+    btn_copy_log:'Kopier logg', log_title:'Aktivitetslogg',
+    tmpl_motion:'Bevegelse<br>\u2192 Lys', tmpl_smart_dim:'Smart Dim<br>Dag / Natt',
+    tmpl_door:'D\u00f8r<br>\u2192 Lys', tmpl_schedule:'Tidsstyrt<br>Lys',
+    tmpl_scene:'Lys<br>Gruppe', tmpl_switch:'Veggbryter<br>/ Knapp',
+    tmpl_zone:'Sone<br>Kontroll', tmpl_custom:'Egendefinert<br>Avansert',
+    title_motion:'\ud83c\udfc3  Bevegelse \u2192 Lys', title_smart_dim:'\ud83c\udf19  Smart Dim \u2014 Dag & Natt',
+    title_door:'\ud83d\udeaa  D\u00f8r \u2192 Lys', title_schedule:'\u23f0  Tidsstyrt lys',
+    title_switch:'\ud83d\udd18  Veggbryter / Knapp', title_scene:'\ud83d\udca1  Lysgruppe / Scene',
+    title_zone:'\ud83c\udfe0  Sonekontroll',
+    modal_settings:'\u2699\ufe0f Innstillinger', modal_lights:'\ud83d\udca1 Lys', modal_test:'\ud83e\uddea Test',
+    ov_title:'Sett p\u00e5 pause', ov_midnight:'\ud83c\udf19 Til midnatt', ov_resume:'\u25b6 Gjenoppta automatisering n\u00e5',
+    dev_filtered:'Filtrert:', dev_check_all:'\u2713 Merk alle', dev_uncheck_all:'\u2717 Fjern alle',
+    dev_all:'Alle:', dev_clear:'Nullstill valg',
+    err_select_motion:'Velg en bevegelsessensor',
+    err_select_lights:'Velg minst ett lys',
+    err_select_door:'Velg en d\u00f8r-/kontaktsensor',
+    err_select_time:'Angi et tidspunkt',
+    err_select_zone:'Velg en sone',
+    err_no_zone_lights:'Ingen lys funnet i denne sonen',
+    err_select_switch:'Velg en bryter eller knappenhet',
+    err_map_button:'Tilordne minst \u00e9n knapp til en automatisering',
+    empty_auto:'Ingen automatiseringer enn\u00e5.<br>Velg en mal ovenfor for \u00e5 komme i gang.',
+    empty_auto_test:'Ingen automatiseringer enn\u00e5.',
+    err_flows_ov:'Kunne ikke opprette Homey Flows:\n{0}\n\nL\u00f8sning: G\u00e5 til Hjelp-fanen og legg til et Personal Access Token med Flows-tillatelse.',
+    err_flows_sw:'Kunne ikke opprette Homey Flows:\n{0}\n\nL\u00f8sning: G\u00e5 til Hjelp-fanen og legg til et Personal Access Token med Flows-tillatelse.',
+    days:['Man','Tir','Ons','Tor','Fre','L\u00f8r','S\u00f8n'],
+    lbl_light_s:'lys', lbl_lights_pl:'lys', lbl_btn_s:'knapp', lbl_btns_pl:'knapper',
+    lbl_via_flows:'(via Flows)',
+    // form labels
+    'Motion sensor':'Bevegelsessensor', 'Lights to control':'Lys \u00e5 styre',
+    'Brightness when motion detected':'Lysstyrke ved bevegelse',
+    'Fade in (0 = instant)':'Fade inn (0 = umiddelbart)',
+    'Turn lights off when motion stops':'Sl\u00e5 av lys n\u00e5r bevegelse stopper',
+    'Keep lights on for (after motion stops)':'Hold lys p\u00e5 i (etter bevegelse stopper)',
+    'Fade out (0 = instant)':'Fade ut (0 = umiddelbart)',
+    'Only trigger if lux is below threshold':'Utl\u00f8s kun hvis lux er under terskel',
+    'Lux sensor':'Lux-sensor',
+    'Maximum lux (only trigger below this)':'Maksimal lux (utl\u00f8s kun under dette)',
+    'Only active during certain hours':'Kun aktiv i bestemte timer',
+    'Active from':'Aktiv fra', 'Until':'Til',
+    'Button override \u2014 press a button to set a custom brightness and pause automation':'Knappoverstyr \u2014 trykk knapp for \u00e5 sette lysstyrke og pause automatisering',
+    'Button / switch device':'Knapp / bryterenhet',
+    'Override brightness':'Overstyr lysstyrke', 'Override duration':'Overstringsvarighet',
+    'Automation name':'Navn p\u00e5 automatisering', 'Name prefix (e.g. room name)':'Navneprefiks (f.eks. romnavn)',
+    '\u2600\ufe0f Day starts':'\u2600\ufe0f Dag starter', 'Daytime brightness':'Dagslys-lysstyrke',
+    '\ud83c\udf19 Night starts':'\ud83c\udf19 Natt starter', 'Night brightness':'Nattelysstyrke',
+    'Door / contact sensor':'D\u00f8r / kontaktsensor',
+    'Brightness when door opens':'Lysstyrke n\u00e5r d\u00f8r \u00e5pnes',
+    'Turn lights off when door closes':'Sl\u00e5 av lys n\u00e5r d\u00f8r lukkes',
+    'Run every day at':'Kj\u00f8r hver dag klokken', 'Days':'Dager', 'Action':'Handling',
+    'Brightness':'Lysstyrke', 'Lights':'Lys',
+    'Lights in this group':'Lys i denne gruppen',
+    'Default brightness (0% = OFF)':'Standard lysstyrke (0% = AV)',
+    'Group name':'Gruppenavn', 'Zone':'Sone', 'Lights in zone':'Lys i sonen',
+    'Motion sensor (optional)':'Bevegelsessensor (valgfritt)',
+    'Wall switch / button device':'Veggbryter / knappenhet',
+    '\u2014 Select sensor \u2014':'\u2014 Velg sensor \u2014',
+    '\u2014 Select lux sensor \u2014':'\u2014 Velg lux-sensor \u2014',
+    '\u2014 Select device \u2014':'\u2014 Velg enhet \u2014',
+    '\u2014 No sensor (manual only) \u2014':'\u2014 Ingen sensor (manuell) \u2014',
+    '\u2014 Select zone \u2014':'\u2014 Velg sone \u2014',
+    'Select lights in the \u2699\ufe0f Settings tab first.':'Velg lys i \u2699\ufe0f Innstillinger-fanen f\u00f8rst.',
+    '\ud83d\udca1 Level':'\ud83d\udca1 Niv\u00e5', '\ud83d\udca1 ON':'\ud83d\udca1 P\u00c5',
+    '\ud83c\udf21 Temp':'\ud83c\udf21 Temp',
+    '\u2600\ufe0f Day':'\u2600\ufe0f Dag', '\ud83c\udf19 Night':'\ud83c\udf19 Natt',
+    'Set all OFF':'Sl\u00e5 av alle', 'Reset to default':'Tilbakestill',
+    'Button \u2192 Automation mapping':'Knapp \u2192 Automatisering',
+    'Homey Flows will be created automatically when you save.':'Homey Flows opprettes automatisk n\u00e5r du lagrer.',
+    'Loading buttons\u2026':'Laster knapper\u2026',
+    'Activate override (ON)':'Aktiver overstyr (P\u00c5)',
+    'Cancel override (OFF, optional)':'Avbryt overstyr (AV, valgfritt)',
+    'Button assignment':'Knapptildeling',
+    '\u2014 Not set \u2014':'\u2014 Ikke valgt \u2014',
+    '\u2014 Not set (optional) \u2014':'\u2014 Ikke valgt (valgfritt) \u2014',
+    'Tip: use the \ud83d\udca1 Lights tab to set each light to a brightness or OFF (0%)':'Tips: bruk \ud83d\udca1 Lys-fanen til \u00e5 sette lysstyrke eller AV (0%) per lys',
+    'No matching devices found.\nGo to Devices tab and press Refresh.':'Ingen enheter funnet.\nG\u00e5 til Enheter-fanen og trykk Oppdater.',
+    'Select a zone first':'Velg en sone f\u00f8rst',
+    'slider_instant':'umiddelbart', 'slider_off_now':'sl\u00e5 av straks',
+    btn_add:'Legg til', btn_save:'Lagre', btn_remove:'Fjern',
+    help_t7_name:'Sonekontroll',
+    help_t7_desc:'Fyller automatisk inn alle dimbare lys fra en valgt Homey-sone. Velg sonen og alle dimbare lys i den legges til. Koble eventuelt til en bevegelsessensor for \u00e5 utl\u00f8se automatiseringen \u2014 virker som Bevegelse \u2192 Lys, men avgrenset til sonen. St\u00f8tter ogs\u00e5 lux-terskel, aktive timer og knappoverstyr.',
+    help_t8_name:'Egendefinert / Avansert',
+    help_t8_desc:'Bygg din egen automatisering fra bunnen av. Velg en utl\u00f8ser (bevegelse oppdaget, bevegelse stoppet, d\u00f8r \u00e5pnes, d\u00f8r lukkes eller fast tidspunkt), legg eventuelt til en tidsintervall-betingelse, og defin\u00e9r \u00e9n eller flere lyshandlinger. Bruk dette for oppsett som ikke passer noen av de andre malene.',
+    help_opt_hdr:'\u2699\ufe0f Valgfrie funksjoner (Bevegelse, Smart Dim, Sonekontroll)',
+    help_opt_body:'<strong>Lux-terskel</strong> \u2014 Aktiver \u00abUtl\u00f8s kun hvis lux er under terskel\u00bb for \u00e5 hindre at lys sl\u00e5s p\u00e5 n\u00e5r rommet allerede er lyst nok. Velg en lux-sensor og sett maksimal lux.<br><br><strong>Aktive timer</strong> \u2014 Aktiver \u00abKun aktiv i bestemte timer\u00bb for \u00e5 begrense automatiseringen til et tidsvindu (f.eks. 07:00\u201323:00). Utenfor dette vinduet ignoreres utl\u00f8sere.<br><br><strong>Knappoverstyr</strong> \u2014 Aktiver \u00abKnappoverstyr\u00bb for \u00e5 tilordne en veggbryter eller fjernkontrollknapp som manuell overstyring. \u00c5 trykke P\u00c5-knappen setter en egendefinert lysstyrke og setter automatiseringen p\u00e5 pause i en valgt tid. \u00c5 trykke AV-knappen (valgfritt) avbryter overstyringen tidlig.',
+    ov_para:'Utl\u00f8sere er satt p\u00e5 pause \u2014 lysene forblir slik du setter dem manuelt. Automatiseringen gjenopptas n\u00e5r overstyringen utl\u00f8per.',
+    help_subtitle:'Styr lysene og automatiseringene dine fra Homey',
+    help_gs_hdr:'Kom i gang',
+    help_gs_body:'<li>G\u00e5 til <strong>Enheter</strong>-fanen og trykk <strong>Oppdater</strong> for \u00e5 laste alle Homey-enhetene dine.</li><li>G\u00e5 til <strong>Automatiseringer</strong> og velg en mal for \u00e5 opprette din f\u00f8rste automatisering.</li><li>Gi den et navn, velg lysene dine, og trykk <strong>Legg til</strong>.</li><li>Bruk en <strong>Veggbryter</strong>-automatisering for \u00e5 koble en knapp til en gruppe du har opprettet.</li>',
+    help_tmpl_hdr:'Automatiseringsmaler',
+    help_t1_name:'Bevegelse \u2192 Lys', help_t1_desc:'Sl\u00e5r p\u00e5 lys n\u00e5r en bevegelsessensor oppdager bevegelse, og slukker dem eventuelt n\u00e5r bevegelsen stopper. Du kan angi en holdtid (f.eks. hold lys p\u00e5 i 5 minutter etter siste bevegelse) og fade inn/ut-varighet.',
+    help_t2_name:'Smart Dim \u2014 Dag & Natt', help_t2_desc:'Samme som Bevegelse \u2192 Lys, men bruker to lysstyrkeniv\u00e5er: et sterkt niv\u00e5 om dagen og et dempet niv\u00e5 om natten. Du setter tidspunktet for n\u00e5r dag starter og natt starter. Perfekt for ganger og bad.',
+    help_t3_name:'D\u00f8r \u2192 Lys', help_t3_desc:'Sl\u00e5r p\u00e5 lys n\u00e5r en d\u00f8r- eller kontaktsensor \u00e5pnes, og slukker dem eventuelt n\u00e5r den lukkes igjen. Nyttig for skap, lager eller garasjelys.',
+    help_t4_name:'Tidsstyrt lys', help_t4_desc:'Kj\u00f8rer en handling til et fast tidspunkt hver dag (eller utvalgte ukedager). Du kan sl\u00e5 lys P\u00c5, AV eller dimme dem til et bestemt niv\u00e5. Bra for morgenrutiner eller \u00e5 slukke alt ved leggetid.',
+    help_t5_name:'Lysgruppe / Scene', help_t5_desc:'En gruppe lys med en fast tilstand. Du velger hva hvert lys gj\u00f8r n\u00e5r scenen kj\u00f8res: sett det til en lysstyrke (1\u2013100%) eller helt av (0%). Scenen gj\u00f8r ingenting selv \u2014 den er ment \u00e5 utl\u00f8ses av en <strong>Veggbryter</strong>-knapp, en annen automatisering eller Test-knappen. Perfekt for en nattscene der noen lys dempes og andre slukker helt.',
+    help_t6_name:'Veggbryter / Knapp', help_t6_desc:'Kobler en fysisk bryter eller knapp til \u00e9n eller flere automatiseringer. Hver knapphandling (trykk, p\u00e5, av, hold) kan tilordnes en hvilken som helst gruppe du har opprettet. For enheter uten standardfunksjoner opprettes Homey Flows automatisk.',
+    help_lt_hdr:'\ud83d\udca1 Lys-fanen (inne i en automatisering)',
+    help_lt_body:'N\u00e5r du redigerer en automatisering finner du en <strong>Lys</strong>-fane. Her kan du sette individuelle lysstyrkeniv\u00e5er per lys \u2014 som overstyrer den globale glidebryteren. Dette lar deg ha ett lys p\u00e5 80% og et annet p\u00e5 20% i samme automatisering.<br><br>For en <strong>Lysgruppe</strong> vil det \u00e5 dra en glidebryter til <strong>0% sl\u00e5 av det spesifikke lyset</strong> n\u00e5r scenen kj\u00f8res, mens andre forblir p\u00e5 sitt angitte niv\u00e5.',
+    help_pause_hdr:'\u23f8 Sette en automatisering p\u00e5 pause',
+    help_pause_body:'Trykk p\u00e5 <strong>\u23f8</strong>-ikonet p\u00e5 et automatiseringskort for \u00e5 sette det p\u00e5 pause i 30 min, 1 time, 2 timer, 4 timer eller til midnatt. Mens det er p\u00e5 pause reagerer automatiseringen ikke p\u00e5 noen utl\u00f8sere. Nyttig n\u00e5r du vil overstyre lysene manuelt en stund. Trykk <strong>Gjenoppta</strong> for \u00e5 avslutte tidlig.',
+    help_tips_hdr:'\ud83d\udcac Tips og vanlige oppsett',
+    help_tips_body:'<strong>Nattscene via veggbryter:</strong><br>1. Opprett en <em>Lysgruppe</em> kalt \u00abNattscene\u00bb. Legg til alle lysene du vil styre. Sett ganglys til 5% og soveromslys til 0% i Lys-fanen.<br>2. Opprett en <em>Veggbryter</em>-automatisering. Tilordne \u00e9n knapp til Nattscene-gruppen.<br>3. Trykk knappen om natten \u2014 gangen dempes, soveromslys slukker.<br><br><strong>Bevegelseslys som demper seg om natten:</strong><br>Bruk <em>Smart Dim</em>. Sett dagslys-lysstyrke til 100% og natt til 15%. Appen velger automatisk riktig niv\u00e5 basert p\u00e5 gjeldende tid.<br><br><strong>Enheter vises ikke?</strong><br>G\u00e5 til <strong>Enheter</strong>-fanen og trykk <strong>Oppdater</strong>. Appen bufrer enhetslisten \u2014 en oppdatering henter det siste fra Homey.<br><br><strong>Teste en automatisering:</strong><br>\u00c5pne en automatisering og bytt til <strong>\ud83e\uddea Test</strong>-fanen. Trykk testknappen for \u00e5 kj\u00f8re handlingene umiddelbart uten \u00e5 vente p\u00e5 en utl\u00f8ser.',
+    help_log_hdr:'\ud83d\udccb Logger-fanen',
+    help_log_body:'Logger-fanen viser en tidsstemplet aktivitetslogg over alt appen har gjort: utl\u00f8sere avfyrt, betingelser sjekket, handlinger utf\u00f8rt og eventuelle feil. Trykk <strong>Kopier logg</strong> for \u00e5 kopiere hele loggen til utklippsbordet for feils\u00f8king.',
+    help_pat_hdr:'\ud83d\udd11 Personal Access Token',
+    help_pat_desc:'Kreves for <strong>Veggbryter</strong>-automatiseringer som bruker Homey Flows (f.eks. Z-Wave-fjernkontroller som NAMRON). Uten dette tokenet kan ikke appen opprette flows automatisk.<br><br>For \u00e5 opprette et token: g\u00e5 til <strong>my.homey.app</strong> \u2192 Innstillinger \u2192 API \u2192 <em>Opprett et Personal Access Token</em> og aktiver <strong>Flows</strong>-tillatelsen.',
+    help_pat_ph:'Lim inn token her\u2026'
+  }
+};
+function i18n(key) {
+  var d = EA_LANG !== 'en' ? I18N[EA_LANG] : null;
+  return (d && d[key] !== undefined) ? d[key] : (I18N.en[key] !== undefined ? I18N.en[key] : key);
+}
+function translateDOM() {
+  if (EA_LANG === 'en') return;
+  document.querySelectorAll('[data-i18n]').forEach(function(e) { e.textContent = i18n(e.getAttribute('data-i18n')); });
+  document.querySelectorAll('[data-i18n-html]').forEach(function(e) { e.innerHTML = i18n(e.getAttribute('data-i18n-html')); });
+  document.querySelectorAll('[data-i18n-ph]').forEach(function(e) { e.placeholder = i18n(e.getAttribute('data-i18n-ph')); });
+}
+function translateFormDOM() {
+  if (EA_LANG === 'en') return;
+  var dict = I18N[EA_LANG];
+  var sel = ['.flabel', '.check-row label', '.lt-label', '.dp-empty'];
+  sel.forEach(function(s) {
+    document.querySelectorAll(s).forEach(function(e) { var k = e.textContent.trim(); if (dict[k] !== undefined) e.textContent = dict[k]; });
+  });
+  document.querySelectorAll('select.finput option[value=""]').forEach(function(e) { var k = e.textContent.trim(); if (dict[k] !== undefined) e.textContent = dict[k]; });
+  document.querySelectorAll('.slider-val').forEach(function(e) { var k = e.textContent.trim(); if (dict[k] !== undefined) e.textContent = dict[k]; });
+  document.querySelectorAll('#tmpl-body .sec-hdr, #t-sw-mappings .sec-hdr, #t-ov-buttons .sec-hdr').forEach(function(e) { var k = e.textContent.trim(); if (dict[k] !== undefined) e.textContent = dict[k]; });
+  document.querySelectorAll('.btn-sm').forEach(function(e) { var k = e.textContent.trim(); if (dict[k] !== undefined) e.textContent = dict[k]; });
+  document.querySelectorAll('#tmpl-body p[style]').forEach(function(e) { var k = e.textContent.trim(); if (dict[k] !== undefined) e.textContent = dict[k]; });
+}
+// Slider display helpers (used from inline oninput handlers)
+window._siF = function(v) { return +v === 0 ? i18n('slider_instant') : v + 's'; };
+window._siH = function(v) { return +v === 0 ? i18n('slider_off_now') : v + ' min'; };
 function esc(s) {
   return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
@@ -608,7 +889,7 @@ var PATSettings = {
     await window._hSet('_homeyPAT', '');
     el('pat-input').value = '';
     el('pat-status').textContent = 'Token removed.';
-    el('pat-status').style.color = 'var(--ea-sub)';
+    el('pat-status').style.color = 'var(--ea-text)';
     el('pat-clear-btn').style.display = 'none';
   }
 };
@@ -687,9 +968,13 @@ function devName(id) {
   return d ? d.name : '';
 }
 
+function groupIcon(g) {
+  var icons = { motion_lights:'🏃', smart_dim:'🌙', door_lights:'🚪', schedule:'⏰', switch:'🔘', scene:'💡', zone_control:'🏠' };
+  return icons[g.type] || '⚙️';
+}
+
 function groupSummary(g) {
-  var icons = { motion_lights:'🏃', smart_dim:'🌙', door_lights:'🚪', schedule:'⏰', switch:'🔘', scene:'💡' };
-  var icon  = icons[g.type] || '⚙️';
+  var icons = { motion_lights:'🏃', smart_dim:'🌙', door_lights:'🚪', schedule:'⏰', switch:'🔘', scene:'💡', zone_control:'🏠' };
   var trigger = g.items[0] && g.items[0].a.trigger;
   var sensor  = trigger && trigger.deviceId ? devName(trigger.deviceId) : '';
 
@@ -699,7 +984,7 @@ function groupSummary(g) {
     if (sensor) parts.push(sensor);
     if (firstA && firstA._useHomeyFlows) {
       var n = (firstA._switchMappings || []).filter(function(m){ return m.groupId; }).length;
-      if (n) parts.push(n + ' button' + (n !== 1 ? 's' : '') + ' (via Flows)');
+      if (n) parts.push(n + ' ' + i18n(n !== 1 ? 'lbl_btns_pl' : 'lbl_btn_s') + ' ' + i18n('lbl_via_flows'));
     } else {
       var mappedNames = [];
       g.items.forEach(function(it) {
@@ -727,10 +1012,10 @@ function groupSummary(g) {
     ? trigger.days.slice().sort(function(a,b){return a-b;}).map(function(d){return dayNames[d];}).join(',')
     : '';
   var time = (g.type === 'schedule' && trigger) ? ('at ' + trigger.time + (schedDays ? ' · ' + schedDays : '')) : '';
-  var parts = [icon];
+  var parts = [];
   if (sensor) parts.push(sensor);
   if (time)   parts.push(time);
-  if (lights.size) parts.push(lights.size + ' light' + (lights.size !== 1 ? 's' : ''));
+  if (lights.size) parts.push(lights.size + ' ' + i18n(lights.size !== 1 ? 'lbl_lights_pl' : 'lbl_light_s'));
   return parts.join(' · ');
 }
 
@@ -783,7 +1068,7 @@ var AutoList = {
     var orphans = AutoList._computed.orphans;
 
     if (!groups.length && !orphans.length) {
-      list.innerHTML = '<div class="empty"><div class="icon">⚡</div><p>No automations yet.<br>Choose a template above to get started.</p></div>';
+      list.innerHTML = '<div class="empty"><div class="icon">⚡</div><p>' + i18n('empty_auto') + '</p></div>';
       return;
     }
 
@@ -796,6 +1081,7 @@ var AutoList = {
         html += '<div class="card">' +
           '<label class="tog"><input type="checkbox"' + (enabled ? ' checked' : '') +
             ' onchange="AutoList.toggleGroup(' + gi + ',this.checked)"/><span class="tog-track"></span></label>' +
+          '<span class="card-type-icon">' + groupIcon(g) + '</span>' +
           '<div class="card-body" onclick="AutoList.editGroup(' + gi + ')">' +
             '<div class="card-name">' + esc(g.name || 'Automation') + '</div>' +
             '<div class="card-sub">' + esc(groupSummary(g)) + '</div>' +
@@ -811,7 +1097,7 @@ var AutoList = {
     }
 
     if (orphans.length) {
-      if (groups.length) html += '<div class="sec-hdr" style="margin-top:18px">Custom automations</div>';
+      if (groups.length) html += '<div class="sec-hdr" style="margin-top:18px">' + i18n('sec_custom_autos') + '</div>';
       html += '<div class="auto-list-wrap">';
       orphans.forEach(function(item) {
         var a = item.a, i = item.i;
@@ -833,10 +1119,11 @@ var AutoList = {
   },
 
   _singleSummary: function(a) {
-    var t = a.trigger || {};
+    var tr = a.trigger || {};
     var labels = { motion_start:'Motion on', motion_stop:'Motion off', door_open:'Door opens', door_close:'Door closes' };
-    var s = t.type === 'time' ? ('Every day at ' + (t.time||'?')) : (labels[t.type] || t.type || '');
-    if (t.deviceId) s += ' · ' + (devName(t.deviceId) || 'Unknown');
+    if (EA_LANG === 'no') { labels = { motion_start:'Bevegelse på', motion_stop:'Bevegelse av', door_open:'Dør åpnes', door_close:'Dør lukkes' }; }
+    var s = tr.type === 'time' ? ('Every day at ' + (tr.time||'?')) : (labels[tr.type] || tr.type || '');
+    if (tr.deviceId) s += ' · ' + (devName(tr.deviceId) || 'Unknown');
     var n = (a.actions||[]).length;
     return s + ' → ' + n + ' action' + (n !== 1 ? 's' : '');
   },
@@ -980,15 +1267,16 @@ var TModal = {
     if (type === 'custom') { CustomEditor.open(); return; }
 
     var titles = {
-      motion_lights: '🏃  Motion → Lights',
-      smart_dim:     '🌙  Smart Dim — Day & Night',
-      door_lights:   '🚪  Door → Lights',
-      schedule:      '⏰  Schedule Lights',
-      switch:        '🔘  Wall Switch / Button',
-      scene:         '💡  Light Group / Scene'
+      motion_lights: i18n('title_motion'),
+      smart_dim:     i18n('title_smart_dim'),
+      door_lights:   i18n('title_door'),
+      schedule:      i18n('title_schedule'),
+      switch:        i18n('title_switch'),
+      scene:         i18n('title_scene'),
+      zone_control:  i18n('title_zone')
     };
     el('tmpl-title').textContent = titles[type];
-    el('tmpl-save-btn').textContent = 'Add';
+    el('tmpl-save-btn').textContent = i18n('btn_add');
     if (el('tmpl-enabled')) el('tmpl-enabled').checked = true;
     TModal._lightDims  = {};
     TModal._prevGlobal = {};
@@ -1003,6 +1291,7 @@ var TModal = {
     el('tmpl-tab-settings').classList.add('on');
     el('tmpl-tab-lights').classList.remove('on');
     el('tmpl-tab-test').classList.remove('on');
+    translateFormDOM();
 
     // Render device pickers (switch uses dynamic mapping, no static picker)
     if (type === 'motion_lights') {
@@ -1015,15 +1304,18 @@ var TModal = {
       Picker.render('dp-lights', [], 'onoff');
     } else if (type === 'scene') {
       Picker.render('dp-lights', [], 'onoff');
+    } else if (type === 'zone_control') {
+      // Zone picker starts empty — lights populated on zone change
+      el('dp-lights').innerHTML = '<div class="dp-empty">Select a zone first</div>';
     }
   },
 
   openEdit: function(g) {
     this._editingGroup = g;
     this.type = g.type;
-    var titles = { motion_lights:'🏃  Motion → Lights', smart_dim:'🌙  Smart Dim — Day & Night', door_lights:'🚪  Door → Lights', schedule:'⏰  Schedule Lights', switch:'🔘  Wall Switch / Button', scene:'💡  Light Group / Scene' };
+    var titles = { motion_lights:i18n('title_motion'), smart_dim:i18n('title_smart_dim'), door_lights:i18n('title_door'), schedule:i18n('title_schedule'), switch:i18n('title_switch'), scene:i18n('title_scene'), zone_control:i18n('title_zone') };
     el('tmpl-title').textContent = titles[g.type] || 'Edit Automation';
-    el('tmpl-save-btn').textContent = 'Save';
+    el('tmpl-save-btn').textContent = i18n('btn_save');
     var groupEnabled = g.items.every(function(it){ return it.a.enabled; });
     if (el('tmpl-enabled')) el('tmpl-enabled').checked = groupEnabled;
     el('tmpl-body').innerHTML = TModal._form(g.type);
@@ -1037,6 +1329,7 @@ var TModal = {
     el('tmpl-lights-tab').style.display   = 'none';
     el('tmpl-test-tab').style.display     = 'none';
     el('tmpl-tab-settings').classList.add('on');
+    translateFormDOM();
     el('tmpl-tab-lights').classList.remove('on');
     el('tmpl-tab-test').classList.remove('on');
 
@@ -1282,6 +1575,65 @@ var TModal = {
         if (el('t-name'))   el('t-name').value = g.name || '';
       }, 0);
 
+    } else if (g.type === 'zone_control') {
+      var onItemZ = (g.items.find(function(it){return it.a.trigger&&(it.a.trigger.type==='motion_start'||it.a.trigger.type==='manual');})||g.items[0]).a;
+      var luxCondZ   = (onItemZ.conditions||[]).find(function(c){return c.type==='lux_below';});
+      var hoursCondZ = (onItemZ.conditions||[]).find(function(c){return c.type==='time_between';});
+      var sensorZ  = onItemZ.trigger && onItemZ.trigger.deviceId;
+      var lightsZ  = (onItemZ.actions||[]).filter(function(ac){return ac.type==='turn_on';}).map(function(ac){return ac.deviceId;});
+      var dimAcZ   = (onItemZ.actions||[]).find(function(ac){return ac.type==='set_dim'||ac.type==='fade_to';});
+      var brightZ  = dimAcZ ? Math.round((dimAcZ.value||1)*100) : 100;
+      var fadeInMZ = (onItemZ.actions||[]).find(function(ac){return ac.type==='fade_to';});
+      var fadeInZ  = fadeInMZ ? (fadeInMZ.duration || 0) : 0;
+      var offItemZ = g.items.find(function(it){return it.a.trigger&&it.a.trigger.type==='motion_stop';});
+      var hasOffZ  = !!offItemZ;
+      var holdZ    = offItemZ ? (offItemZ.a._holdMinutes || 0) : 5;
+      var fadeOutAcZ = offItemZ && (offItemZ.a.actions||[]).find(function(ac){return ac.type==='fade_off';});
+      var fadeOutZ  = fadeOutAcZ ? (fadeOutAcZ.duration || 0) : 0;
+      var savedZone = onItemZ._zone || '';
+      Picker.render('dp-lights', lightsZ, 'dim');
+      TModal._prevGlobal.on = brightZ;
+      (onItemZ.actions||[]).forEach(function(ac) {
+        if ((ac.type==='set_dim'||ac.type==='fade_to') && ac.deviceId) {
+          if (!TModal._lightDims[ac.deviceId]) TModal._lightDims[ac.deviceId] = {};
+          TModal._lightDims[ac.deviceId].on = ac.value;
+        }
+        if (ac.type==='set_color_temp' && ac.deviceId) {
+          if (!TModal._lightDims[ac.deviceId]) TModal._lightDims[ac.deviceId] = {};
+          TModal._lightDims[ac.deviceId].ct = ac.value;
+        }
+      });
+      setTimeout(function(){
+        if (savedZone && el('t-zone')) el('t-zone').value = savedZone;
+        if (sensorZ && el('t-sensor')) el('t-sensor').value = sensorZ;
+        if (el('t-bright'))   { el('t-bright').value = brightZ; if(el('t-bval')) el('t-bval').textContent = brightZ+'%'; }
+        if (el('t-fadein'))   { el('t-fadein').value = fadeInZ; if(el('t-fadein-val')) el('t-fadein-val').textContent = fadeInZ===0?'instant':fadeInZ+'s'; }
+        if (el('t-turnoff'))  el('t-turnoff').checked = hasOffZ;
+        if (el('t-hold'))     { el('t-hold').value = holdZ; if(el('t-holdval')) el('t-holdval').textContent = holdZ===0?'off immediately':holdZ+' min'; }
+        if (el('t-hold-wrap'))    el('t-hold-wrap').style.display = hasOffZ ? '' : 'none';
+        if (el('t-fadeout'))  { el('t-fadeout').value = fadeOutZ; if(el('t-fadeout-val')) el('t-fadeout-val').textContent = fadeOutZ===0?'instant':fadeOutZ+'s'; }
+        if (el('t-fadeout-wrap')) el('t-fadeout-wrap').style.display = hasOffZ ? '' : 'none';
+        if (el('t-lux-en') && luxCondZ && luxCondZ.deviceId) {
+          el('t-lux-en').checked = true; el('t-lux-wrap').style.display = '';
+          if(el('t-lux-sensor')) el('t-lux-sensor').value = luxCondZ.deviceId;
+          if(el('t-lux-max')) { el('t-lux-max').value = luxCondZ.maxLux||50; if(el('t-lux-val')) el('t-lux-val').textContent = (luxCondZ.maxLux||50)+' lx'; }
+        }
+        if (el('t-hours-en') && hoursCondZ) {
+          el('t-hours-en').checked = true; el('t-hours-wrap').style.display = '';
+          tpSet('t-hours-from', hoursCondZ.from||'07:00'); tpSet('t-hours-to', hoursCondZ.to||'23:00');
+        }
+        if (el('t-ov-en') && onItemZ._overrideSwitch && onItemZ._overrideSwitch.deviceId) {
+          el('t-ov-en').checked = true; el('t-ov-wrap').style.display = '';
+          if (el('t-ov-device')) el('t-ov-device').value = onItemZ._overrideSwitch.deviceId;
+          var _ovBZ = Math.round((onItemZ._overrideSwitch.brightness||1)*100);
+          var _ovDZ = onItemZ._overrideSwitch.durationMinutes||30;
+          if (el('t-ov-bright')) { el('t-ov-bright').value = _ovBZ; if(el('t-ov-bval')) el('t-ov-bval').textContent = _ovBZ+'%'; }
+          if (el('t-ov-dur'))    { el('t-ov-dur').value = _ovDZ;    if(el('t-ov-durval')) el('t-ov-durval').textContent = _ovDZ+' min'; }
+          TModal._ovDeviceChanged({ onMapping: onItemZ._overrideSwitch.onMapping || null, offMapping: onItemZ._overrideSwitch.offMapping || null });
+        }
+        if (el('t-name'))     el('t-name').value = g.name || '';
+      }, 0);
+
     } else if (g.type === 'switch') {
       var firstItem = g.items[0] && g.items[0].a;
       var swDev = firstItem && firstItem.trigger && firstItem.trigger.deviceId;
@@ -1373,14 +1725,14 @@ var TModal = {
     el('tmpl-tab-settings').classList.toggle('on', tab === 'settings');
     el('tmpl-tab-lights').classList.toggle('on',   tab === 'lights');
     el('tmpl-tab-test').classList.toggle('on',     tab === 'test');
-    if (tab === 'lights') TModal._renderLightsTab();
+    if (tab === 'lights') { TModal._renderLightsTab(); translateFormDOM(); }
     if (tab === 'test')   TModal._renderTestTab();
   },
 
   _renderLightsTab: function() {
     var lights = Picker.getSelected('dp-lights');
     if (!lights.length) {
-      el('tmpl-lights-tab').innerHTML = '<div style="padding:28px 0;text-align:center;color:#8e8e93;font-size:14px">Select lights in the ⚙️ Settings tab first.</div>';
+      el('tmpl-lights-tab').innerHTML = '<div style="padding:28px 0;text-align:center;color:var(--ea-text);font-size:14px">Select lights in the ⚙️ Settings tab first.</div>';
       return;
     }
     var type = TModal.type;
@@ -1544,7 +1896,7 @@ var TModal = {
       // Switch: one button per mapped automation group
       var g = TModal._editingGroup;
       if (!g) {
-        html = '<div style="padding:24px 0;text-align:center;color:#8e8e93;font-size:14px">Save the automation first, then reopen to test.</div>';
+        html = '<div style="padding:24px 0;text-align:center;color:var(--ea-text);font-size:14px">Save the automation first, then reopen to test.</div>';
       } else {
         var btns = '';
         var firstIt = g.items[0] && g.items[0].a;
@@ -1557,14 +1909,14 @@ var TModal = {
             var rows = mappings.filter(function(m){ return m.groupId; }).map(function(m) {
               return '<div style="background:var(--ea-card);border:1px solid var(--ea-border);border-radius:10px;padding:10px 12px;margin-bottom:8px;font-size:13px">' +
                 '<div style="font-weight:700;margin-bottom:4px">📋 ' + esc(m.triggerTitle || 'Button') + '</div>' +
-                '<div style="color:var(--ea-sub);margin-bottom:2px">Trigger: <b>' + esc(devName) + '</b> — ' + esc(m.triggerTitle || '') + '</div>' +
-                '<div style="color:var(--ea-sub);margin-bottom:6px">Action: <b>Easy Automation</b> → Run automation group → <b>' + esc(m.groupName || m.groupId) + '</b></div>' +
+                '<div style="color:var(--ea-text);margin-bottom:2px">Trigger: <b>' + esc(devName) + '</b> — ' + esc(m.triggerTitle || '') + '</div>' +
+                '<div style="color:var(--ea-text);margin-bottom:6px">Action: <b>Easy Automation</b> → Run automation group → <b>' + esc(m.groupName || m.groupId) + '</b></div>' +
                 '<button class="btn btn-blue" style="width:100%;font-size:12px" onclick="TModal._runGroupTest(\'' + esc(m.groupId) + '\')">🧪 Test this automation</button>' +
               '</div>';
             }).join('');
             html = '<div style="background:rgba(255,149,0,.12);border:1px solid rgba(255,149,0,.4);border-radius:10px;padding:12px 14px;margin-bottom:12px;font-size:13px">' +
               '<b>⚠️ Manual Homey Flow required</b><br>' +
-              '<span style="color:var(--ea-sub)">The app cannot create Homey Flows automatically. Create each flow below manually in Homey → Flows → + New Flow:</span>' +
+              '<span style="color:var(--ea-text)">The app cannot create Homey Flows automatically. Create each flow below manually in Homey → Flows → + New Flow:</span>' +
             '</div>' + rows +
             '<div id="tmpl-test-result" style="min-height:20px"></div>';
           } else {
@@ -1596,8 +1948,8 @@ var TModal = {
           html = btns
             ? flowCheckBtn +
               '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">' + btns + '</div>' +
-              '<div id="tmpl-test-result" style="min-height:40px"><p style="color:#8e8e93;font-size:13px">Press a button to run the mapped automation.</p></div>'
-            : '<div style="padding:24px 0;text-align:center;color:#8e8e93;font-size:14px">No automations mapped yet.</div>';
+              '<div id="tmpl-test-result" style="min-height:40px"><p style="color:var(--ea-text);font-size:13px">Press a button to run the mapped automation.</p></div>'
+            : '<div style="padding:24px 0;text-align:center;color:var(--ea-text);font-size:14px">No automations mapped yet.</div>';
         }
       }
       el('tmpl-test-tab').innerHTML = html;
@@ -1606,7 +1958,7 @@ var TModal = {
 
     var lights = Picker.getSelected('dp-lights');
     if (!lights.length) {
-      html = '<div style="padding:24px 0;text-align:center;color:#8e8e93;font-size:14px">Select lights in the ⚙️ Settings tab first.</div>';
+      html = '<div style="padding:24px 0;text-align:center;color:var(--ea-text);font-size:14px">Select lights in the ⚙️ Settings tab first.</div>';
     } else {
       var btns = '';
       if (type === 'scene') {
@@ -1629,7 +1981,7 @@ var TModal = {
       }
       html =
         '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">' + btns + '</div>' +
-        '<div id="tmpl-test-result" style="min-height:40px"><p style="color:#8e8e93;font-size:13px">Press a button above to test your lights.</p></div>';
+        '<div id="tmpl-test-result" style="min-height:40px"><p style="color:var(--ea-text);font-size:13px">Press a button above to test your lights.</p></div>';
     }
     el('tmpl-test-tab').innerHTML = html;
   },
@@ -1637,7 +1989,7 @@ var TModal = {
   _runGroupTest: async function(groupId) {
     var resEl = el('tmpl-test-result');
     if (!resEl) return;
-    resEl.innerHTML = '<p style="color:#8e8e93;font-size:13px">Running…</p>';
+    resEl.innerHTML = '<p style="color:var(--ea-text);font-size:13px">Running…</p>';
     var ts = Date.now();
     try {
       await window._hSet('_testRequest', JSON.stringify({ actions: [{ type: 'run_group', groupId: groupId }], name: 'Switch test', ts: ts }));
@@ -1651,7 +2003,7 @@ var TModal = {
       resEl.innerHTML = res.ok
         ? '<p style="color:#34c759;font-size:13px">✓ Automation ran successfully.</p>'
         : '<p style="color:#ff3b30;font-size:13px">✗ ' + esc(res.error || 'Unknown error') + '</p>' +
-          '<p style="color:#8e8e93;font-size:11px">Group ID: ' + esc(groupId) + '</p>';
+          '<p style="color:var(--ea-text);font-size:11px">Group ID: ' + esc(groupId) + '</p>';
     } catch(e) {
       resEl.innerHTML = '<p style="color:#ff3b30;font-size:13px">✗ ' + esc(e.message) + '</p>';
     }
@@ -1660,7 +2012,7 @@ var TModal = {
   _checkSwitchFlows: async function() {
     var resEl = el('tmpl-test-result');
     if (!resEl) return;
-    resEl.innerHTML = '<p style="color:#8e8e93;font-size:13px">Checking Homey Flows…</p>';
+    resEl.innerHTML = '<p style="color:var(--ea-text);font-size:13px">Checking Homey Flows…</p>';
     var g = TModal._editingGroup;
     var firstIt = g && g.items[0] && g.items[0].a;
     var flowIds = (firstIt && firstIt._homeyFlowIds) || [];
@@ -1681,7 +2033,7 @@ var TModal = {
         lines.map(function(l){ return '<p style="font-size:13px;margin:4px 0">' + l + '</p>'; }).join('') +
         (res.flows && Object.values(res.flows).some(function(f){ return !f; })
           ? '<p style="color:#ff3b30;font-size:12px;margin-top:8px">Missing flows — re-save the wall switch to recreate them.</p>'
-          : '<p style="color:#8e8e93;font-size:12px;margin-top:8px">If the physical switch still doesn\'t work, check the Logs tab while pressing the switch.</p>');
+          : '<p style="color:var(--ea-text);font-size:12px;margin-top:8px">If the physical switch still doesn\'t work, check the Logs tab while pressing the switch.</p>');
     } catch(e) {
       resEl.innerHTML = '<p style="color:#ff3b30;font-size:13px">✗ ' + esc(e.message) + '</p>';
     }
@@ -1728,7 +2080,7 @@ var TModal = {
     if (!resEl) { TModal._renderTestTab(); resEl = el('tmpl-test-result'); }
     var actions = TModal._buildTestActions(phase);
     if (!actions.length) { resEl.innerHTML = '<p style="color:#ff3b30;font-size:13px">No lights selected.</p>'; return; }
-    resEl.innerHTML = '<p style="color:#8e8e93;font-size:13px">Blinking lights… (restoring after)</p>';
+    resEl.innerHTML = '<p style="color:var(--ea-text);font-size:13px">Blinking lights… (restoring after)</p>';
     var labels = { on:'💡 ON', day:'☀️ Day', night:'🌙 Night', off:'⚫ Off', scene:'💡 Run Group' };
     var label  = labels[phase] || phase;
     var ts = Date.now();
@@ -1767,7 +2119,7 @@ var TModal = {
         var isOn = s.on !== false, pct = s.dim != null ? Math.round(s.dim * 100) : null;
         var icon  = s.err ? '❌' : (isOn ? '💡' : '🔌');
         var state = s.err ? 'Error' : (isOn ? (pct != null ? pct + '%' : 'ON') : 'OFF');
-        var col   = s.err ? '#ff3b30' : (isOn ? '#ff9500' : '#8e8e93');
+        var col   = s.err ? '#ff3b30' : (isOn ? '#ff9500' : 'var(--ea-text)');
         return '<div class="light-tile"><span class="light-tile-icon">' + icon + '</span>' +
           '<div class="light-tile-name">' + esc(nm) + '</div>' +
           '<div class="light-tile-state" style="color:' + col + '">' + state + '</div></div>';
@@ -1790,14 +2142,87 @@ var TModal = {
     if (type === 'schedule')      return TModal._formSchedule();
     if (type === 'switch')        return TModal._formSwitch();
     if (type === 'scene')         return TModal._formScene();
+    if (type === 'zone_control')  return TModal._formZone();
     return '';
+  },
+
+  // ── Zone Control form ──
+  _formZone: function() {
+    var zoneSet = {};
+    State.devices.forEach(function(d) { if (d.zone) zoneSet[d.zone] = true; });
+    var zones = Object.keys(zoneSet).sort();
+    var zoneOpts = zones.map(function(z) { return '<option value="' + esc(z) + '">' + esc(z) + '</option>'; }).join('');
+    var sensors = State.devices.filter(function(d) { return d.capabilities && d.capabilities.indexOf('alarm_motion') !== -1; });
+    var sensorOpts = sensors.map(function(d) { return '<option value="' + esc(d.id) + '">' + esc(d.name) + (d.zone ? ' ('+esc(d.zone)+')' : '') + '</option>'; }).join('');
+    var luxSensors = State.devices.filter(function(d) { return d.capabilities && d.capabilities.indexOf('measure_luminance') !== -1; });
+    var luxOpts = luxSensors.map(function(d) { return '<option value="' + esc(d.id) + '">' + esc(d.name) + (d.zone ? ' ('+esc(d.zone)+')' : '') + '</option>'; }).join('');
+    var _ovRaw = State.devices.filter(function(d) { return d.class === 'remote'; });
+    var _ovList = _ovRaw.length ? _ovRaw : State.devices;
+    var _ovListS = _ovList.slice().sort(function(a,b){ var za=a.zone||'',zb=b.zone||''; return za!==zb?za.localeCompare(zb):a.name.localeCompare(b.name); });
+    var ovDevOpts = _ovListS.map(function(d) { return '<option value="' + esc(d.id) + '">' + esc(d.name) + (d.zone ? ' ('+esc(d.zone)+')' : '') + '</option>'; }).join('');
+    return '<div class="fgrp"><label class="flabel">Zone</label>' +
+        '<select class="finput" id="t-zone" onchange="TModal._zoneChanged()">' +
+          '<option value="">— Select zone —</option>' + zoneOpts +
+        '</select></div>' +
+      '<div class="fgrp"><label class="flabel">Lights in zone</label>' +
+        '<div class="dp-wrap" id="dp-lights"></div></div>' +
+      '<div class="fgrp"><label class="flabel">Motion sensor (optional)</label>' +
+        '<select class="finput" id="t-sensor"><option value="">— No sensor (manual only) —</option>' + sensorOpts + '</select></div>' +
+      '<div class="fgrp"><label class="flabel">Brightness</label>' +
+        '<div class="slider-row"><input type="range" id="t-bright" min="1" max="100" value="100" oninput="el(\'t-bval\').textContent=this.value+\'%\';TModal._globalChanged(\'on\',parseInt(this.value))"><span class="slider-val" id="t-bval">100%</span></div></div>' +
+      '<div class="fgrp"><label class="flabel">Fade in (0 = instant)</label>' +
+        '<div class="slider-row"><input type="range" id="t-fadein" min="0" max="10" value="0" oninput="el(\'t-fadein-val\').textContent=this.value==\'0\'?\'instant\':this.value+\'s\'"><span class="slider-val" id="t-fadein-val">instant</span></div></div>' +
+      '<hr class="sep">' +
+      '<div class="check-row"><input type="checkbox" id="t-turnoff" checked onchange="el(\'t-hold-wrap\').style.display=this.checked?\'\':\'none\';el(\'t-fadeout-wrap\').style.display=this.checked?\'\':\'none\'"><label for="t-turnoff">Turn lights off when motion stops</label></div>' +
+      '<div class="fgrp" id="t-hold-wrap"><label class="flabel">Keep lights on for (after motion stops)</label>' +
+        '<div class="slider-row"><input type="range" id="t-hold" min="0" max="60" value="5" oninput="el(\'t-holdval\').textContent=this.value==\'0\'?\'off immediately\':this.value+\' min\'"><span class="slider-val" id="t-holdval">5 min</span></div></div>' +
+      '<div class="fgrp" id="t-fadeout-wrap"><label class="flabel">Fade out (0 = instant)</label>' +
+        '<div class="slider-row"><input type="range" id="t-fadeout" min="0" max="10" value="0" oninput="el(\'t-fadeout-val\').textContent=this.value==\'0\'?\'instant\':this.value+\'s\'"><span class="slider-val" id="t-fadeout-val">instant</span></div></div>' +
+      '<hr class="sep">' +
+      '<div class="check-row"><input type="checkbox" id="t-lux-en" onchange="el(\'t-lux-wrap\').style.display=this.checked?\'\':\'none\'"><label for="t-lux-en">Only trigger if lux is below threshold</label></div>' +
+      '<div id="t-lux-wrap" style="display:none">' +
+        '<div class="fgrp"><label class="flabel">Lux sensor</label><select class="finput" id="t-lux-sensor"><option value="">— Select lux sensor —</option>' + luxOpts + '</select></div>' +
+        '<div class="fgrp"><label class="flabel">Maximum lux (only trigger below this)</label><div class="slider-row"><input type="range" id="t-lux-max" min="0" max="500" value="50" oninput="el(\'t-lux-val\').textContent=this.value+\' lx\'"><span class="slider-val" id="t-lux-val">50 lx</span></div></div>' +
+      '</div>' +
+      '<hr class="sep">' +
+      '<div class="check-row"><input type="checkbox" id="t-hours-en" onchange="el(\'t-hours-wrap\').style.display=this.checked?\'\':\'none\'"><label for="t-hours-en">Only active during certain hours</label></div>' +
+      '<div id="t-hours-wrap" style="display:none">' +
+        '<div class="fgrp"><label class="flabel">Active from</label>' + mkTimePicker('t-hours-from','07:00') + '</div>' +
+        '<div class="fgrp"><label class="flabel">Until</label>' + mkTimePicker('t-hours-to','23:00') + '</div>' +
+      '</div>' +
+      '<hr class="sep">' +
+      '<div class="check-row"><input type="checkbox" id="t-ov-en" onchange="el(\'t-ov-wrap\').style.display=this.checked?\'\':\'none\'"><label for="t-ov-en">Button override — press a button to set a custom brightness and pause automation</label></div>' +
+      '<div id="t-ov-wrap" style="display:none">' +
+        '<div class="fgrp"><label class="flabel">Button / switch device</label>' +
+          '<select class="finput" id="t-ov-device" onchange="TModal._ovDeviceChanged()"><option value="">— Select device —</option>' + ovDevOpts + '</select></div>' +
+        '<div id="t-ov-buttons"></div>' +
+        '<div class="fgrp"><label class="flabel">Override brightness</label>' +
+          '<div class="slider-row"><input type="range" id="t-ov-bright" min="10" max="100" value="100" oninput="el(\'t-ov-bval\').textContent=this.value+\'%\'"><span class="slider-val" id="t-ov-bval">100%</span></div></div>' +
+        '<div class="fgrp"><label class="flabel">Override duration</label>' +
+          '<div class="slider-row"><input type="range" id="t-ov-dur" min="5" max="180" value="30" step="5" oninput="el(\'t-ov-durval\').textContent=this.value+\' min\'"><span class="slider-val" id="t-ov-durval">30 min</span></div></div>' +
+      '</div>' +
+      '<div class="fgrp" style="margin-top:12px"><label class="flabel">Automation name</label>' +
+        '<input class="finput" id="t-name" type="text" placeholder="e.g. Living Room Zone"/></div>';
+  },
+
+  _zoneChanged: function() {
+    var zone = el('t-zone') && el('t-zone').value;
+    if (!zone) {
+      el('dp-lights').innerHTML = '<div class="dp-empty">Select a zone first</div>';
+      return;
+    }
+    var lightsInZone = State.devices.filter(function(d) {
+      return d.zone === zone && d.capabilities && d.capabilities.indexOf('dim') !== -1;
+    }).map(function(d) { return d.id; });
+    Picker.render('dp-lights', lightsInZone, 'dim');
+    if (el('t-name') && !el('t-name').value) el('t-name').value = zone;
   },
 
   // ── Light Group / Scene form ──
   _formScene: function() {
     return '<div class="fgrp"><label class="flabel">Lights in this group</label>' +
         '<div class="dp-wrap" id="dp-lights"></div>' +
-        '<span style="font-size:11px;color:var(--ea-sub);margin-top:4px;display:block">Tip: use the 💡 Lights tab to set each light to a brightness or OFF (0%)</span>' +
+        '<span style="font-size:11px;color:var(--ea-text);margin-top:4px;display:block">Tip: use the 💡 Lights tab to set each light to a brightness or OFF (0%)</span>' +
       '</div>' +
       '<div class="fgrp"><label class="flabel">Default brightness (0% = OFF)</label>' +
         '<div class="slider-row">' +
@@ -1941,7 +2366,7 @@ var TModal = {
 
   // ── Schedule form ──
   _formSchedule: function() {
-    var days = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+    var days = i18n('days');
     var dayBtns = days.map(function(d, i) {
       var val = i === 6 ? 0 : i + 1; // 0=Sun,1=Mon...6=Sat
       return '<label class="day-btn"><input type="checkbox" class="day-chk" value="' + val + '" checked><span>' + d + '</span></label>';
@@ -1980,12 +2405,13 @@ var TModal = {
         case 'schedule':      automations = TModal._saveSchedule(); break;
         case 'scene':         automations = TModal._saveScene(); break;
         case 'switch':        automations = await TModal._saveSwitch(); break;
+        case 'zone_control':  automations = TModal._saveZone(); break;
         default: return;
       }
     } catch(e) { window._hAlert(e.message); return; }
 
-    // For motion_lights / smart_dim: if there's a flow-card override device, sync Homey Flows
-    if (TModal.type === 'motion_lights' || TModal.type === 'smart_dim') {
+    // For motion_lights / smart_dim / zone_control: if there's a flow-card override device, sync Homey Flows
+    if (TModal.type === 'motion_lights' || TModal.type === 'smart_dim' || TModal.type === 'zone_control') {
       var onAuto = automations.find(function(a){ return a._overrideSwitch && a._overrideSwitch.deviceId; });
       if (onAuto && onAuto._overrideSwitch) {
         var ovSw = onAuto._overrideSwitch;
@@ -2008,7 +2434,7 @@ var TModal = {
             deviceId: ovSw.deviceId, mappings: ovSyncMappings, existingFlowIds: existingOvFlowIds
           }, 20000);
           if (!ovResult.ok) {
-            window._hAlert('Could not create override Homey Flows:\n' + (ovResult.error || 'Unknown error') + '\n\nFix: Go to the Help tab and add a Personal Access Token with Flows permission.');
+            window._hAlert(i18n('err_flows_ov').replace('{0}', ovResult.error || 'Unknown error'));
           } else {
             automations.forEach(function(a){
               if (a._overrideSwitch) a._overrideSwitch.flowIds = ovResult.flowIds || [];
@@ -2044,14 +2470,9 @@ var TModal = {
   _mkId: function() { return 'a' + Date.now() + Math.floor(Math.random()*1000); },
 
   _saveMotion: function() {
-    var sensor  = el('t-sensor').value; if (!sensor) throw new Error('Please select a motion sensor');
-    var lights  = Picker.getSelected('dp-lights'); if (!lights.length) throw new Error('Please select at least one light');
+    var sensor  = el('t-sensor').value; if (!sensor) throw new Error(i18n('err_select_motion'));
+    var lights  = Picker.getSelected('dp-lights'); if (!lights.length) throw new Error(i18n('err_select_lights'));
     var bright  = parseInt(el('t-bright').value) / 100;
-    var fadeIn  = parseInt(el('t-fadein') ? el('t-fadein').value : 0) || 0;
-    var turnOff = el('t-turnoff').checked;
-    var hold    = el('t-hold') ? parseInt(el('t-hold').value) : 0;
-    var fadeOut = parseInt(el('t-fadeout') ? el('t-fadeout').value : 0) || 0;
-    var name    = el('t-name').value.trim() || 'Motion Lights';
     var hoursEn   = el('t-hours-en') && el('t-hours-en').checked;
     var hoursFrom = hoursEn ? (el('t-hours-from') ? el('t-hours-from').value : '07:00') : null;
     var hoursTo   = hoursEn ? (el('t-hours-to')   ? el('t-hours-to').value   : '23:00') : null;
@@ -2109,8 +2530,8 @@ var TModal = {
   },
 
   _saveSmartDim: function() {
-    var sensor     = el('t-sensor').value;     if (!sensor) throw new Error('Please select a motion sensor');
-    var lights     = Picker.getSelected('dp-lights'); if (!lights.length) throw new Error('Please select at least one light');
+    var sensor     = el('t-sensor').value;     if (!sensor) throw new Error(i18n('err_select_motion'));
+    var lights     = Picker.getSelected('dp-lights'); if (!lights.length) throw new Error(i18n('err_select_lights'));
     var luxEn     = el('t-lux-en') && el('t-lux-en').checked;
     var luxSensorId = luxEn ? (el('t-lux-sensor') ? el('t-lux-sensor').value : '') : null;
     var luxMax    = luxEn ? parseInt(el('t-lux-max') ? el('t-lux-max').value : 50) : null;
@@ -2197,8 +2618,8 @@ var TModal = {
   },
 
   _saveDoor: function() {
-    var sensor  = el('t-sensor').value; if (!sensor) throw new Error('Please select a door sensor');
-    var lights  = Picker.getSelected('dp-lights'); if (!lights.length) throw new Error('Please select at least one light');
+    var sensor  = el('t-sensor').value; if (!sensor) throw new Error(i18n('err_select_door'));
+    var lights  = Picker.getSelected('dp-lights'); if (!lights.length) throw new Error(i18n('err_select_lights'));
     var bright  = parseInt(el('t-bright').value) / 100;
     var fadeIn  = parseInt(el('t-fadein') ? el('t-fadein').value : 0) || 0;
     var turnOff = el('t-turnoff').checked;
@@ -2240,8 +2661,8 @@ var TModal = {
   },
 
   _saveSchedule: function() {
-    var time   = el('t-time').value;   if (!time) throw new Error('Please set a time');
-    var lights = Picker.getSelected('dp-lights'); if (!lights.length) throw new Error('Please select at least one light');
+    var time   = el('t-time').value;   if (!time) throw new Error(i18n('err_select_time'));
+    var lights = Picker.getSelected('dp-lights'); if (!lights.length) throw new Error(i18n('err_select_lights'));
     var action = el('t-sched-action').value;
     var bright = action === 'dim' ? parseInt(el('t-bright').value) / 100 : null;
     var name   = el('t-name').value.trim() || 'Schedule';
@@ -2268,7 +2689,7 @@ var TModal = {
   },
 
   _saveScene: function() {
-    var lights = Picker.getSelected('dp-lights'); if (!lights.length) throw new Error('Please select at least one light');
+    var lights = Picker.getSelected('dp-lights'); if (!lights.length) throw new Error(i18n('err_select_lights'));
     var defBright = parseInt(el('t-bright') ? el('t-bright').value : 10) / 100;
     var name = el('t-name').value.trim() || 'Light Group';
     var gid  = TModal._editingGroup ? TModal._editingGroup.id : TModal._mkId();
@@ -2288,6 +2709,73 @@ var TModal = {
     return [{ id: TModal._mkId(), name: name, enabled: true,
       _groupId: gid, _groupName: name, _templateType: 'scene',
       trigger: { type: 'manual' }, conditions: [], actions: acts }];
+  },
+
+  _saveZone: function() {
+    var zone    = el('t-zone') && el('t-zone').value; if (!zone) throw new Error(i18n('err_select_zone'));
+    var lights  = Picker.getSelected('dp-lights'); if (!lights.length) throw new Error(i18n('err_no_zone_lights'));
+    var sensor  = el('t-sensor') && el('t-sensor').value;
+    var bright  = parseInt(el('t-bright').value) / 100;
+    var fadeIn  = parseInt(el('t-fadein') ? el('t-fadein').value : 0) || 0;
+    var turnOff = el('t-turnoff').checked;
+    var hold    = el('t-hold') ? parseInt(el('t-hold').value) : 0;
+    var fadeOut = parseInt(el('t-fadeout') ? el('t-fadeout').value : 0) || 0;
+    var name    = el('t-name').value.trim() || zone;
+    var hoursEn   = el('t-hours-en') && el('t-hours-en').checked;
+    var hoursFrom = hoursEn ? (el('t-hours-from') ? el('t-hours-from').value : '07:00') : null;
+    var hoursTo   = hoursEn ? (el('t-hours-to')   ? el('t-hours-to').value   : '23:00') : null;
+    var luxEn     = el('t-lux-en') && el('t-lux-en').checked;
+    var luxSensorId = luxEn ? (el('t-lux-sensor') ? el('t-lux-sensor').value : '') : null;
+    var luxMax    = luxEn ? parseInt(el('t-lux-max') ? el('t-lux-max').value : 50) : null;
+    var ovEn      = el('t-ov-en') && el('t-ov-en').checked;
+    var ovDevId   = ovEn ? (el('t-ov-device') ? el('t-ov-device').value : '') : null;
+    var ovBright  = ovEn ? (parseInt(el('t-ov-bright') ? el('t-ov-bright').value : 100) / 100) : null;
+    var ovDur     = ovEn ? parseInt(el('t-ov-dur') ? el('t-ov-dur').value : 30) : null;
+    var ovOnMapping  = (ovEn && ovDevId) ? (TModal._ovLearnedOn  || null) : null;
+    var ovOffMapping = (ovEn && ovDevId) ? (TModal._ovLearnedOff || null) : null;
+    var onConditions = [];
+    if (hoursEn && hoursFrom && hoursTo) onConditions.push({ type: 'time_between', from: hoursFrom, to: hoursTo });
+    if (luxEn && luxSensorId) onConditions.push({ type: 'lux_below', deviceId: luxSensorId, maxLux: luxMax });
+    var gid = TModal._editingGroup ? TModal._editingGroup.id : TModal._mkId();
+    var list = [];
+
+    // If no sensor, create a manual-trigger group (like scene but with zone metadata)
+    var triggerType = sensor ? 'motion_start' : 'manual';
+    var onActs = lights.map(function(id) { return { type: 'turn_on', deviceId: id }; });
+    lights.forEach(function(id) {
+      var dimVal = (TModal._lightDims[id] && TModal._lightDims[id].on != null) ? TModal._lightDims[id].on : bright;
+      if (fadeIn > 0) {
+        onActs.push({ type: 'fade_to', deviceId: id, value: dimVal, duration: fadeIn });
+      } else if (dimVal < 1) {
+        onActs.push({ type: 'set_dim', deviceId: id, value: dimVal });
+      }
+      if (TModal._lightDims[id] && TModal._lightDims[id].ct != null) {
+        onActs.push({ type: 'set_color_temp', deviceId: id, value: TModal._lightDims[id].ct });
+      }
+    });
+    var onAuto = { id: TModal._mkId(), name: name + (sensor ? ' — ON' : ''), enabled: true,
+      _groupId: gid, _groupName: name, _templateType: 'zone_control', _zone: zone,
+      trigger: { type: triggerType, deviceId: sensor || undefined }, conditions: onConditions, actions: onActs };
+    if (ovEn && ovDevId) {
+      var _ovExisting = TModal._editingGroup && TModal._editingGroup.items.find(function(it){ return it.a._overrideSwitch && it.a._overrideSwitch.deviceId; });
+      var _ovExistingFlowIds = _ovExisting && _ovExisting.a._overrideSwitch.flowIds || [];
+      onAuto._overrideSwitch = { deviceId: ovDevId, brightness: ovBright, durationMinutes: ovDur,
+        ...(ovOnMapping  ? { onMapping:  ovOnMapping  } : {}),
+        ...(ovOffMapping ? { offMapping: ovOffMapping } : {}),
+        ...(_ovExistingFlowIds.length ? { flowIds: _ovExistingFlowIds } : {}) };
+    }
+    list.push(onAuto);
+
+    if (sensor && turnOff) {
+      var offActs = lights.map(function(id) {
+        return fadeOut > 0 ? { type: 'fade_off', deviceId: id, duration: fadeOut } : { type: 'turn_off', deviceId: id };
+      });
+      list.push({ id: TModal._mkId(), name: name + ' — OFF', enabled: true,
+        _groupId: gid, _groupName: name, _templateType: 'zone_control', _zone: zone,
+        _holdMinutes: hold,
+        trigger: { type: 'motion_stop', deviceId: sensor }, conditions: [], actions: offActs });
+    }
+    return list;
   },
 
   // ── Wall Switch / Button form ──
@@ -2328,7 +2816,7 @@ var TModal = {
     var allGroupOpts = groupOpts + (overrideOptsStr ? '<optgroup label="— Override mode —">' + overrideOptsStr + '</optgroup>' : '');
 
     // Always try Flow trigger cards first — they expose all buttons for any brand
-    wrap.innerHTML = '<p style="color:#8e8e93;font-size:13px;padding:6px 0">Loading buttons…</p>';
+    wrap.innerHTML = '<p style="color:var(--ea-text);font-size:13px;padding:6px 0">Loading buttons…</p>';
     try {
       var res = await window._hBridge('_flowTriggersReq', '_flowTriggersResult', { deviceId: devId });
       var flowCards = (!res.error && res.cards) ? res.cards.filter(function(c) {
@@ -2391,7 +2879,7 @@ var TModal = {
     if (!wrap) return;
     var html = '<div class="sec-hdr" style="margin-top:12px">Button → Automation mapping</div>';
     if (isFlowMode) {
-      html += '<p style="color:#8e8e93;font-size:12px;margin-bottom:8px">Homey Flows will be created automatically when you save.</p>';
+      html += '<p style="color:var(--ea-text);font-size:12px;margin-bottom:8px">Homey Flows will be created automatically when you save.</p>';
     }
     rows.forEach(function(r, i) {
       html += '<div class="fgrp">' +
@@ -2408,13 +2896,13 @@ var TModal = {
         '</select>' +
         '<div id="t-sw-ov-' + i + '" style="display:none;margin-top:6px;padding:8px;background:#1c1c1e;border-radius:8px">' +
           '<div class="slider-row" style="margin-top:0">' +
-            '<span class="slider-val" style="min-width:80px;color:#8e8e93">Lysstyrke</span>' +
+            '<span class="slider-val" style="min-width:80px;color:var(--ea-text)">' + i18n('Override brightness') + '</span>' +
             '<input type="range" id="t-sw-ov-bright-' + i + '" min="10" max="100" value="100" ' +
               'oninput="document.getElementById(\'t-sw-ov-bv-' + i + '\').textContent=this.value+\'%\'">' +
             '<span class="slider-val" id="t-sw-ov-bv-' + i + '">100%</span>' +
           '</div>' +
           '<div class="slider-row" style="margin-top:6px">' +
-            '<span class="slider-val" style="min-width:80px;color:#8e8e93">Varighet</span>' +
+            '<span class="slider-val" style="min-width:80px;color:var(--ea-text)">' + i18n('Override duration') + '</span>' +
             '<input type="range" id="t-sw-ov-dur-' + i + '" min="5" max="180" step="5" value="60" ' +
               'oninput="document.getElementById(\'t-sw-ov-dv-' + i + '\').textContent=this.value+\' min\'">' +
             '<span class="slider-val" id="t-sw-ov-dv-' + i + '">60 min</span>' +
@@ -2436,7 +2924,7 @@ var TModal = {
       wrap.innerHTML = '';
       return;
     }
-    wrap.innerHTML = '<p style="color:#8e8e93;font-size:13px;padding:4px 0">Loading device…</p>';
+    wrap.innerHTML = '<p style="color:var(--ea-text);font-size:13px;padding:4px 0">Loading device…</p>';
 
     // Extract saved on/off mappings from savedMappings (object or legacy array)
     var savedOn  = savedMappings && (savedMappings.onMapping  || (Array.isArray(savedMappings) && savedMappings[0]) || null);
@@ -2557,7 +3045,7 @@ var TModal = {
 
   _saveSwitch: async function() {
     var swDev = el('t-switch') && el('t-switch').value;
-    if (!swDev) throw new Error('Please select a switch or button device');
+    if (!swDev) throw new Error(i18n('err_select_switch'));
     var name = (el('t-name') && el('t-name').value.trim()) || 'Wall Switch';
     var gid  = TModal._editingGroup ? TModal._editingGroup.id : TModal._mkId();
     var list = [];
@@ -2614,12 +3102,12 @@ var TModal = {
     }
 
     if (isFlowMode) {
-      if (!allFlowMappings.length) throw new Error('Please map at least one button to an automation');
+      if (!allFlowMappings.length) throw new Error(i18n('err_map_button'));
       var existingFlowIds = TModal._editingGroup && TModal._editingGroup._homeyFlowIds || [];
       var result = await window._hBridge('_flowSyncReq', '_flowSyncResult', {
         deviceId: swDev, mappings: flowMappings, existingFlowIds: existingFlowIds
       }, 20000);
-      if (!result.ok) window._hAlert('Could not create Homey Flows:\n' + (result.error || 'Unknown error') + '\n\nFix: Go to the Help tab and add a Personal Access Token with Flows permission.');
+      if (!result.ok) window._hAlert(i18n('err_flows_sw').replace('{0}', result.error || 'Unknown error'));
       // Store as a single virtual automation entry (no direct trigger — Flows handle it)
       list.push({
         id: TModal._mkId(), name: name, enabled: true,
@@ -2631,7 +3119,7 @@ var TModal = {
       });
     }
 
-    if (!list.length) throw new Error('Please map at least one button to an automation');
+    if (!list.length) throw new Error(i18n('err_map_button'));
     return list;
   }
 };
@@ -2679,13 +3167,13 @@ var CustomEditor = {
         '</select></div>' +
       '<div id="ce-trig-extra"></div>' +
       '<hr class="sep">' +
-      '<div style="font-size:11px;font-weight:700;color:#8e8e93;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Conditions (optional)</div>' +
+      '<div style="font-size:11px;font-weight:700;color:var(--ea-text);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Conditions (optional)</div>' +
       '<div id="ce-conds"></div>' +
-      '<button style="width:100%;padding:8px;border:1.5px dashed #c7c7cc;border-radius:8px;background:none;color:#8e8e93;cursor:pointer;font-size:13px;margin-bottom:12px" onclick="CustomEditor._addCond()">+ Add condition</button>' +
+      '<button style="width:100%;padding:8px;border:1.5px dashed var(--ea-border);border-radius:8px;background:none;color:var(--ea-text);cursor:pointer;font-size:13px;margin-bottom:12px" onclick="CustomEditor._addCond()">+ Add condition</button>' +
       '<hr class="sep">' +
-      '<div style="font-size:11px;font-weight:700;color:#8e8e93;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Actions</div>' +
+      '<div style="font-size:11px;font-weight:700;color:var(--ea-text);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Actions</div>' +
       '<div id="ce-acts"></div>' +
-      '<button style="width:100%;padding:8px;border:1.5px dashed #c7c7cc;border-radius:8px;background:none;color:#8e8e93;cursor:pointer;font-size:13px" onclick="CustomEditor._addAct()">+ Add action</button>';
+      '<button style="width:100%;padding:8px;border:1.5px dashed var(--ea-border);border-radius:8px;background:none;color:var(--ea-text);cursor:pointer;font-size:13px" onclick="CustomEditor._addAct()">+ Add action</button>';
 
     setTimeout(function() {
       CustomEditor._trigChanged(a.trigger);
@@ -2721,9 +3209,9 @@ var CustomEditor = {
     el('ce-conds').innerHTML = CustomEditor.conds.map(function(c, i) {
       if (c.type === 'time_between') {
         return '<div class="fgrp" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">' +
-          '<span style="font-size:13px;color:#8e8e93">Between</span>' +
+          '<span style="font-size:13px;color:var(--ea-text)">Between</span>' +
           '<input type="text" pattern="\d{2}:\d{2}" placeholder="HH:MM" style="border:1.5px solid #e0e0e5;border-radius:8px;padding:6px;font-size:13px" value="'+(c.from||'08:00')+'" oninput="CustomEditor.conds['+i+'].from=this.value"/>' +
-          '<span style="font-size:13px;color:#8e8e93">and</span>' +
+          '<span style="font-size:13px;color:var(--ea-text)">and</span>' +
           '<input type="text" pattern="\d{2}:\d{2}" placeholder="HH:MM" style="border:1.5px solid #e0e0e5;border-radius:8px;padding:6px;font-size:13px" value="'+(c.to||'22:00')+'" oninput="CustomEditor.conds['+i+'].to=this.value"/>' +
           '<button onclick="CustomEditor._rmCond('+i+')" style="background:none;border:none;color:#ff3b30;cursor:pointer;font-size:18px">×</button>' +
         '</div>';
@@ -2760,7 +3248,7 @@ var CustomEditor = {
         case 'notify':
           extra = '<input type="text" value="'+esc(a.message||'')+'" placeholder="Message" style="flex:1;border:1.5px solid #e0e0e5;border-radius:8px;padding:6px;font-size:13px" oninput="CustomEditor.acts['+i+'].message=this.value"/>'; break;
         case 'wait':
-          extra = '<input type="number" min="1" value="'+(a.seconds||5)+'" style="width:70px;border:1.5px solid #e0e0e5;border-radius:8px;padding:6px;font-size:13px" oninput="CustomEditor.acts['+i+'].seconds=parseInt(this.value)"/> <span style="font-size:13px;color:#8e8e93">sec</span>'; break;
+          extra = '<input type="number" min="1" value="'+(a.seconds||5)+'" style="width:70px;border:1.5px solid var(--ea-border);border-radius:8px;padding:6px;font-size:13px" oninput="CustomEditor.acts['+i+'].seconds=parseInt(this.value)"/> <span style="font-size:13px;color:var(--ea-text)">sec</span>'; break;
       }
       return '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:#f2f2f7;border-radius:10px;padding:10px;margin-bottom:8px">' +
         '<select style="border:1.5px solid #e0e0e5;border-radius:8px;padding:6px;font-size:13px" onchange="CustomEditor._actType('+i+',this.value)">'+typeOpts+'</select>' +
@@ -3005,11 +3493,12 @@ var TestTab = {
     var orphans = computed.orphans;
 
     if (!groups.length && !orphans.length) {
-      list.innerHTML = '<div class="empty"><div class="icon">⚡</div><p>No automations yet.</p></div>';
+      list.innerHTML = '<div class="empty"><div class="icon">⚡</div><p>' + i18n('empty_auto_test') + '</p></div>';
     } else {
       var html = '<div class="auto-list-wrap">';
       groups.forEach(function(g, gi) {
         html += '<div class="card">' +
+          '<span class="card-type-icon">' + groupIcon(g) + '</span>' +
           '<div class="card-body" style="flex:1">' +
             '<div class="card-name">' + esc(g.name || 'Automation') + '</div>' +
             '<div class="card-sub">' + esc(groupSummary(g)) + '</div>' +
@@ -3118,7 +3607,7 @@ var TestTab = {
           var pct  = s.dim != null ? Math.round(s.dim * 100) : null;
           var icon  = s.err ? '❌' : (isOn ? '💡' : '🔌');
           var state = s.err ? 'Error' : (isOn ? (pct != null ? pct + '%' : 'ON') : 'OFF');
-          var col   = s.err ? '#ff3b30' : (isOn ? '#ff9500' : '#8e8e93');
+          var col   = s.err ? '#ff3b30' : (isOn ? '#ff9500' : 'var(--ea-text)');
           bulbsHtml += '<div class="light-tile">' +
             '<span class="light-tile-icon">' + icon + '</span>' +
             '<div class="light-tile-name">' + esc(nm) + '</div>' +
@@ -3135,7 +3624,7 @@ var TestTab = {
           '<span style="font-size:14px">' + (r.ok ? '✅' : '❌') + '</span>' +
           '<div style="flex:1;font-size:12px">' +
             '<span style="font-weight:600">' + esc(r.action || a.type || '') + '</span>' +
-            (a.deviceId ? ' → <span style="color:#8e8e93">' + esc(devName(a.deviceId) || a.deviceId) + '</span>' : '') +
+            (a.deviceId ? ' → <span style="color:var(--ea-text)">' + esc(devName(a.deviceId) || a.deviceId) + '</span>' : '') +
             (r.error ? '<div style="color:#ff3b30;font-size:11px">' + esc(r.error) + '</div>' : '') +
           '</div>' +
         '</div>';
@@ -3146,7 +3635,7 @@ var TestTab = {
           '<div style="font-size:14px;font-weight:700">' + esc(label) + '</div>' +
         '</div>' +
         bulbsHtml +
-        (rows.length ? '<div>' + rows.join('') + '</div>' : '<p style="color:#8e8e93;font-size:14px">No actions were run.</p>');
+        (rows.length ? '<div>' + rows.join('') + '</div>' : '<p style="color:var(--ea-text);font-size:14px">No actions were run.</p>');
     } catch(e) {
       resultEl.innerHTML = '<p style="color:#ff3b30;font-size:14px">Error: ' + esc(e.message) + '</p>';
     }
@@ -3228,7 +3717,7 @@ var DevTab = {
             '<div class="device-card-name">' + info.icon + ' ' + esc(d.name) + '</div>' +
             '<div class="device-card-sub">' + esc(info.label) + (d.zone ? ' · ' + esc(d.zone) : '') + '</div>' +
           '</div>' +
-          '<span class="badge" style="' + (d.available ? 'background:#34c759' : 'background:#8e8e93') + ';color:#fff;border:none">' + (d.available ? 'Online' : 'Offline') + '</span>' +
+          '<span class="badge" style="' + (d.available ? 'background:#34c759' : 'background:var(--ea-text)') + ';color:#fff;border:none">' + (d.available ? 'Online' : 'Offline') + '</span>' +
         '</label>';
       }).join('');
     };
@@ -3238,7 +3727,7 @@ var DevTab = {
       html += '<div class="sec-hdr">' + esc(z) + '</div>' + renderGroup(zones[z]);
     });
     if (noZone.length) { if (Object.keys(zones).length) html += '<div class="sec-hdr">Other</div>'; html += renderGroup(noZone); }
-    if (!html) html = '<div style="padding:20px 0;text-align:center;color:var(--ea-sub);font-size:14px">No devices in this category.</div>';
+    if (!html) html = '<div style="padding:20px 0;text-align:center;color:var(--ea-text);font-size:14px">No devices in this category.</div>';
     list.innerHTML = html;
   },
 
