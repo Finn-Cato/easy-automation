@@ -552,10 +552,10 @@
     </div>
     <p style="font-size:13px;color:var(--ea-text);margin-bottom:14px" data-i18n="ov_para">Triggers are paused — lights stay as you set them manually. Automation resumes when the override expires.</p>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-      <button class="ov-time-btn" onclick="OverrideModal.set(30)">⏸ 30 min</button>
-      <button class="ov-time-btn" onclick="OverrideModal.set(60)">⏸ 1 hour</button>
-      <button class="ov-time-btn" onclick="OverrideModal.set(120)">⏸ 2 hours</button>
-      <button class="ov-time-btn" onclick="OverrideModal.set(240)">⏸ 4 hours</button>
+      <button class="ov-time-btn" onclick="OverrideModal.set(30)" data-i18n="ov_30min">⏸ 30 min</button>
+      <button class="ov-time-btn" onclick="OverrideModal.set(60)" data-i18n="ov_1h">⏸ 1 hour</button>
+      <button class="ov-time-btn" onclick="OverrideModal.set(120)" data-i18n="ov_2h">⏸ 2 hours</button>
+      <button class="ov-time-btn" onclick="OverrideModal.set(240)" data-i18n="ov_4h">⏸ 4 hours</button>
     </div>
     <button class="ov-time-btn" style="width:100%;margin-top:8px" onclick="OverrideModal.setMidnight()" data-i18n="ov_midnight">🌙 Until midnight</button>
     <div id="ov-resume-wrap" style="display:none">
@@ -695,7 +695,103 @@ var I18N = {
     help_t8_name:'Custom / Advanced',
     help_t8_desc:'Build your own automation from scratch. Choose a trigger (motion detected, motion stopped, door opens, door closes, or a fixed time), optionally add a time-range condition, and define one or more light actions. Use this for setups that don\u2019t fit any of the other templates.',
     help_opt_hdr:'\u2699\ufe0f Optional features (Motion, Smart Dim, Zone Control)',
-    help_opt_body:'<strong>Lux threshold</strong> \u2014 Enable \u201cOnly trigger if lux is below threshold\u201d to stop the automation from turning lights on when the room is already bright. Pick a lux sensor and set a maximum lux level.<br><br><strong>Active hours</strong> \u2014 Enable \u201cOnly active during certain hours\u201d to restrict the automation to a time window (e.g. 07:00\u201323:00). Outside those hours triggers are ignored.<br><br><strong>Button override</strong> \u2014 Enable \u201cButton override\u201d to assign a wall switch or remote button as a manual override. Pressing the ON button sets a custom brightness and pauses the automation for a set time. Pressing the OFF button (optional) cancels the override early.'
+    help_opt_body:'<strong>Lux threshold</strong> \u2014 Enable \u201cOnly trigger if lux is below threshold\u201d to stop the automation from turning lights on when the room is already bright. Pick a lux sensor and set a maximum lux level.<br><br><strong>Active hours</strong> \u2014 Enable \u201cOnly active during certain hours\u201d to restrict the automation to a time window (e.g. 07:00\u201323:00). Outside those hours triggers are ignored.<br><br><strong>Button override</strong> \u2014 Enable \u201cButton override\u201d to assign a wall switch or remote button as a manual override. Pressing the ON button sets a custom brightness and pauses the automation for a set time. Pressing the OFF button (optional) cancels the override early.',
+    ov_para:'Triggers are paused \u2014 lights stay as you set them manually. Automation resumes when the override expires.',
+    pat_saved:'Token saved \u2014 flows will be created automatically.',
+    pat_removed:'Token removed.',
+    cd_off_in:'\u23f1 off in ',
+    cd_paused_pfx:'\u23f8 paused ',
+    cd_ending_soon:'ending soon',
+    toast_saving:'Saving\u2026',
+    toast_saved:'Saved',
+    toast_deleted:'Deleted',
+    toast_duplicated:'Duplicated',
+    toast_added:'Added',
+    toast_save_failed:'Save failed: ',
+    toast_dim_saved:'Dim saved',
+    confirm_delete:'Delete \u201c{0}\u201d?',
+    this_automation:'this automation',
+    dup_copy:'(copy)',
+    sched_at:'at ',
+    sum_motion_on:'Motion on',
+    sum_motion_off:'Motion off',
+    sum_door_open:'Door opens',
+    sum_door_close:'Door closes',
+    sum_every_day_at:'Every day at ',
+    sum_action_s:'action',
+    sum_actions_pl:'actions',
+    sum_unknown:'Unknown',
+    ov_active_pfx:'\u23f8 Override active \u2014 ',
+    ov_remaining:'remaining',
+    ov_30min:'\u23f8 30 min',
+    ov_1h:'\u23f8 1 hour',
+    ov_2h:'\u23f8 2 hours',
+    ov_4h:'\u23f8 4 hours',
+    picker_other:'Other',
+    dev_cls_light:'Lights',
+    dev_cls_sensor:'Sensors',
+    dev_cls_socket:'Sockets',
+    dev_cls_button:'Buttons',
+    dev_cls_remote:'Remotes',
+    dev_cls_speaker:'Speakers',
+    dev_cls_thermostat:'Thermostats',
+    dev_cls_lock:'Locks',
+    dev_cls_camera:'Cameras',
+    dev_cls_blinds:'Blinds',
+    dev_cls_fan:'Fans',
+    dev_cls_airconditioning:'AC',
+    dev_cls_heater:'Heaters',
+    dev_cls_evcharger:'EV Charger',
+    dev_cls_washer:'Washers',
+    dev_cls_other:'Other',
+    dev_online:'Online',
+    dev_offline:'Offline',
+    dev_other_zone:'Other',
+    dev_no_category:'No devices in this category.',
+    dev_refreshing:'Refreshing\u2026',
+    log_loading:'Loading\u2026',
+    log_empty:'No log entries yet.',
+    log_copied:'Log copied to clipboard',
+    test_running:'Running\u2026',
+    test_no_device:'Please select a device first.',
+    test_no_response:'\u26a0\ufe0f No response from app. Check the Logs tab for errors.',
+    test_no_actions:'No actions were run.',
+    test_state_error:'Error',
+    test_state_on:'ON',
+    test_state_off:'OFF',
+    test_blinked:'blinked \u2014 lights restored to original state',
+    ce_title_edit:'\u2699\ufe0f Edit Automation',
+    ce_title_new:'\u2699\ufe0f Custom Automation',
+    ce_err_name:'Please enter a name.',
+    ce_err_actions:'Add at least one action.',
+    ce_lbl_name:'Name',
+    ce_lbl_trigger_type:'Trigger type',
+    ce_lbl_time:'Time',
+    ce_lbl_device:'Device',
+    ce_lbl_select:'\u2014 Select \u2014',
+    ce_lbl_conds:'Conditions (optional)',
+    ce_lbl_actions:'Actions',
+    ce_btn_add_cond:'+ Add condition',
+    ce_btn_add_act:'+ Add action',
+    ce_cond_between:'Between',
+    ce_cond_and:'and',
+    ce_act_device:'\u2014 Device \u2014',
+    ce_act_msg_ph:'Message',
+    ce_act_sec:'sec',
+    ce_trig_motion_start:'Motion detected',
+    ce_trig_motion_stop:'Motion stopped',
+    ce_trig_door_open:'Door opens',
+    ce_trig_door_close:'Door closes',
+    ce_trig_time:'Every day at time',
+    ce_act_turn_on:'Turn ON',
+    ce_act_turn_off:'Turn OFF',
+    ce_act_set_dim:'Set brightness',
+    ce_act_set_ct:'Set color temp',
+    ce_act_notify:'Notification',
+    ce_act_wait:'Wait (seconds)',
+    err_no_buttons:'No buttons found for this device.',
+    switch_check_logs:'Check Logs tab for details.',
+    err_load:'Load error: '
   },
   no: {
     tab_auto:'Automatiseringer', tab_devices:'Enheter', tab_logs:'Logger', tab_help:'Hjelp',
@@ -808,7 +904,102 @@ var I18N = {
     help_log_body:'Logger-fanen viser en tidsstemplet aktivitetslogg over alt appen har gjort: utl\u00f8sere avfyrt, betingelser sjekket, handlinger utf\u00f8rt og eventuelle feil. Trykk <strong>Kopier logg</strong> for \u00e5 kopiere hele loggen til utklippsbordet for feils\u00f8king.',
     help_pat_hdr:'\ud83d\udd11 Personal Access Token',
     help_pat_desc:'Kreves for <strong>Veggbryter</strong>-automatiseringer som bruker Homey Flows (f.eks. Z-Wave-fjernkontroller som NAMRON). Uten dette tokenet kan ikke appen opprette flows automatisk.<br><br>For \u00e5 opprette et token: g\u00e5 til <strong>my.homey.app</strong> \u2192 Innstillinger \u2192 API \u2192 <em>Opprett et Personal Access Token</em> og aktiver <strong>Flows</strong>-tillatelsen.',
-    help_pat_ph:'Lim inn token her\u2026'
+    help_pat_ph:'Lim inn token her\u2026',
+    pat_saved:'Token lagret \u2014 flows opprettes automatisk.',
+    pat_removed:'Token fjernet.',
+    cd_off_in:'\u23f1 av om ',
+    cd_paused_pfx:'\u23f8 pauset ',
+    cd_ending_soon:'slutter snart',
+    toast_saving:'Lagrer\u2026',
+    toast_saved:'Lagret',
+    toast_deleted:'Slettet',
+    toast_duplicated:'Duplisert',
+    toast_added:'Lagt til',
+    toast_save_failed:'Lagring mislyktes: ',
+    toast_dim_saved:'Dim lagret',
+    confirm_delete:'Slett \u00ab{0}\u00bb?',
+    this_automation:'denne automatiseringen',
+    dup_copy:'(kopi)',
+    sched_at:'kl. ',
+    sum_motion_on:'Bevegelse p\u00e5',
+    sum_motion_off:'Bevegelse av',
+    sum_door_open:'D\u00f8r \u00e5pnes',
+    sum_door_close:'D\u00f8r lukkes',
+    sum_every_day_at:'Hver dag kl. ',
+    sum_action_s:'handling',
+    sum_actions_pl:'handlinger',
+    sum_unknown:'Ukjent',
+    ov_active_pfx:'\u23f8 Overstyring aktiv \u2014 ',
+    ov_remaining:'igjen',
+    ov_30min:'\u23f8 30 min',
+    ov_1h:'\u23f8 1 time',
+    ov_2h:'\u23f8 2 timer',
+    ov_4h:'\u23f8 4 timer',
+    picker_other:'Andre',
+    dev_cls_light:'Lys',
+    dev_cls_sensor:'Sensorer',
+    dev_cls_socket:'Stikkontakter',
+    dev_cls_button:'Knapper',
+    dev_cls_remote:'Fjernkontroller',
+    dev_cls_speaker:'H\u00f8yttalere',
+    dev_cls_thermostat:'Termostater',
+    dev_cls_lock:'L\u00e5ser',
+    dev_cls_camera:'Kameraer',
+    dev_cls_blinds:'Persienner',
+    dev_cls_fan:'Vifter',
+    dev_cls_airconditioning:'AC',
+    dev_cls_heater:'Varmeovner',
+    dev_cls_evcharger:'EV-lader',
+    dev_cls_washer:'Vaskemaskiner',
+    dev_cls_other:'Andre',
+    dev_online:'P\u00e5 nett',
+    dev_offline:'Frakoblet',
+    dev_other_zone:'Andre',
+    dev_no_category:'Ingen enheter i denne kategorien.',
+    dev_refreshing:'Oppdaterer\u2026',
+    log_loading:'Laster\u2026',
+    log_empty:'Ingen loggoppf\u00f8ringer enn\u00e5.',
+    log_copied:'Logg kopiert til utklippsbordet',
+    test_running:'Kj\u00f8rer\u2026',
+    test_no_device:'Velg en enhet f\u00f8rst.',
+    test_no_response:'\u26a0\ufe0f Ingen respons fra appen. Sjekk Logger-fanen for feil.',
+    test_no_actions:'Ingen handlinger ble kj\u00f8rt.',
+    test_state_error:'Feil',
+    test_state_on:'P\u00c5',
+    test_state_off:'AV',
+    test_blinked:'blinket \u2014 lys gjenopprettet til opprinnelig tilstand',
+    ce_title_edit:'\u2699\ufe0f Rediger automatisering',
+    ce_title_new:'\u2699\ufe0f Tilpasset automatisering',
+    ce_err_name:'Skriv inn et navn.',
+    ce_err_actions:'Legg til minst \u00e9n handling.',
+    ce_lbl_name:'Navn',
+    ce_lbl_trigger_type:'Utl\u00f8sertype',
+    ce_lbl_time:'Tidspunkt',
+    ce_lbl_device:'Enhet',
+    ce_lbl_select:'\u2014 Velg \u2014',
+    ce_lbl_conds:'Betingelser (valgfritt)',
+    ce_lbl_actions:'Handlinger',
+    ce_btn_add_cond:'+ Legg til betingelse',
+    ce_btn_add_act:'+ Legg til handling',
+    ce_cond_between:'Mellom',
+    ce_cond_and:'og',
+    ce_act_device:'\u2014 Enhet \u2014',
+    ce_act_msg_ph:'Melding',
+    ce_act_sec:'sek',
+    ce_trig_motion_start:'Bevegelse oppdaget',
+    ce_trig_motion_stop:'Bevegelse stoppet',
+    ce_trig_door_open:'D\u00f8r \u00e5pnes',
+    ce_trig_door_close:'D\u00f8r lukkes',
+    ce_trig_time:'Hver dag til et tidspunkt',
+    ce_act_turn_on:'Sl\u00e5 P\u00c5',
+    ce_act_turn_off:'Sl\u00e5 AV',
+    ce_act_set_dim:'Still lysstyrke',
+    ce_act_set_ct:'Still fargetemperatur',
+    ce_act_notify:'Varsling',
+    ce_act_wait:'Vent (sekunder)',
+    err_no_buttons:'Ingen knapper funnet for denne enheten.',
+    switch_check_logs:'Sjekk Logger-fanen for detaljer.',
+    err_load:'Lastfeil: '
   }
 };
 function i18n(key) {
@@ -871,7 +1062,7 @@ var PATSettings = {
     var val = await window._hGet('_homeyPAT').catch(function(){ return null; });
     if (val) {
       el('pat-input').value = '••••••••••••••••';
-      el('pat-status').textContent = 'Token saved — flows will be created automatically.';
+      el('pat-status').textContent = i18n('pat_saved');
       el('pat-status').style.color = 'var(--ea-green)';
       el('pat-clear-btn').style.display = '';
     }
@@ -881,14 +1072,14 @@ var PATSettings = {
     if (!val || val.startsWith('•')) return;
     await window._hSet('_homeyPAT', val);
     el('pat-input').value = '••••••••••••••••';
-    el('pat-status').textContent = 'Token saved — flows will be created automatically.';
+    el('pat-status').textContent = i18n('pat_saved');
     el('pat-status').style.color = 'var(--ea-green)';
     el('pat-clear-btn').style.display = '';
   },
   clear: async function() {
     await window._hSet('_homeyPAT', '');
     el('pat-input').value = '';
-    el('pat-status').textContent = 'Token removed.';
+    el('pat-status').textContent = i18n('pat_removed');
     el('pat-status').style.color = 'var(--ea-text)';
     el('pat-clear-btn').style.display = 'none';
   }
@@ -908,7 +1099,7 @@ var App = {
       DevTab.render();
       PATSettings.load();
     } catch(e) {
-      el('auto-list').innerHTML = '<div class="loader" style="color:#ff3b30">Load error: ' + e.message + '</div>';
+      el('auto-list').innerHTML = '<div class="loader" style="color:#ff3b30">' + i18n('err_load') + e.message + '</div>';
     }
     // Load hold status and overrides once on init
     window._hGet('_holdStatus').then(function(raw) {
@@ -1007,11 +1198,12 @@ function groupSummary(g) {
     });
   });
   // Time for schedule
-  var dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  var _i18nDays = i18n('days');
+  var dayNames = [_i18nDays[6], _i18nDays[0], _i18nDays[1], _i18nDays[2], _i18nDays[3], _i18nDays[4], _i18nDays[5]];
   var schedDays = (g.type === 'schedule' && trigger && trigger.days && trigger.days.length)
     ? trigger.days.slice().sort(function(a,b){return a-b;}).map(function(d){return dayNames[d];}).join(',')
     : '';
-  var time = (g.type === 'schedule' && trigger) ? ('at ' + trigger.time + (schedDays ? ' · ' + schedDays : '')) : '';
+  var time = (g.type === 'schedule' && trigger) ? (i18n('sched_at') + trigger.time + (schedDays ? ' · ' + schedDays : '')) : '';
   var parts = [];
   if (sensor) parts.push(sensor);
   if (time)   parts.push(time);
@@ -1033,7 +1225,7 @@ var Countdown = {
       var secs  = Math.round((endsAt - now) / 1000);
       var mins  = Math.floor(secs / 60);
       var s     = secs % 60;
-      el.textContent = '⏱ off in ' + (mins > 0 ? mins + ':' + String(s).padStart(2,'0') : s + 's');
+      el.textContent = i18n('cd_off_in') + (mins > 0 ? mins + ':' + String(s).padStart(2,'0') : s + 's');
       el.style.display = '';
     });
 
@@ -1049,8 +1241,8 @@ var Countdown = {
       var rem  = expiresAt - now;
       var h    = Math.floor(rem / 3600000);
       var m    = Math.floor((rem % 3600000) / 60000);
-      var disp = h > 0 ? h + 'h ' + m + 'm' : (m > 0 ? m + 'm' : 'ending soon');
-      el.textContent = '⏸ paused ' + disp;
+      var disp = h > 0 ? h + 'h ' + m + 'm' : (m > 0 ? m + 'm' : i18n('cd_ending_soon'));
+      el.textContent = i18n('cd_paused_pfx') + disp;
       el.style.display = '';
       if (btn) btn.classList.add('active');
     });
@@ -1120,30 +1312,29 @@ var AutoList = {
 
   _singleSummary: function(a) {
     var tr = a.trigger || {};
-    var labels = { motion_start:'Motion on', motion_stop:'Motion off', door_open:'Door opens', door_close:'Door closes' };
-    if (EA_LANG === 'no') { labels = { motion_start:'Bevegelse på', motion_stop:'Bevegelse av', door_open:'Dør åpnes', door_close:'Dør lukkes' }; }
-    var s = tr.type === 'time' ? ('Every day at ' + (tr.time||'?')) : (labels[tr.type] || tr.type || '');
-    if (tr.deviceId) s += ' · ' + (devName(tr.deviceId) || 'Unknown');
+    var labels = { motion_start: i18n('sum_motion_on'), motion_stop: i18n('sum_motion_off'), door_open: i18n('sum_door_open'), door_close: i18n('sum_door_close') };
+    var s = tr.type === 'time' ? (i18n('sum_every_day_at') + (tr.time||'?')) : (labels[tr.type] || tr.type || '');
+    if (tr.deviceId) s += ' · ' + (devName(tr.deviceId) || i18n('sum_unknown'));
     var n = (a.actions||[]).length;
-    return s + ' → ' + n + ' action' + (n !== 1 ? 's' : '');
+    return s + ' → ' + n + ' ' + i18n(n !== 1 ? 'sum_actions_pl' : 'sum_action_s');
   },
 
   toggleGroup: function(gi, val) {
     var g = AutoList._computed.groups[gi];
     g.items.forEach(function(it) { State.automations[it.i].enabled = val; });
-    AutoList.persist('Saved');
+    AutoList.persist(i18n('toast_saved'));
   },
 
   toggle: function(i, val) {
     State.automations[i].enabled = val;
-    AutoList.persist('Saved');
+    AutoList.persist(i18n('toast_saved'));
   },
 
   dupGroup: async function(gi) {
     var g = AutoList._computed && AutoList._computed.groups[gi];
     if (!g) return;
     var newGid = 'a' + Date.now() + Math.floor(Math.random()*1000);
-    var newName = g.name + ' (copy)';
+    var newName = g.name + ' ' + i18n('dup_copy');
     g.items.forEach(function(item) {
       var copy = JSON.parse(JSON.stringify(item.a));
       copy.id = 'a' + Date.now() + Math.floor(Math.random()*1000);
@@ -1152,16 +1343,16 @@ var AutoList = {
       copy.name = copy.name ? copy.name.replace(g.name, newName) : newName;
       State.automations.push(copy);
     });
-    await AutoList.persist('Duplicated');
+    await AutoList.persist(i18n('toast_duplicated'));
   },
 
   delGroup: async function(gi) {
     var g = AutoList._computed.groups[gi];
-    var yes = await window._hConfirm('Delete "' + (g.name || 'this automation') + '"?');
+    var yes = await window._hConfirm(i18n('confirm_delete').replace('{0}', g.name || i18n('this_automation')));
     if (!yes) return;
     var indices = g.items.map(function(it) { return it.i; }).sort(function(a,b){return b-a;});
     indices.forEach(function(i) { State.automations.splice(i, 1); });
-    await AutoList.persist('Deleted');
+    await AutoList.persist(i18n('toast_deleted'));
   },
 
   editGroup: function(gi) {
@@ -1174,22 +1365,22 @@ var AutoList = {
   },
 
   del: async function(i) {
-    var yes = await window._hConfirm('Delete "' + (State.automations[i].name||'this automation') + '"?');
-    if (yes) { State.automations.splice(i, 1); await AutoList.persist('Deleted'); }
+    var yes = await window._hConfirm(i18n('confirm_delete').replace('{0}', State.automations[i].name || i18n('this_automation')));
+    if (yes) { State.automations.splice(i, 1); await AutoList.persist(i18n('toast_deleted')); }
   },
 
   persist: async function(msg) {
-    setStatus('Saving…');
+    setStatus(i18n('toast_saving'));
     try {
       await API.saveAutomations(State.automations);
       AutoList.render();
-      setStatus(msg || 'Saved', 3000);
-    } catch(e) { setStatus('Save failed: ' + e.message, 5000); }
+      setStatus(msg != null ? msg : i18n('toast_saved'), 3000);
+    } catch(e) { setStatus(i18n('toast_save_failed') + e.message, 5000); }
   },
 
   addAll: async function(newAutomations) {
     newAutomations.forEach(function(a) { State.automations.push(a); });
-    await AutoList.persist('Added');
+    await AutoList.persist(i18n('toast_added'));
   }
 };
 
@@ -1224,7 +1415,7 @@ var Picker = {
       zones[z].forEach(function(d) { html += Picker._item(d, selectedIds); });
     });
     if (noZone.length) {
-      if (Object.keys(zones).length) html += '<div class="dp-grp">Other</div>';
+      if (Object.keys(zones).length) html += '<div class="dp-grp">' + i18n('picker_other') + '</div>';
       noZone.forEach(function(d) { html += Picker._item(d, selectedIds); });
     }
     el(containerId).innerHTML = html;
@@ -1284,7 +1475,7 @@ var TModal = {
     el('tmpl-overlay').classList.add('on');
     var hasTabs = type !== 'custom';
     el('tmpl-inner-tabs').style.display = hasTabs ? '' : 'none';
-    el('tmpl-tab-lights').style.display = (type === 'switch') ? 'none' : '';
+    el('tmpl-tab-lights').style.display = (type === 'switch' || type === 'scene') ? 'none' : '';
     el('tmpl-settings-tab').style.display = '';
     el('tmpl-lights-tab').style.display   = 'none';
     el('tmpl-test-tab').style.display     = 'none';
@@ -1304,6 +1495,7 @@ var TModal = {
       Picker.render('dp-lights', [], 'onoff');
     } else if (type === 'scene') {
       Picker.render('dp-lights', [], 'onoff');
+      el('dp-lights').addEventListener('change', function() { TModal._renderSceneLightsInline(); });
     } else if (type === 'zone_control') {
       // Zone picker starts empty — lights populated on zone change
       el('dp-lights').innerHTML = '<div class="dp-empty">Select a zone first</div>';
@@ -1324,7 +1516,7 @@ var TModal = {
     TModal._prevGlobal = {};
     var _hasTabs = g.type !== 'custom';
     el('tmpl-inner-tabs').style.display = _hasTabs ? '' : 'none';
-    el('tmpl-tab-lights').style.display = (g.type === 'switch') ? 'none' : '';
+    el('tmpl-tab-lights').style.display = (g.type === 'switch' || g.type === 'scene') ? 'none' : '';
     el('tmpl-settings-tab').style.display = '';
     el('tmpl-lights-tab').style.display   = 'none';
     el('tmpl-test-tab').style.display     = 'none';
@@ -1570,6 +1762,8 @@ var TModal = {
       var avgScene = dimValsScene.length ? Math.round(dimValsScene.reduce(function(a,b){return a+b;},0)/dimValsScene.length) : 10;
       TModal._prevGlobal.on = avgScene;
       Picker.render('dp-lights', allLightsScene, 'onoff');
+      el('dp-lights').addEventListener('change', function() { TModal._renderSceneLightsInline(); });
+      TModal._renderSceneLightsInline();
       setTimeout(function() {
         if (el('t-bright')) { el('t-bright').value = avgScene; if (el('t-bval')) el('t-bval').textContent = avgScene + '%'; }
         if (el('t-name'))   el('t-name').value = g.name || '';
@@ -1846,7 +2040,7 @@ var TModal = {
       if (!TModal._lightDims[id]) TModal._lightDims[id] = {};
       TModal._lightDims[id].on = defVal;
     });
-    TModal._renderLightsTab();
+    TModal._renderSceneLightsInline();
   },
 
   _setLightDim: function(deviceId, mode, pct) {
@@ -1884,8 +2078,12 @@ var TModal = {
       var nv  = Math.max(TModal.type === 'scene' ? 0 : 1, Math.min(100, cur + delta));
       TModal._lightDims[id][mode] = nv / 100;
     });
-    // Refresh lights tab if open
-    if (el('tmpl-lights-tab') && el('tmpl-lights-tab').style.display !== 'none') TModal._renderLightsTab();
+    // Refresh lights tab if open (non-scene) or inline sliders (scene)
+    if (TModal.type === 'scene') {
+      TModal._renderSceneLightsInline();
+    } else if (el('tmpl-lights-tab') && el('tmpl-lights-tab').style.display !== 'none') {
+      TModal._renderLightsTab();
+    }
   },
 
   _renderTestTab: function() {
@@ -2099,7 +2297,7 @@ var TModal = {
         resEl.innerHTML =
           '<div style="display:flex;align-items:center;gap:6px">' +
             '<span>' + (res.results[0].ok ? '✅' : '⚠️') + '</span>' +
-            '<span style="font-size:13px;font-weight:700">' + nLights + ' light' + (nLights !== 1 ? 's' : '') + ' blinked — lights restored to original state</span>' +
+            '<span style="font-size:13px;font-weight:700">' + nLights + ' ' + i18n(nLights !== 1 ? 'lbl_lights_pl' : 'lbl_light_s') + ' ' + i18n('test_blinked') + '</span>' +
           '</div>';
         return;
       }
@@ -2118,7 +2316,7 @@ var TModal = {
         var s = ls[id], nm = devName(id) || id.slice(-6);
         var isOn = s.on !== false, pct = s.dim != null ? Math.round(s.dim * 100) : null;
         var icon  = s.err ? '❌' : (isOn ? '💡' : '🔌');
-        var state = s.err ? 'Error' : (isOn ? (pct != null ? pct + '%' : 'ON') : 'OFF');
+        var state = s.err ? i18n('test_state_error') : (isOn ? (pct != null ? pct + '%' : i18n('test_state_on')) : i18n('test_state_off'));
         var col   = s.err ? '#ff3b30' : (isOn ? '#ff9500' : 'var(--ea-text)');
         return '<div class="light-tile"><span class="light-tile-icon">' + icon + '</span>' +
           '<div class="light-tile-name">' + esc(nm) + '</div>' +
@@ -2208,7 +2406,7 @@ var TModal = {
   _zoneChanged: function() {
     var zone = el('t-zone') && el('t-zone').value;
     if (!zone) {
-      el('dp-lights').innerHTML = '<div class="dp-empty">Select a zone first</div>';
+      el('dp-lights').innerHTML = '<div class="dp-empty">' + i18n('Select a zone first') + '</div>';
       return;
     }
     var lightsInZone = State.devices.filter(function(d) {
@@ -2222,7 +2420,6 @@ var TModal = {
   _formScene: function() {
     return '<div class="fgrp"><label class="flabel">Lights in this group</label>' +
         '<div class="dp-wrap" id="dp-lights"></div>' +
-        '<span style="font-size:11px;color:var(--ea-text);margin-top:4px;display:block">Tip: use the 💡 Lights tab to set each light to a brightness or OFF (0%)</span>' +
       '</div>' +
       '<div class="fgrp"><label class="flabel">Default brightness (0% = OFF)</label>' +
         '<div class="slider-row">' +
@@ -2230,8 +2427,59 @@ var TModal = {
           '<span class="slider-val" id="t-bval">10%</span>' +
         '</div>' +
       '</div>' +
+      '<div id="scene-lights-inline"></div>' +
       '<div class="fgrp" style="margin-top:12px"><label class="flabel">Group name</label>' +
         '<input class="finput" id="t-name" type="text" placeholder="e.g. Night Scene"/></div>';
+  },
+
+  _renderSceneLightsInline: function() {
+    var wrap = el('scene-lights-inline');
+    if (!wrap) return;
+    var lights = Picker.getSelected('dp-lights');
+    if (!lights.length) { wrap.innerHTML = ''; return; }
+    var html = '<div class="fgrp" style="margin-top:4px">';
+    html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">' +
+      '<label class="flabel" style="margin-bottom:0">Individual lights</label>' +
+      '<div style="display:flex;gap:6px">' +
+        '<button type="button" class="btn-sm" onclick="TModal._setAllSceneDim(0)">Set all OFF</button>' +
+        '<button type="button" class="btn-sm" onclick="TModal._setAllSceneDim(null)">Reset to default</button>' +
+      '</div>' +
+    '</div>';
+    lights.forEach(function(id) {
+      var dname = devName(id) || id;
+      var did = 'ild_' + id.replace(/[^a-zA-Z0-9]/g, '_');
+      if (!TModal._lightDims[id]) TModal._lightDims[id] = {};
+      var globalVal = el('t-bright') ? parseInt(el('t-bright').value) : 10;
+      if (TModal._lightDims[id].on == null) TModal._lightDims[id].on = globalVal / 100;
+      if (TModal._prevGlobal.on == null) TModal._prevGlobal.on = globalVal;
+      var pct = Math.round(TModal._lightDims[id].on * 100);
+      var sid = did + '_on', vid = sid + '_v';
+      html += '<div class="lt-card">' +
+        '<div class="lt-name">💡 ' + esc(dname) + '</div>' +
+        '<div class="lt-row">' +
+          '<span class="lt-label">💡 Level</span>' +
+          '<div class="slider-row" style="flex:1;margin-top:0">' +
+            '<input type="range" id="' + sid + '" min="0" max="100" value="' + pct + '"' +
+              ' oninput="var v=parseInt(this.value);document.getElementById(\'' + vid + '\').textContent=v===0?\'OFF\':v+\'%\';TModal._setLightDim(\'' + id + '\',\'on\',v);TModal._previewLight(\'' + id + '\',v/100)">' +
+            '<span class="slider-val" id="' + vid + '">' + (pct === 0 ? 'OFF' : pct + '%') + '</span>' +
+          '</div></div>';
+      var dev = State.devices.find(function(d){return d.id===id;});
+      if (hasLightTemp(dev)) {
+        var ctVal = TModal._lightDims[id].ct != null ? Math.round(TModal._lightDims[id].ct * 100) : 50;
+        var ctId = did + '_ct', ctVid = ctId + '_v';
+        html += '<div class="lt-row">' +
+          '<span class="lt-label">🌡 Temp</span>' +
+          '<div class="slider-row" style="flex:1;margin-top:0">' +
+            '<input type="range" id="' + ctId + '" min="0" max="100" value="' + ctVal + '"' +
+              ' oninput="var v=parseInt(this.value);document.getElementById(\'' + ctVid + '\').textContent=(v<30?\'Warm\':(v>70?\'Cool\':\'Mid\'));TModal._setLightDim(\'' + id + '\',\'ct\',v);TModal._previewLight(\'' + id + '\',v/100,\'ct\')">' +
+            '<span class="slider-val" id="' + ctVid + '">' + (ctVal < 30 ? 'Warm' : (ctVal > 70 ? 'Cool' : 'Mid')) + '</span>' +
+          '</div></div>';
+      }
+      html += '</div>';
+    });
+    html += '</div>';
+    wrap.innerHTML = html;
+    translateFormDOM();
   },
 
   // ── Motion → Lights form ──
@@ -2472,7 +2720,12 @@ var TModal = {
   _saveMotion: function() {
     var sensor  = el('t-sensor').value; if (!sensor) throw new Error(i18n('err_select_motion'));
     var lights  = Picker.getSelected('dp-lights'); if (!lights.length) throw new Error(i18n('err_select_lights'));
-    var bright  = parseInt(el('t-bright').value) / 100;
+    var bright   = parseInt(el('t-bright').value) / 100;
+    var fadeIn   = parseInt(el('t-fadein')  ? el('t-fadein').value  : 0) || 0;
+    var turnOff  = el('t-turnoff') ? el('t-turnoff').checked : false;
+    var hold     = el('t-hold')    ? parseInt(el('t-hold').value)   : 0;
+    var fadeOut  = parseInt(el('t-fadeout') ? el('t-fadeout').value : 0) || 0;
+    var name     = el('t-name')    ? (el('t-name').value.trim() || 'Motion Lights') : 'Motion Lights';
     var hoursEn   = el('t-hours-en') && el('t-hours-en').checked;
     var hoursFrom = hoursEn ? (el('t-hours-from') ? el('t-hours-from').value : '07:00') : null;
     var hoursTo   = hoursEn ? (el('t-hours-to')   ? el('t-hours-to').value   : '23:00') : null;
@@ -2816,7 +3069,7 @@ var TModal = {
     var allGroupOpts = groupOpts + (overrideOptsStr ? '<optgroup label="— Override mode —">' + overrideOptsStr + '</optgroup>' : '');
 
     // Always try Flow trigger cards first — they expose all buttons for any brand
-    wrap.innerHTML = '<p style="color:var(--ea-text);font-size:13px;padding:6px 0">Loading buttons…</p>';
+    wrap.innerHTML = '<p style="color:var(--ea-text);font-size:13px;padding:6px 0">' + i18n('Loading buttons…') + '</p>';
     try {
       var res = await window._hBridge('_flowTriggersReq', '_flowTriggersResult', { deviceId: devId });
       var flowCards = (!res.error && res.cards) ? res.cards.filter(function(c) {
@@ -2870,7 +3123,7 @@ var TModal = {
     if (rows.length) {
       TModal._switchRenderRows(rows, allGroupOpts, false);
     } else {
-      wrap.innerHTML = '<p style="color:#ff3b30;font-size:13px">No buttons found for this device.<br>Check Logs tab for details.</p>';
+      wrap.innerHTML = '<p style="color:#ff3b30;font-size:13px">' + i18n('err_no_buttons') + '<br>' + i18n('switch_check_logs') + '</p>';
     }
   },
 
@@ -3134,8 +3387,8 @@ var CustomEditor = {
     CustomEditor.acts  = [];
     var a = (CustomEditor.idx >= 0) ? State.automations[CustomEditor.idx] : {};
 
-    el('tmpl-title').textContent = CustomEditor.idx >= 0 ? '⚙️ Edit Automation' : '⚙️ Custom Automation';
-    el('tmpl-save-btn').textContent = CustomEditor.idx >= 0 ? 'Save' : 'Add';
+    el('tmpl-title').textContent = i18n(CustomEditor.idx >= 0 ? 'ce_title_edit' : 'ce_title_new');
+    el('tmpl-save-btn').textContent = i18n(CustomEditor.idx >= 0 ? 'btn_save' : 'btn_add');
     CustomEditor.conds = JSON.parse(JSON.stringify(a.conditions || []));
     CustomEditor.acts  = JSON.parse(JSON.stringify(a.actions    || []));
     el('tmpl-body').innerHTML = CustomEditor._form(a);
@@ -3156,24 +3409,24 @@ var CustomEditor = {
       return '<option value="'+esc(d.id)+'"'+(d.id===t.deviceId?' selected':'')+'>'+esc(d.name)+(d.zone?' ('+esc(d.zone)+')':'')+' ['+esc(d.class||'')+']</option>';
     }).join('');
 
-    var html = '<div class="fgrp"><label class="flabel">Name</label><input class="finput" id="ce-name" value="'+esc(a.name||'')+'"/></div>' +
-      '<div class="fgrp"><label class="flabel">Trigger type</label>' +
+    var html = '<div class="fgrp"><label class="flabel">' + i18n('ce_lbl_name') + '</label><input class="finput" id="ce-name" value="'+esc(a.name||'')+'"/></div>' +
+      '<div class="fgrp"><label class="flabel">' + i18n('ce_lbl_trigger_type') + '</label>' +
         '<select class="finput" id="ce-trig-type" onchange="CustomEditor._trigChanged()">' +
-          '<option value="motion_start"'+(trigType==='motion_start'?' selected':'')+'>Motion detected</option>' +
-          '<option value="motion_stop"'+(trigType==='motion_stop'?' selected':'')+'>Motion stopped</option>' +
-          '<option value="door_open"'+(trigType==='door_open'?' selected':'')+'>Door opens</option>' +
-          '<option value="door_close"'+(trigType==='door_close'?' selected':'')+'>Door closes</option>' +
-          '<option value="time"'+(trigType==='time'?' selected':'')+'>Every day at time</option>' +
+          '<option value="motion_start"'+(trigType==='motion_start'?' selected':'')+'>'+i18n('ce_trig_motion_start')+'</option>' +
+          '<option value="motion_stop"'+(trigType==='motion_stop'?' selected':'')+'>'+i18n('ce_trig_motion_stop')+'</option>' +
+          '<option value="door_open"'+(trigType==='door_open'?' selected':'')+'>'+i18n('ce_trig_door_open')+'</option>' +
+          '<option value="door_close"'+(trigType==='door_close'?' selected':'')+'>'+i18n('ce_trig_door_close')+'</option>' +
+          '<option value="time"'+(trigType==='time'?' selected':'')+'>'+i18n('ce_trig_time')+'</option>' +
         '</select></div>' +
       '<div id="ce-trig-extra"></div>' +
       '<hr class="sep">' +
-      '<div style="font-size:11px;font-weight:700;color:var(--ea-text);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Conditions (optional)</div>' +
+      '<div style="font-size:11px;font-weight:700;color:var(--ea-text);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">' + i18n('ce_lbl_conds') + '</div>' +
       '<div id="ce-conds"></div>' +
-      '<button style="width:100%;padding:8px;border:1.5px dashed var(--ea-border);border-radius:8px;background:none;color:var(--ea-text);cursor:pointer;font-size:13px;margin-bottom:12px" onclick="CustomEditor._addCond()">+ Add condition</button>' +
+      '<button style="width:100%;padding:8px;border:1.5px dashed var(--ea-border);border-radius:8px;background:none;color:var(--ea-text);cursor:pointer;font-size:13px;margin-bottom:12px" onclick="CustomEditor._addCond()">' + i18n('ce_btn_add_cond') + '</button>' +
       '<hr class="sep">' +
-      '<div style="font-size:11px;font-weight:700;color:var(--ea-text);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Actions</div>' +
+      '<div style="font-size:11px;font-weight:700;color:var(--ea-text);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">' + i18n('ce_lbl_actions') + '</div>' +
       '<div id="ce-acts"></div>' +
-      '<button style="width:100%;padding:8px;border:1.5px dashed var(--ea-border);border-radius:8px;background:none;color:var(--ea-text);cursor:pointer;font-size:13px" onclick="CustomEditor._addAct()">+ Add action</button>';
+      '<button style="width:100%;padding:8px;border:1.5px dashed var(--ea-border);border-radius:8px;background:none;color:var(--ea-text);cursor:pointer;font-size:13px" onclick="CustomEditor._addAct()">' + i18n('ce_btn_add_act') + '</button>';
 
     setTimeout(function() {
       CustomEditor._trigChanged(a.trigger);
@@ -3191,9 +3444,9 @@ var CustomEditor = {
     }).join('');
     var extra = '';
     if (type === 'time') {
-      extra = '<div class="fgrp"><label class="flabel">Time</label><input class="finput" type="text" pattern="\d{2}:\d{2}" placeholder="HH:MM" id="ce-t-time" value="'+(existing.time||'08:00')+'"/></div>';
+      extra = '<div class="fgrp"><label class="flabel">' + i18n('ce_lbl_time') + '</label><input class="finput" type="text" pattern="\d{2}:\d{2}" placeholder="HH:MM" id="ce-t-time" value="'+(existing.time||'08:00')+'"/></div>';
     } else {
-      extra = '<div class="fgrp"><label class="flabel">Device</label><select class="finput" id="ce-t-dev"><option value="">— Select —</option>'+allOpts+'</select></div>';
+      extra = '<div class="fgrp"><label class="flabel">' + i18n('ce_lbl_device') + '</label><select class="finput" id="ce-t-dev"><option value="">' + i18n('ce_lbl_select') + '</option>'+allOpts+'</select></div>';
     }
     if (el('ce-trig-extra')) el('ce-trig-extra').innerHTML = extra;
   },
@@ -3209,9 +3462,9 @@ var CustomEditor = {
     el('ce-conds').innerHTML = CustomEditor.conds.map(function(c, i) {
       if (c.type === 'time_between') {
         return '<div class="fgrp" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">' +
-          '<span style="font-size:13px;color:var(--ea-text)">Between</span>' +
+          '<span style="font-size:13px;color:var(--ea-text)">' + i18n('ce_cond_between') + '</span>' +
           '<input type="text" pattern="\d{2}:\d{2}" placeholder="HH:MM" style="border:1.5px solid #e0e0e5;border-radius:8px;padding:6px;font-size:13px" value="'+(c.from||'08:00')+'" oninput="CustomEditor.conds['+i+'].from=this.value"/>' +
-          '<span style="font-size:13px;color:var(--ea-text)">and</span>' +
+          '<span style="font-size:13px;color:var(--ea-text)">' + i18n('ce_cond_and') + '</span>' +
           '<input type="text" pattern="\d{2}:\d{2}" placeholder="HH:MM" style="border:1.5px solid #e0e0e5;border-radius:8px;padding:6px;font-size:13px" value="'+(c.to||'22:00')+'" oninput="CustomEditor.conds['+i+'].to=this.value"/>' +
           '<button onclick="CustomEditor._rmCond('+i+')" style="background:none;border:none;color:#ff3b30;cursor:pointer;font-size:18px">×</button>' +
         '</div>';
@@ -3234,21 +3487,21 @@ var CustomEditor = {
       }).join('');
     };
     el('ce-acts').innerHTML = CustomEditor.acts.map(function(a, i) {
-      var typeOpts = [['turn_on','Turn ON'],['turn_off','Turn OFF'],['set_dim','Set brightness'],
-        ['set_color_temp','Set color temp'],['notify','Notification'],['wait','Wait (seconds)']].map(function(p) {
+      var typeOpts = [['turn_on',i18n('ce_act_turn_on')],['turn_off',i18n('ce_act_turn_off')],['set_dim',i18n('ce_act_set_dim')],
+        ['set_color_temp',i18n('ce_act_set_ct')],['notify',i18n('ce_act_notify')],['wait',i18n('ce_act_wait')]].map(function(p) {
         return '<option value="'+p[0]+'"'+(a.type===p[0]?' selected':'')+'>'+p[1]+'</option>';
       }).join('');
       var extra = '';
       switch(a.type) {
         case 'turn_on': case 'turn_off':
-          extra = '<select style="flex:1;border:1.5px solid #e0e0e5;border-radius:8px;padding:6px;font-size:13px" onchange="CustomEditor.acts['+i+'].deviceId=this.value"><option value="">— Device —</option>'+allOpts(a.deviceId)+'</select>'; break;
+          extra = '<select style="flex:1;border:1.5px solid #e0e0e5;border-radius:8px;padding:6px;font-size:13px" onchange="CustomEditor.acts['+i+'].deviceId=this.value"><option value="">' + i18n('ce_act_device') + '</option>'+allOpts(a.deviceId)+'</select>'; break;
         case 'set_dim': case 'set_color_temp':
-          extra = '<select style="flex:1;border:1.5px solid #e0e0e5;border-radius:8px;padding:6px;font-size:13px" onchange="CustomEditor.acts['+i+'].deviceId=this.value"><option value="">— Device —</option>'+allOpts(a.deviceId)+'</select>' +
+          extra = '<select style="flex:1;border:1.5px solid #e0e0e5;border-radius:8px;padding:6px;font-size:13px" onchange="CustomEditor.acts['+i+'].deviceId=this.value"><option value="">' + i18n('ce_act_device') + '</option>'+allOpts(a.deviceId)+'</select>' +
             '<input type="number" min="0" max="1" step="0.05" value="'+(a.value!=null?a.value:1)+'" style="width:65px;border:1.5px solid #e0e0e5;border-radius:8px;padding:6px;font-size:13px" oninput="CustomEditor.acts['+i+'].value=parseFloat(this.value)"/>'; break;
         case 'notify':
-          extra = '<input type="text" value="'+esc(a.message||'')+'" placeholder="Message" style="flex:1;border:1.5px solid #e0e0e5;border-radius:8px;padding:6px;font-size:13px" oninput="CustomEditor.acts['+i+'].message=this.value"/>'; break;
+          extra = '<input type="text" value="'+esc(a.message||'')+'" placeholder="' + i18n('ce_act_msg_ph') + '" style="flex:1;border:1.5px solid #e0e0e5;border-radius:8px;padding:6px;font-size:13px" oninput="CustomEditor.acts['+i+'].message=this.value"/>'; break;
         case 'wait':
-          extra = '<input type="number" min="1" value="'+(a.seconds||5)+'" style="width:70px;border:1.5px solid var(--ea-border);border-radius:8px;padding:6px;font-size:13px" oninput="CustomEditor.acts['+i+'].seconds=parseInt(this.value)"/> <span style="font-size:13px;color:var(--ea-text)">sec</span>'; break;
+          extra = '<input type="number" min="1" value="'+(a.seconds||5)+'" style="width:70px;border:1.5px solid var(--ea-border);border-radius:8px;padding:6px;font-size:13px" oninput="CustomEditor.acts['+i+'].seconds=parseInt(this.value)"/> <span style="font-size:13px;color:var(--ea-text)">' + i18n('ce_act_sec') + '</span>'; break;
       }
       return '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:#f2f2f7;border-radius:10px;padding:10px;margin-bottom:8px">' +
         '<select style="border:1.5px solid #e0e0e5;border-radius:8px;padding:6px;font-size:13px" onchange="CustomEditor._actType('+i+',this.value)">'+typeOpts+'</select>' +
@@ -3273,8 +3526,8 @@ var CustomEditor = {
 
   save: async function() {
     var name = el('ce-name').value.trim();
-    if (!name) { window._hAlert('Please enter a name.'); return; }
-    if (!CustomEditor.acts.length) { window._hAlert('Add at least one action.'); return; }
+    if (!name) { window._hAlert(i18n('ce_err_name')); return; }
+    if (!CustomEditor.acts.length) { window._hAlert(i18n('ce_err_actions')); return; }
     var auto = {
       id: (CustomEditor.idx >= 0 && State.automations[CustomEditor.idx].id) || TModal._mkId(),
       name: name, enabled: CustomEditor.idx >= 0 ? State.automations[CustomEditor.idx].enabled : true,
@@ -3285,7 +3538,7 @@ var CustomEditor = {
     if (CustomEditor.idx >= 0) { State.automations[CustomEditor.idx] = auto; }
     else { State.automations.push(auto); }
     TModal.close();
-    await AutoList.persist('Saved');
+    await AutoList.persist(i18n('toast_saved'));
   }
 };
 
@@ -3309,8 +3562,8 @@ var OverrideModal = {
       var rem  = expiresAt - Date.now();
       var h    = Math.floor(rem / 3600000);
       var m    = Math.floor((rem % 3600000) / 60000);
-      var disp = h > 0 ? h + 'h ' + m + 'm remaining' : m + 'm remaining';
-      el('ov-active-label').textContent = '⏸ Override active — ' + disp;
+      var disp = h > 0 ? h + 'h ' + m + 'm ' + i18n('ov_remaining') : m + 'm ' + i18n('ov_remaining');
+      el('ov-active-label').textContent = i18n('ov_active_pfx') + disp;
       el('ov-resume-wrap').style.display = '';
     } else {
       el('ov-resume-wrap').style.display = 'none';
@@ -3357,129 +3610,6 @@ var _origSave = TModal.save;
 TModal.save = async function() {
   if (TModal.type === 'custom') { await CustomEditor.save(); return; }
   await _origSave.call(TModal);
-};
-
-// ── Lights tab (removed from nav — kept only for modal inner tab) ───────────────
-var LightsTab = {
-  _saveTimer: null,
-
-  render: function() {
-    var computed = computeGroups();
-    var html = '';
-
-    computed.groups.forEach(function(g) {
-      // Collect unique light deviceIds that are turned ON in this group
-      var lightIds = [], seen = {};
-      g.items.forEach(function(it) {
-        (it.a.actions || []).forEach(function(ac) {
-          if (ac.type === 'turn_on' && ac.deviceId && !seen[ac.deviceId]) {
-            seen[ac.deviceId] = true;
-            lightIds.push(ac.deviceId);
-          }
-        });
-      });
-      if (!lightIds.length) return;
-
-      var icons = { motion_lights:'🏃', smart_dim:'🌙', door_lights:'🚪', schedule:'⏰', switch:'🔘' };
-      html += '<div class="sec-hdr">' + esc((icons[g.type] || '⚙️') + '  ' + (g.name || 'Automation')) + '</div>';
-      html += '<div class="auto-list-wrap">';
-
-      lightIds.forEach(function(deviceId) {
-        var dname   = devName(deviceId) || deviceId;
-        var safeGid = g.id.replace(/[^a-zA-Z0-9]/g, '_');
-        var safeDid = deviceId.replace(/[^a-zA-Z0-9]/g, '_');
-        var prefix  = 'lt_' + safeGid + '_' + safeDid;
-
-        html += '<div class="lt-card">';
-        html += '<div class="lt-name">💡 ' + esc(dname) + '</div>';
-
-        if (g.type === 'smart_dim') {
-          // Two sliders: Day and Night
-          var modes = [
-            { key: 'day',   label: '☀️ Day',   part: ' — Day'   },
-            { key: 'night', label: '🌙 Night', part: ' — Night' }
-          ];
-          modes.forEach(function(m) {
-            var modeItem = g.items.find(function(it) { return it.a.name && it.a.name.indexOf(m.part) !== -1; });
-            var dimAc = modeItem && (modeItem.a.actions || []).find(function(ac) {
-              return (ac.type === 'set_dim' || ac.type === 'fade_to') && ac.deviceId === deviceId;
-            });
-            var pct = dimAc ? Math.round((dimAc.value || 1) * 100) : 100;
-            var sid = prefix + '_' + m.key;
-            var vid = sid + '_v';
-            html += '<div class="lt-row">' +
-              '<span class="lt-label">' + m.label + '</span>' +
-              '<div class="slider-row" style="flex:1;margin-top:0">' +
-                '<input type="range" id="' + sid + '" min="1" max="100" value="' + pct + '"' +
-                  ' oninput="document.getElementById(\'' + vid + '\').textContent=this.value+\'%\';' +
-                  'LightsTab.updateDim(' + JSON.stringify(g.id) + ',' + JSON.stringify(deviceId) + ',' + JSON.stringify(m.key) + ',parseInt(this.value))">' +
-                '<span class="slider-val" id="' + vid + '">' + pct + '%</span>' +
-              '</div>' +
-            '</div>';
-          });
-        } else {
-          // Single brightness slider (motion, door, switch)
-          var dimAc = null;
-          g.items.forEach(function(it) {
-            if (!dimAc) dimAc = (it.a.actions || []).find(function(ac) {
-              return (ac.type === 'set_dim' || ac.type === 'fade_to') && ac.deviceId === deviceId;
-            });
-          });
-          var pct = dimAc ? Math.round((dimAc.value || 1) * 100) : 100;
-          var sid = prefix + '_on';
-          var vid = sid + '_v';
-          html += '<div class="lt-row">' +
-            '<span class="lt-label">💡 ON</span>' +
-            '<div class="slider-row" style="flex:1;margin-top:0">' +
-              '<input type="range" id="' + sid + '" min="1" max="100" value="' + pct + '"' +
-                ' oninput="document.getElementById(\'' + vid + '\').textContent=this.value+\'%\';' +
-                'LightsTab.updateDim(' + JSON.stringify(g.id) + ',' + JSON.stringify(deviceId) + ',\'on\',parseInt(this.value))">' +
-              '<span class="slider-val" id="' + vid + '">' + pct + '%</span>' +
-            '</div>' +
-          '</div>';
-        }
-
-        html += '</div>'; // lt-card
-      });
-
-      html += '</div>'; // auto-list-wrap
-    });
-
-    if (!html) {
-      html = '<div class="empty"><div class="icon">💡</div><p>No lights configured yet.<br>Add a Motion, Smart Dim, Door, or Switch automation first.</p></div>';
-    }
-    el('lights-list').innerHTML = html;
-  },
-
-  updateDim: function(groupId, deviceId, mode, pct) {
-    var val = pct / 100;
-    State.automations.forEach(function(a) {
-      if (a._groupId !== groupId) return;
-      // For smart_dim, only update the Day or Night part
-      if (mode === 'day'   && !(a.name && a.name.indexOf(' — Day')   !== -1)) return;
-      if (mode === 'night' && !(a.name && a.name.indexOf(' — Night') !== -1)) return;
-      // Skip automations that don't touch this device at all
-      var hasDev = (a.actions || []).some(function(ac) { return ac.deviceId === deviceId; });
-      if (!hasDev) return;
-      // Update existing dim action
-      var dimAc = (a.actions || []).find(function(ac) {
-        return (ac.type === 'set_dim' || ac.type === 'fade_to') && ac.deviceId === deviceId;
-      });
-      if (dimAc) {
-        dimAc.value = val;
-      } else if (val < 1) {
-        // Insert set_dim right after the turn_on for this device
-        var toIdx = (a.actions || []).findIndex(function(ac) {
-          return ac.type === 'turn_on' && ac.deviceId === deviceId;
-        });
-        if (toIdx >= 0) a.actions.splice(toIdx + 1, 0, { type: 'set_dim', deviceId: deviceId, value: val });
-      }
-    });
-    clearTimeout(LightsTab._saveTimer);
-    LightsTab._saveTimer = setTimeout(function() {
-      AutoList.persist('Dim saved').catch(function(){});
-    }, 800);
-  }
 };
 
 // ── Test tab ───────────────────────────────────────────────────────────────────
@@ -3558,7 +3688,7 @@ var TestTab = {
 
   runDevice: async function() {
     var devId = el('test-dev-sel').value;
-    if (!devId) { window._hAlert('Please select a device first.'); return; }
+    if (!devId) { window._hAlert(i18n('test_no_device')); return; }
     var act   = el('test-act-sel').value;
     var actions = [];
     if (act === 'turn_on')  { actions = [{ type: 'turn_on',  deviceId: devId }]; }
@@ -3573,7 +3703,7 @@ var TestTab = {
 
   _run: async function(actions, label) {
     var resultEl = el('test-result');
-    resultEl.innerHTML = '<div class="loader">Running…</div>';
+    resultEl.innerHTML = '<div class="loader">' + i18n('test_running') + '</div>';
     var ts = Date.now();
     try {
       await window._hSet('_testRequest', JSON.stringify({ actions: actions, name: label, ts: ts }));
@@ -3582,7 +3712,7 @@ var TestTab = {
       var raw = await window._hGet('_testResult');
       var res = raw ? (typeof raw === 'string' ? JSON.parse(raw) : raw) : null;
       if (!res || res.reqTs !== ts) {
-        resultEl.innerHTML = '<p style="color:#ff3b30;font-size:14px">⚠️ No response from app. Check the Logs tab for errors.</p>';
+        resultEl.innerHTML = '<p style="color:#ff3b30;font-size:14px">' + i18n('test_no_response') + '</p>';
         return;
       }
       // Build per-light final state from the actions list
@@ -3606,7 +3736,7 @@ var TestTab = {
           var isOn = s.on !== false;
           var pct  = s.dim != null ? Math.round(s.dim * 100) : null;
           var icon  = s.err ? '❌' : (isOn ? '💡' : '🔌');
-          var state = s.err ? 'Error' : (isOn ? (pct != null ? pct + '%' : 'ON') : 'OFF');
+          var state = s.err ? i18n('test_state_error') : (isOn ? (pct != null ? pct + '%' : i18n('test_state_on')) : i18n('test_state_off'));
           var col   = s.err ? '#ff3b30' : (isOn ? '#ff9500' : 'var(--ea-text)');
           bulbsHtml += '<div class="light-tile">' +
             '<span class="light-tile-icon">' + icon + '</span>' +
@@ -3635,7 +3765,7 @@ var TestTab = {
           '<div style="font-size:14px;font-weight:700">' + esc(label) + '</div>' +
         '</div>' +
         bulbsHtml +
-        (rows.length ? '<div>' + rows.join('') + '</div>' : '<p style="color:var(--ea-text);font-size:14px">No actions were run.</p>');
+        (rows.length ? '<div>' + rows.join('') + '</div>' : '<p style="color:var(--ea-text);font-size:14px">' + i18n('test_no_actions') + '</p>');
     } catch(e) {
       resultEl.innerHTML = '<p style="color:#ff3b30;font-size:14px">Error: ' + esc(e.message) + '</p>';
     }
@@ -3666,7 +3796,10 @@ var DevTab = {
   },
 
   _classInfo: function(cls) {
-    return DevTab._meta[cls] || { icon: '⚙️', label: cls.charAt(0).toUpperCase() + cls.slice(1) };
+    var m = DevTab._meta[cls] || { icon: '⚙️', label: cls.charAt(0).toUpperCase() + cls.slice(1) };
+    var key = 'dev_cls_' + cls;
+    var lbl = i18n(key);
+    return { icon: m.icon, label: lbl !== key ? lbl : m.label };
   },
 
   _visibleDevices: function() {
@@ -3717,7 +3850,7 @@ var DevTab = {
             '<div class="device-card-name">' + info.icon + ' ' + esc(d.name) + '</div>' +
             '<div class="device-card-sub">' + esc(info.label) + (d.zone ? ' · ' + esc(d.zone) : '') + '</div>' +
           '</div>' +
-          '<span class="badge" style="' + (d.available ? 'background:#34c759' : 'background:var(--ea-text)') + ';color:#fff;border:none">' + (d.available ? 'Online' : 'Offline') + '</span>' +
+          '<span class="badge" style="' + (d.available ? 'background:#34c759' : 'background:var(--ea-text)') + ';color:#fff;border:none">' + (d.available ? i18n('dev_online') : i18n('dev_offline')) + '</span>' +
         '</label>';
       }).join('');
     };
@@ -3726,8 +3859,8 @@ var DevTab = {
     Object.keys(zones).sort().forEach(function(z) {
       html += '<div class="sec-hdr">' + esc(z) + '</div>' + renderGroup(zones[z]);
     });
-    if (noZone.length) { if (Object.keys(zones).length) html += '<div class="sec-hdr">Other</div>'; html += renderGroup(noZone); }
-    if (!html) html = '<div style="padding:20px 0;text-align:center;color:var(--ea-text);font-size:14px">No devices in this category.</div>';
+    if (noZone.length) { if (Object.keys(zones).length) html += '<div class="sec-hdr">' + i18n('dev_other_zone') + '</div>'; html += renderGroup(noZone); }
+    if (!html) html = '<div style="padding:20px 0;text-align:center;color:var(--ea-text);font-size:14px">' + i18n('dev_no_category') + '</div>';
     list.innerHTML = html;
   },
 
@@ -3788,7 +3921,7 @@ var DevTab = {
 
   refresh: async function() {
     var btn = el('btn-refresh-dev');
-    btn.textContent = 'Refreshing…'; btn.disabled = true;
+    btn.textContent = i18n('dev_refreshing'); btn.disabled = true;
     try {
       await window._hSet('_refreshDevices', Date.now());
       await new Promise(function(r) { setTimeout(r, 2500); });
@@ -3797,7 +3930,7 @@ var DevTab = {
       DevTab.render();
     } catch(e) {
       el('device-list').innerHTML = '<div class="loader" style="color:#ff3b30">Error: ' + e.message + '</div>';
-    } finally { btn.textContent = 'Refresh'; btn.disabled = false; }
+    } finally { btn.textContent = i18n('btn_refresh'); btn.disabled = false; }
   }
 };
 
@@ -3842,15 +3975,16 @@ function tpSet(id, val) {
 // ── Logs tab ───────────────────────────────────────────────────────────────────
 var LogTab = {
   load: async function() {
-    el('log-list').innerHTML = '<div class="loader">Loading…</div>';
+    el('log-list').innerHTML = '<div class="loader">' + i18n('log_loading') + '</div>';
     try {
-      var raw  = await window._hGet('_appLog');
+      var raw = await window._hGet('_appLog');
       var logs = raw ? (typeof raw === 'string' ? JSON.parse(raw) : raw) : [];
-      if (!logs.length) { el('log-list').innerHTML = '<div class="loader">No log entries yet.</div>'; return; }
+      logs = logs.slice().reverse();
+      if (!logs.length) { el('log-list').innerHTML = '<div class="loader">' + i18n('log_empty') + '</div>'; return; }
       LogTab._logs = logs;
       el('log-list').innerHTML = logs.map(function(l) {
         var d  = new Date(l.ts);
-        var ts = d.toLocaleDateString([],{month:'short',day:'numeric'}) + ' ' + d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',hour12:false});
+        var ts = d.toLocaleDateString([],{month:'short',day:'numeric'}) + ' ' + d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
         return '<div class="log-row">' +
           '<span class="log-ts">' + ts + '</span>' +
           '<span class="log-lv ' + esc(l.level) + '">' + esc(l.level) + '</span>' +
@@ -3872,7 +4006,7 @@ var LogTab = {
     ta.select();
     document.execCommand('copy');
     document.body.removeChild(ta);
-    alert('Log copied to clipboard');
+    alert(i18n('log_copied'));
   }
 };
 </script>

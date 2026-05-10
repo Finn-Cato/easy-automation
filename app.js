@@ -12,6 +12,7 @@ class EasyAutomationApp extends App {
     this.log(`Easy Automation v${manifest.version} starting...`);
 
     this._log            = [];
+    this._logSaveTimer   = null;
     this._capInstances   = [];     // CapabilityInstance objects — keep refs so GC doesn't destroy subscriptions
     this._holdTimers     = new Map();
     this._safetyTimers   = new Map();
@@ -19,7 +20,9 @@ class EasyAutomationApp extends App {
     this._minuteTimer    = null;
     this._reconnectTimer = null;
     this._cachedDevices  = [];
+    this._api            = null;   // single shared HomeyAPI instance for all queries/actions
     this._listenerApi    = null;
+    this._liveDevices    = null;   // live device map reused across triggers to avoid repeated getDevices() calls
 
     // Cache all devices now (API handlers have limited homey access)
     await this._refreshDeviceCache();
@@ -142,6 +145,15 @@ class EasyAutomationApp extends App {
     this._detachAllListeners();
   }
 
+  //  Shared API helper
+
+  async _getApi() {
+    if (!this._api) {
+      this._api = await HomeyAPI.createAppAPI({ homey: this.homey });
+    }
+    return this._api;
+  }
+
   //  Catch-all API handler
 
   async onApi(method, path, body) {
@@ -180,7 +192,7 @@ class EasyAutomationApp extends App {
   async _refreshDeviceCache() {
     try {
       this._addLog('info', 'Refreshing device cache…');
-      const api     = await HomeyAPI.createAppAPI({ homey: this.homey });
+      const api     = await this._getApi();
       const devices = await api.devices.getDevices();
       const count   = devices ? Object.keys(devices).length : 0;
       this._addLog('info', `getDevices() returned ${count} device(s)`);
@@ -196,8 +208,9 @@ class EasyAutomationApp extends App {
         available:       d.available,
       }));
       this.homey.settings.set('_deviceCache', JSON.stringify(this._cachedDevices));
-      this._addLog('info', `Device cache updated: ${this._cachedDevices.length} device(s) stored`);
+      this._addLog('info', `Device cache updated: ${this._cachedDevices.length} device(s)`);
     } catch (e) {
+      this._api = null; // reset so next call retries
       this._addLog('error', '_refreshDeviceCache: ' + e.message);
     }
   }
@@ -258,7 +271,7 @@ class EasyAutomationApp extends App {
     const wait = ms => new Promise(r => this.homey.setTimeout(r, ms));
     let devices;
     try {
-      const api = await HomeyAPI.createAppAPI({ homey: this.homey });
+      const api = await this._getApi();
       devices = await api.devices.getDevices();
     } catch (e) {
       this._addLog('warn', 'blinkTest: getDevices failed: ' + e.message);
@@ -326,7 +339,7 @@ class EasyAutomationApp extends App {
       this.homey.settings.set('_flowTriggersResult', JSON.stringify({ reqTs: req.ts, ...data }));
 
     try {
-      const api = await HomeyAPI.createAppAPI({ homey: this.homey });
+      const api = await this._getApi();
       const allCards = await api.flow.getFlowCardTriggers();
       const devices  = await api.devices.getDevices();
       const device   = devices[req.deviceId];
@@ -417,7 +430,7 @@ class EasyAutomationApp extends App {
         api = await HomeyAPI.createLocalAPI({ address: localUrl, token: pat });
         this._addLog('info', 'Using Personal Access Token for flow creation');
       } else {
-        api = await HomeyAPI.createAppAPI({ homey: this.homey });
+        api = await this._getApi();
       }
 
       for (const id of (req.existingFlowIds || [])) {
@@ -465,10 +478,8 @@ class EasyAutomationApp extends App {
     if (!raw) return;
     const { deviceId, value, capability } = typeof raw === 'string' ? JSON.parse(raw) : raw;
     this._addLog('info', `[preview] ${deviceId} → ${Math.round(value * 100)}% (${capability || 'dim'})`);
-    if (!this._previewApi) {
-      this._previewApi = await HomeyAPI.createAppAPI({ homey: this.homey });
-    }
-    const devices = await this._previewApi.devices.getDevices();
+    const api = await this._getApi();
+    const devices = await api.devices.getDevices();
     const device = devices[deviceId];
     if (!device) { this._addLog('warn', `[preview] device not found: ${deviceId}`); return; }
     const hasCap = cap => device.capabilities && device.capabilities.includes(cap);
@@ -496,7 +507,7 @@ class EasyAutomationApp extends App {
       this.homey.settings.set('_flowCheckResult', JSON.stringify({ reqTs: req.ts, ...data }));
 
     try {
-      const api = await HomeyAPI.createAppAPI({ homey: this.homey });
+      const api = await this._getApi();
       const allFlows = await api.flow.getFlows();
       const flows = {};
       for (const id of (req.flowIds || [])) {
@@ -522,7 +533,7 @@ class EasyAutomationApp extends App {
       this.homey.settings.set('_flowActionCardsResult', JSON.stringify({ reqTs: req.ts, ...data }));
 
     try {
-      const api = await HomeyAPI.createAppAPI({ homey: this.homey });
+      const api = await this._getApi();
       const allCards = await api.flow.getFlowCardActions();
       const devices  = await api.devices.getDevices();
       const device   = devices[req.deviceId];
@@ -595,6 +606,7 @@ class EasyAutomationApp extends App {
     // If it gets GC'd the WebSocket closes and capability listeners stop firing.
     this._listenerApi = await HomeyAPI.createAppAPI({ homey: this.homey });
     const devices     = await this._listenerApi.devices.getDevices();
+    this._liveDevices = devices; // cache for use in _runActions
 
     for (const automation of automations) {
       if (!automation.enabled) continue;
@@ -1012,8 +1024,8 @@ class EasyAutomationApp extends App {
 
     // Set lights to override brightness
     try {
-      if (!this._actionApi) this._actionApi = await HomeyAPI.createAppAPI({ homey: this.homey });
-      const allDevices = await this._actionApi.devices.getDevices();
+      const api = await this._getApi();
+      const allDevices = await api.devices.getDevices();
       await Promise.all(lightIds.map(async id => {
         const d = allDevices[id];
         if (!d) return;
@@ -1025,7 +1037,7 @@ class EasyAutomationApp extends App {
       this._addLog('action', `Override: ${lightIds.length} light(s) → ${Math.round(b * 100)}% for ${durationMinutes}min`);
     } catch (e) {
       this._addLog('error', `Override set lights: ${e.message}`);
-      this._actionApi = null;
+      this._api = null;
     }
 
     // Store override timestamp so motion triggers are skipped during the period
@@ -1073,8 +1085,8 @@ class EasyAutomationApp extends App {
       this.homey.settings.set('_ovLearnResult', JSON.stringify({ reqTs: ts, ...result }));
 
     try {
-      if (!this._listenerApi) this._listenerApi = await HomeyAPI.createAppAPI({ homey: this.homey });
-      const devices = await this._listenerApi.devices.getDevices();
+      const api = await this._getApi();
+      const devices = await api.devices.getDevices();
       const device  = devices[deviceId];
       if (!device) { done({ error: 'Device not found' }); return; }
 
@@ -1217,6 +1229,7 @@ class EasyAutomationApp extends App {
     }
     this._capInstances = [];
     this._listenerApi  = null;
+    this._liveDevices  = null;
 
     for (const timer of this._holdTimers.values()) {
       try { this.homey.clearTimeout(timer); } catch (e) {}
@@ -1285,30 +1298,30 @@ class EasyAutomationApp extends App {
     }
     if (c.type === 'device_is') {
       try {
-        if (!this._actionApi) this._actionApi = await HomeyAPI.createAppAPI({ homey: this.homey });
-        const devices = await this._actionApi.devices.getDevices();
+        const api = await this._getApi();
+        const devices = await api.devices.getDevices();
         const device  = devices[c.deviceId];
         if (!device) return false;
         const capObj = device.capabilitiesObj && device.capabilitiesObj[c.capability];
         const val = capObj && capObj.value;
         return String(val) === String(c.value);
       } catch (e) {
-        this._actionApi = null;
+        this._api = null;
         this._addLog('warn', `device_is condition failed: ${e.message}`);
         return false;
       }
     }
     if (c.type === 'lux_below') {
       try {
-        if (!this._actionApi) this._actionApi = await HomeyAPI.createAppAPI({ homey: this.homey });
-        const devices = await this._actionApi.devices.getDevices();
+        const api = await this._getApi();
+        const devices = await api.devices.getDevices();
         const device = devices[c.deviceId];
         if (!device) return true;
         const capObj = device.capabilitiesObj && device.capabilitiesObj['measure_luminance'];
         const lux = capObj != null ? capObj.value : null;
         return lux != null ? lux <= c.maxLux : true;
       } catch(e) {
-        this._actionApi = null;
+        this._api = null;
         this._addLog('warn', `lux_below condition failed: ${e.message}`);
         return true;
       }
@@ -1320,16 +1333,19 @@ class EasyAutomationApp extends App {
 
   async _runActions(actions, name) {
     let devices;
-    try {
-      if (!this._actionApi) {
-        this._actionApi = await HomeyAPI.createAppAPI({ homey: this.homey });
+    if (this._liveDevices) {
+      devices = this._liveDevices;
+    } else {
+      try {
+        const api = await this._getApi();
+        devices = await api.devices.getDevices();
+        this._liveDevices = devices;
+      } catch (e) {
+        this._addLog('warn', 'getDevices failed, using cache: ' + e.message);
+        this._api = null; // reset so next call retries
+        devices = {};
+        this._cachedDevices.forEach(d => { devices[d.id] = d; });
       }
-      devices = await this._actionApi.devices.getDevices();
-    } catch (e) {
-      this._addLog('warn', 'getDevices failed, using cache: ' + e.message);
-      this._actionApi = null; // reset so next call retries
-      devices = {};
-      this._cachedDevices.forEach(d => { devices[d.id] = d; });
     }
 
     // Snapshot which devices are already on BEFORE we run any actions.
@@ -1352,13 +1368,22 @@ class EasyAutomationApp extends App {
 
       if (isFade || !isBlocking) {
         // Collect all consecutive non-blocking actions and run them in parallel
-        const batch = [];
+        let batch = [];
         while (i < actions.length) {
           const a = actions[i];
           const aIsBlocking = a.type === 'wait' || a.type === 'run_group' || a.type === 'notify';
           if (aIsBlocking) break;
           batch.push(a);
           i++;
+        }
+        // Optimise: if a batch contains both turn_on and set_dim for the same device,
+        // drop the turn_on — set_dim > 0 implicitly turns on most dimmers (incl. Plejd),
+        // and this saves one extra BLE round-trip per device.
+        const dimDevices = new Set(
+          batch.filter(a => a.type === 'set_dim' && parseFloat(a.value) > 0).map(a => a.deviceId)
+        );
+        if (dimDevices.size > 0) {
+          batch = batch.filter(a => !(a.type === 'turn_on' && dimDevices.has(a.deviceId)));
         }
         const batchResults = await Promise.all(batch.map(async a => {
           try {
@@ -1476,10 +1501,13 @@ class EasyAutomationApp extends App {
   _addLog(level, message) {
     this._log.push({ ts: new Date().toISOString(), level, message });
     if (this._log.length > 200) this._log.shift();
-    // Write reversed log to settings so the settings page can read it via Homey.get()
-    try { this.homey.settings.set('_appLog', JSON.stringify(this._log.slice().reverse())); } catch(e) {}
     if (level === 'error') this.error(message);
     else this.log(`[${level}] ${message}`);
+    // Persist to settings so the settings page can read it via _hGet
+    if (this._logSaveTimer) this.homey.clearTimeout(this._logSaveTimer);
+    this._logSaveTimer = this.homey.setTimeout(() => {
+      this.homey.settings.set('_appLog', JSON.stringify(this._log));
+    }, 500);
   }
 
 }

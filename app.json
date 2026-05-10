@@ -1,6 +1,6 @@
 {
   "id": "no.easy.automation",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "compatibility": ">=5.0.0",
   "sdk": 3,
   "platforms": [
@@ -11,8 +11,8 @@
     "no": "Easy Automation"
   },
   "description": {
-    "en": "Create room automations for lights, doors and more - all configured inside the app, no flows needed.",
-    "no": "Lag romautomasjoner for lys, dører og mer - alt konfigureres inne i appen, ingen flyter nødvendig."
+    "en": "Automate any room without writing a single Flow.",
+    "no": "Automatiser ethvert rom uten å skrive en eneste flyt."
   },
   "tags": {
     "en": [

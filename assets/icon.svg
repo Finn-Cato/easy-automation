@@ -1,25 +1,42 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-  <!-- Background circle -->
-  <circle cx="50" cy="50" r="48" fill="#EEF4FF"/>
+  <!-- Gear: 8 teeth, clockwise (r_body=37, r_tooth=46, half-tooth=9°) -->
+  <path fill="#1E88E5" d="
+    M 86.5,44.2 L 95.4,42.8 L 95.4,57.2 L 86.5,55.8
+    A 37,37 0 0,1 79.9,71.8
+    L 87.2,77.0 L 77.0,87.2 L 71.8,79.9
+    A 37,37 0 0,1 55.8,86.5
+    L 57.2,95.4 L 42.8,95.4 L 44.2,86.5
+    A 37,37 0 0,1 28.3,79.9
+    L 23.0,87.2 L 12.8,77.0 L 20.1,71.8
+    A 37,37 0 0,1 13.5,55.8
+    L 4.6,57.2 L 4.6,42.8 L 13.5,44.2
+    A 37,37 0 0,1 20.1,28.2
+    L 12.8,23.0 L 23.0,12.8 L 28.3,20.1
+    A 37,37 0 0,1 44.2,13.5
+    L 42.8,4.6 L 57.2,4.6 L 55.8,13.5
+    A 37,37 0 0,1 71.8,20.1
+    L 77.0,12.8 L 87.2,23.0 L 79.9,28.2
+    A 37,37 0 0,1 86.5,44.2 Z"/>
 
-  <!-- House shape -->
-  <polygon points="50,12 14,40 86,40" fill="#4A90E2"/>
-  <rect x="18" y="40" width="64" height="44" rx="3" fill="#4A90E2" opacity="0.85"/>
+  <!-- Inner dark circle -->
+  <circle cx="50" cy="50" r="28" fill="#040d18"/>
 
-  <!-- Door -->
-  <rect x="42" y="62" width="16" height="22" rx="2" fill="#fff" opacity="0.9"/>
-  <circle cx="54" cy="73" r="1.5" fill="#4A90E2"/>
+  <!-- Lightbulb body (white) -->
+  <path fill="white" d="
+    M 50,29
+    C 42,29 36,35 36,43
+    C 36,50 40,55 45,57
+    L 45,60 L 55,60 L 55,57
+    C 60,55 64,50 64,43
+    C 64,35 58,29 50,29 Z"/>
 
-  <!-- Window / light bulb -->
-  <circle cx="50" cy="52" r="8" fill="#FFD700"/>
-  <!-- Bulb base -->
-  <rect x="46" y="59" width="8" height="3" rx="1.5" fill="#E5B400"/>
-  <rect x="47" y="62" width="6" height="2" rx="1" fill="#E5B400"/>
+  <!-- Filament -->
+  <polyline points="46,57 46,50 50,46 54,50 54,57"
+    fill="none" stroke="#999" stroke-width="1.5"
+    stroke-linejoin="round" stroke-linecap="round"/>
 
-  <!-- Light rays -->
-  <line x1="50" y1="40" x2="50" y2="37" stroke="#FFD700" stroke-width="2" stroke-linecap="round"/>
-  <line x1="61" y1="44" x2="63" y2="42" stroke="#FFD700" stroke-width="2" stroke-linecap="round"/>
-  <line x1="39" y1="44" x2="37" y2="42" stroke="#FFD700" stroke-width="2" stroke-linecap="round"/>
-  <line x1="65" y1="52" x2="68" y2="52" stroke="#FFD700" stroke-width="2" stroke-linecap="round"/>
-  <line x1="35" y1="52" x2="32" y2="52" stroke="#FFD700" stroke-width="2" stroke-linecap="round"/>
+  <!-- Toggle switch track (on-state) -->
+  <rect x="37" y="62" width="26" height="12" rx="6" fill="#1E88E5"/>
+  <!-- Toggle knob (right = ON) -->
+  <circle cx="57" cy="68" r="5.5" fill="white"/>
 </svg>
