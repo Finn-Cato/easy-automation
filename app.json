@@ -11,8 +11,8 @@
     "no": "Light Guard"
   },
   "description": {
-    "en": "Automate any room without writing a single Flow.",
-    "no": "Automatiser ethvert rom uten å skrive en eneste flyt."
+    "en": "Motion-controlled room lighting with adjustable night lights.",
+    "no": "Bevegelsesstyrt rombelysning med justerbart nattlys."
   },
   "tags": {
     "en": [
@@ -122,12 +122,12 @@
       {
         "id": "cancel_override",
         "title": {
-          "en": "Cancel override for automation group",
-          "no": "Avbryt overstyring for automasjonsgruppe"
+          "en": "Switch off room lights manually",
+          "no": "Slå av romlys manuelt"
         },
         "titleFormatted": {
-          "en": "Cancel override for [[group]]",
-          "no": "Avbryt overstyring for [[group]]"
+          "en": "Switch off [[group]] manually",
+          "no": "Slå av [[group]] manuelt"
         },
         "args": [
           {

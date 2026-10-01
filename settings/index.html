@@ -14,6 +14,13 @@
           Homey.get(key, function(err, val) { err ? reject(new Error(String(err))) : resolve(val); });
         });
       };
+      window._hGet('_appVersion').then(function(version) {
+        var label = document.getElementById('app-version');
+        if (label && typeof version === 'string' && version) {
+          label.textContent = 'v' + version;
+          label.hidden = false;
+        }
+      }).catch(function(){});
       window._hSet = function(key, val) {
         return new Promise(function(resolve, reject) {
           Homey.set(key, val, function(err) { err ? reject(new Error(String(err))) : resolve(); });
@@ -69,7 +76,7 @@
 <header class="header-top">
   <div class="header-title"><h1>Light <span>Guard</span></h1><p class="header-subtitle" data-i18n="header_subtitle">Lights and automations, room by room</p></div>
   <div class="header-mark" aria-hidden="true"><svg viewBox="0 0 48 48"><path d="M16 30c0-5-5-7-5-14a13 13 0 0 1 26 0c0 7-5 9-5 14M16 30h16v6H16zM19 40h10M24 1V0M5 7 2 4m41 3 3-3M4 21H0m44 0h4"/></svg></div>
-  <span class="app-version">v0.1.14</span>
+  <span class="app-version" id="app-version" hidden></span>
 </header>
 <div id="connection-status" class="connection-banner" role="status" data-i18n="overview_loading">Loading settings from Homey…</div>
 <nav class="tab-bar" aria-label="Main menu" data-i18n-aria="main_menu">
@@ -87,7 +94,6 @@
     <p class="hint" id="overview-summary" data-i18n="overview_ready">Build your first room automation to get started.</p>
     <div class="status-grid">
       <div class="status-box"><span class="status-label"><i class="status-dot active" aria-hidden="true"></i><span data-i18n="overview_active">Active</span></span><strong id="overview-active">–</strong></div>
-      <div class="status-box"><span class="status-label"><i class="status-dot paused" aria-hidden="true"></i><span data-i18n="overview_paused">Paused</span></span><strong id="overview-paused">–</strong></div>
       <div class="status-box"><span class="status-label"><i class="status-dot" aria-hidden="true"></i><span data-i18n="overview_disabled">Disabled</span></span><strong id="overview-disabled">–</strong></div>
       <div class="status-box"><span class="status-label"><i class="status-dot devices" aria-hidden="true"></i><span data-i18n="tab_devices">Devices</span></span><strong id="overview-devices">–</strong></div>
     </div>
@@ -206,7 +212,7 @@
       <div style="font-size:13px;color:var(--ea-text);margin-top:4px" data-i18n="help_subtitle">Control your lights and automations from Homey</div>
     </div>
 
-<div class="surface-card"><h3 data-i18n="help_overview_title">Overview and room status</h3><p class="hint" data-i18n="help_overview_body">Overview groups your automations by room. Active means the automation is enabled; it does not mean the lights are currently on. Paused automations resume when the displayed time expires. Open a room entry to edit it. Automations controlling devices in several rooms appear under Multiple rooms. Find the full activity log under Events.</p></div>
+<div class="surface-card"><h3 data-i18n="help_overview_title">Overview and room status</h3><p class="hint" data-i18n="help_overview_body">Overview groups enabled and disabled automations by room. Active means the automation is enabled, not that the lights are currently on. Manual light adjustments retain automatic switch-off after no motion. Open a room entry to edit it. Find the activity log under Events.</p></div>
 <div class="surface-card"><h3 data-i18n="night_idle_help_title">Night light after movement stops</h3><p class="hint" data-i18n="night_idle_help_body">In Motion → Lights, enable Dim instead of switching off after sunset. Set the brightness (1–100%, default 1%) and optionally a later switch-off, for example 3 hours. The usual hold time runs first, then night lighting starts. New movement returns the lights to their motion brightness and resets the countdown. At sunrise the lights switch off. Daytime behaviour follows the normal switch-off settings. Timers continue through app restarts. Dimmable lights are required.</p></div>
     <!-- Getting started -->
     <div style="background:var(--ea-surface);border:1px solid var(--ea-border);border-radius:14px;padding:20px 22px;margin-bottom:14px">
@@ -306,9 +312,7 @@
     <div style="background:var(--ea-surface);border:1px solid var(--ea-border);border-radius:14px;padding:20px 22px;margin-bottom:14px">
       <div style="font-size:13px;font-weight:700;color:var(--ea-text);text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px" data-i18n="help_opt_hdr">⚙️ Optional features (Motion, Smart Dim, Zone Control)</div>
       <div style="font-size:14px;color:var(--ea-text);line-height:1.8" data-i18n-html="help_opt_body">
-        <strong>Lux threshold</strong> — Enable “Only trigger if lux is below threshold” to stop the automation from turning lights on when the room is already bright. Pick a lux sensor and set a maximum lux level.<br><br>
-        <strong>Active hours</strong> — Enable “Only active during certain hours” to restrict the automation to a time window (e.g. 07:00–23:00). Outside those hours triggers are ignored.<br><br>
-        <strong>Button override</strong> — Enable “Button override” to assign a wall switch or remote button as a manual override. Pressing the ON button sets a custom brightness and pauses the automation for a set time. Pressing the OFF button (optional) cancels the override early.
+        <strong>Lux threshold</strong> — Prevent automatic switch-on when the room is already bright enough.<br><br><strong>Active hours</strong> — Restrict automatic switch-on to a time window.<br><br><strong>Manual light control</strong> — Dim or switch the lights yourself. Motion will keep those values until the room has been empty for the configured inactivity time, then switch off and resume automatic control.<br><br><strong>Optional wall button</strong> — Assign a remote button to select a manual brightness, or an OFF button to turn off manually. These use the same empty-room time.
       </div>
     </div>
 
@@ -323,9 +327,9 @@
 
     <!-- Pause / override -->
     <div style="background:var(--ea-surface);border:1px solid var(--ea-border);border-radius:14px;padding:20px 22px;margin-bottom:14px">
-      <div style="font-size:13px;font-weight:700;color:var(--ea-text);text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px" data-i18n="help_pause_hdr">⏸ Pausing an automation</div>
-      <div style="font-size:14px;color:var(--ea-text);line-height:1.7" data-i18n-html="help_pause_body">
-        Configure <strong>Button override</strong> in a supported automation to pause it from a wall switch or remote. Choose the pause duration in the automation settings. While paused, the automation ignores triggers and resumes when the pause expires. Overview and Automations show the remaining time. A configured OFF button can cancel the override early.
+      <div style="font-size:13px;font-weight:700;color:var(--ea-text);text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px" data-i18n="help_manual_hdr">Manual light control</div>
+      <div style="font-size:14px;color:var(--ea-text);line-height:1.7" data-i18n-html="help_manual_body">
+        Dimming or switching a light manually keeps your chosen light values while the room is occupied. Motion still resets the empty-room countdown. After the configured inactivity time, the lights switch completely off and normal motion control resumes. This also applies when night lighting is enabled. No extra button setup is required when the dimmer or switch reports the light change to Homey.
       </div>
     </div>
 
@@ -362,31 +366,8 @@
 </div>
 
 </div></details>
-  <div class="surface-card settings-about" style="margin-top:14px"><h2>Light Guard</h2><p class="hint" data-i18n="settings_about">Room automations for your lights, with the familiar House Guard and Power Guard design.</p><a href="https://github.com/Finn-Cato/easy-automation" target="_blank" rel="noopener noreferrer" data-i18n="settings_source">Source code on GitHub</a></div>
+  <div class="surface-card settings-about" style="margin-top:14px"><h2>Light Guard</h2><p class="hint" data-i18n="settings_about">Room automations for your lights, with the familiar House Guard and Power Guard design.</p><a href="https://github.com/5olvik/easy-automation" target="_blank" rel="noopener noreferrer" data-i18n="settings_source">Source code on GitHub</a></div>
 </section>
-
-<!-- Override modal -->
-<div class="overlay" id="ov-overlay" onclick="OverrideModal.bgClose(event)">
-  <div class="modal" style="max-width:360px">
-    <div class="modal-hdr">
-      <h2 id="ov-title" style="font-size:16px" data-i18n="ov_title">Pause automation</h2>
-      <button aria-label="Close" data-i18n-aria="a11y_close" class="hy-nostyle close-btn" onclick="OverrideModal.close()">✕</button>
-    </div>
-    <p style="font-size:13px;color:var(--ea-text);margin-bottom:14px" data-i18n="ov_para">Triggers are paused — lights stay as you set them manually. Automation resumes when the override expires.</p>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-      <button class="hy-nostyle ov-time-btn" onclick="OverrideModal.set(30)" data-i18n="ov_30min">⏸ 30 min</button>
-      <button class="hy-nostyle ov-time-btn" onclick="OverrideModal.set(60)" data-i18n="ov_1h">⏸ 1 hour</button>
-      <button class="hy-nostyle ov-time-btn" onclick="OverrideModal.set(120)" data-i18n="ov_2h">⏸ 2 hours</button>
-      <button class="hy-nostyle ov-time-btn" onclick="OverrideModal.set(240)" data-i18n="ov_4h">⏸ 4 hours</button>
-    </div>
-    <button class="hy-nostyle ov-time-btn" style="width:100%;margin-top:8px" onclick="OverrideModal.setMidnight()" data-i18n="ov_midnight">🌙 Until midnight</button>
-    <div id="ov-resume-wrap" style="display:none">
-      <hr class="hy-nostyle sep" style="margin:14px 0">
-      <div style="font-size:12px;color:#af52de;font-weight:600;margin-bottom:8px" id="ov-active-label"></div>
-      <button class="hy-nostyle ov-resume-btn" onclick="OverrideModal.cancel()" data-i18n="ov_resume">▶ Resume automation now</button>
-    </div>
-  </div>
-</div>
 
 <!-- Template / Custom modal -->
 <div class="overlay" id="tmpl-overlay" onclick="TModal.overlayClick(event)">
@@ -426,7 +407,6 @@ var el = function(id) { return document.getElementById(id); };
 document.addEventListener('keydown', function(event) {
   if (event.key !== 'Escape') return;
   if (el('tmpl-overlay').classList.contains('on')) TModal.close();
-  else if (el('ov-overlay').classList.contains('on')) OverrideModal.close();
 });
 
 // ── i18n / Localization ────────────────────────────────────────────────────────
@@ -450,7 +430,6 @@ var I18N = {
     title_switch:'\ud83d\udd18  Wall Switch / Button', title_scene:'\ud83d\udca1  Light Group / Scene',
     title_zone:'\ud83c\udfe0  Zone Control',
     modal_settings:'\u2699\ufe0f Settings', modal_lights:'\ud83d\udca1 Lights', modal_test:'\ud83e\uddea Test',
-    ov_title:'Pause automation', ov_midnight:'\ud83c\udf19 Until midnight', ov_resume:'\u25b6 Resume automation now',
     dev_filtered:'Filtered:', dev_check_all:'\u2713 Check all', dev_uncheck_all:'\u2717 Uncheck all',
     dev_all:'All:', dev_clear:'Clear selection',
     err_select_motion:'Please select a motion sensor',
@@ -482,7 +461,6 @@ var I18N = {
     'Maximum lux (only trigger below this)':'Maximum lux (only trigger below this)',
     'Only active during certain hours':'Only active during certain hours',
     'Active from':'Active from', 'Until':'Until',
-    'Button override \u2014 press a button to set a custom brightness and pause automation':'Button override \u2014 press a button to set a custom brightness and pause automation',
     'Button / switch device':'Button / switch device',
     'Override brightness':'Override brightness', 'Override duration':'Override duration',
     'Automation name':'Automation name', 'Name prefix (e.g. room name)':'Name prefix (e.g. room name)',
@@ -526,12 +504,9 @@ var I18N = {
     help_t8_name:'Custom / Advanced',
     help_t8_desc:'Build your own automation from scratch. Choose a trigger (motion detected, motion stopped, door opens, door closes, or a fixed time), optionally add a time-range condition, and define one or more light actions. Use this for setups that don\u2019t fit any of the other templates.',
     help_opt_hdr:'\u2699\ufe0f Optional features (Motion, Smart Dim, Zone Control)',
-    help_opt_body:'<strong>Lux threshold</strong> \u2014 Enable \u201cOnly trigger if lux is below threshold\u201d to stop the automation from turning lights on when the room is already bright. Pick a lux sensor and set a maximum lux level.<br><br><strong>Active hours</strong> \u2014 Enable \u201cOnly active during certain hours\u201d to restrict the automation to a time window (e.g. 07:00\u201323:00). Outside those hours triggers are ignored.<br><br><strong>Button override</strong> \u2014 Enable \u201cButton override\u201d to assign a wall switch or remote button as a manual override. Pressing the ON button sets a custom brightness and pauses the automation for a set time. Pressing the OFF button (optional) cancels the override early.',
-    ov_para:'Triggers are paused \u2014 lights stay as you set them manually. Automation resumes when the override expires.',
     pat_saved:'Token saved \u2014 flows will be created automatically.',
     pat_removed:'Token removed.',
     cd_off_in:'\u23f1 off in ',
-    cd_paused_pfx:'\u23f8 paused ',
     cd_ending_soon:'ending soon',
     toast_saving:'Saving\u2026',
     toast_saved:'Saved',
@@ -552,12 +527,6 @@ var I18N = {
     sum_action_s:'action',
     sum_actions_pl:'actions',
     sum_unknown:'Unknown',
-    ov_active_pfx:'\u23f8 Override active \u2014 ',
-    ov_remaining:'remaining',
-    ov_30min:'\u23f8 30 min',
-    ov_1h:'\u23f8 1 hour',
-    ov_2h:'\u23f8 2 hours',
-    ov_4h:'\u23f8 4 hours',
     picker_other:'Other',
     dev_cls_light:'Lights',
     dev_cls_sensor:'Sensors',
@@ -639,7 +608,6 @@ var I18N = {
     title_switch:'\ud83d\udd18  Veggbryter / Knapp', title_scene:'\ud83d\udca1  Lysgruppe / Scene',
     title_zone:'\ud83c\udfe0  Sonekontroll',
     modal_settings:'\u2699\ufe0f Innstillinger', modal_lights:'\ud83d\udca1 Lys', modal_test:'\ud83e\uddea Test',
-    ov_title:'Sett p\u00e5 pause', ov_midnight:'\ud83c\udf19 Til midnatt', ov_resume:'\u25b6 Gjenoppta automatisering n\u00e5',
     dev_filtered:'Filtrert:', dev_check_all:'\u2713 Merk alle', dev_uncheck_all:'\u2717 Fjern alle',
     dev_all:'Alle:', dev_clear:'Nullstill valg',
     err_select_motion:'Velg en bevegelsessensor',
@@ -671,7 +639,6 @@ var I18N = {
     'Maximum lux (only trigger below this)':'Maksimal lux (utl\u00f8s kun under dette)',
     'Only active during certain hours':'Kun aktiv i bestemte timer',
     'Active from':'Aktiv fra', 'Until':'Til',
-    'Button override \u2014 press a button to set a custom brightness and pause automation':'Knappoverstyr \u2014 trykk knapp for \u00e5 sette lysstyrke og pause automatisering',
     'Button / switch device':'Knapp / bryterenhet',
     'Override brightness':'Overstyr lysstyrke', 'Override duration':'Overstringsvarighet',
     'Automation name':'Navn p\u00e5 automatisering', 'Name prefix (e.g. room name)':'Navneprefiks (f.eks. romnavn)',
@@ -715,8 +682,6 @@ var I18N = {
     help_t8_name:'Egendefinert / Avansert',
     help_t8_desc:'Bygg din egen automatisering fra bunnen av. Velg en utl\u00f8ser (bevegelse oppdaget, bevegelse stoppet, d\u00f8r \u00e5pnes, d\u00f8r lukkes eller fast tidspunkt), legg eventuelt til en tidsintervall-betingelse, og defin\u00e9r \u00e9n eller flere lyshandlinger. Bruk dette for oppsett som ikke passer noen av de andre malene.',
     help_opt_hdr:'\u2699\ufe0f Valgfrie funksjoner (Bevegelse, Smart Dim, Sonekontroll)',
-    help_opt_body:'<strong>Lux-terskel</strong> \u2014 Aktiver \u00abUtl\u00f8s kun hvis lux er under terskel\u00bb for \u00e5 hindre at lys sl\u00e5s p\u00e5 n\u00e5r rommet allerede er lyst nok. Velg en lux-sensor og sett maksimal lux.<br><br><strong>Aktive timer</strong> \u2014 Aktiver \u00abKun aktiv i bestemte timer\u00bb for \u00e5 begrense automatiseringen til et tidsvindu (f.eks. 07:00\u201323:00). Utenfor dette vinduet ignoreres utl\u00f8sere.<br><br><strong>Knappoverstyr</strong> \u2014 Aktiver \u00abKnappoverstyr\u00bb for \u00e5 tilordne en veggbryter eller fjernkontrollknapp som manuell overstyring. \u00c5 trykke P\u00c5-knappen setter en egendefinert lysstyrke og setter automatiseringen p\u00e5 pause i en valgt tid. \u00c5 trykke AV-knappen (valgfritt) avbryter overstyringen tidlig.',
-    ov_para:'Utl\u00f8sere er satt p\u00e5 pause \u2014 lysene forblir slik du setter dem manuelt. Automatiseringen gjenopptas n\u00e5r overstyringen utl\u00f8per.',
     help_subtitle:'Styr lysene og automatiseringene dine fra Homey',
     help_gs_hdr:'Kom i gang',
     help_gs_body:'<li>G\u00e5 til <strong>Enheter</strong>-fanen og trykk <strong>Oppdater</strong> for \u00e5 laste alle Homey-enhetene dine.</li><li>G\u00e5 til <strong>Automatiseringer</strong> og velg en mal for \u00e5 opprette din f\u00f8rste automatisering.</li><li>Gi den et navn, velg lysene dine, og trykk <strong>Legg til</strong>.</li><li>Bruk en <strong>Veggbryter</strong>-automatisering for \u00e5 koble en knapp til en gruppe du har opprettet.</li>',
@@ -729,8 +694,6 @@ var I18N = {
     help_t6_name:'Veggbryter / Knapp', help_t6_desc:'Kobler en fysisk bryter eller knapp til \u00e9n eller flere automatiseringer. Hver knapphandling (trykk, p\u00e5, av, hold) kan tilordnes en hvilken som helst gruppe du har opprettet. For enheter uten standardfunksjoner opprettes Homey Flows automatisk.',
     help_lt_hdr:'\ud83d\udca1 Lys-fanen (inne i en automatisering)',
     help_lt_body:'N\u00e5r du redigerer en automatisering finner du en <strong>Lys</strong>-fane. Her kan du sette individuelle lysstyrkeniv\u00e5er per lys \u2014 som overstyrer den globale glidebryteren. Dette lar deg ha ett lys p\u00e5 80% og et annet p\u00e5 20% i samme automatisering.<br><br>For en <strong>Lysgruppe</strong> vil det \u00e5 dra en glidebryter til <strong>0% sl\u00e5 av det spesifikke lyset</strong> n\u00e5r scenen kj\u00f8res, mens andre forblir p\u00e5 sitt angitte niv\u00e5.',
-    help_pause_hdr:'\u23f8 Sette en automatisering p\u00e5 pause',
-    help_pause_body:'Trykk p\u00e5 <strong>\u23f8</strong>-ikonet p\u00e5 et automatiseringskort for \u00e5 sette det p\u00e5 pause i 30 min, 1 time, 2 timer, 4 timer eller til midnatt. Mens det er p\u00e5 pause reagerer automatiseringen ikke p\u00e5 noen utl\u00f8sere. Nyttig n\u00e5r du vil overstyre lysene manuelt en stund. Trykk <strong>Gjenoppta</strong> for \u00e5 avslutte tidlig.',
     help_tips_hdr:'\ud83d\udcac Tips og vanlige oppsett',
     help_tips_body:'<strong>Nattscene via veggbryter:</strong><br>1. Opprett en <em>Lysgruppe</em> kalt \u00abNattscene\u00bb. Legg til alle lysene du vil styre. Sett ganglys til 5% og soveromslys til 0% i Lys-fanen.<br>2. Opprett en <em>Veggbryter</em>-automatisering. Tilordne \u00e9n knapp til Nattscene-gruppen.<br>3. Trykk knappen om natten \u2014 gangen dempes, soveromslys slukker.<br><br><strong>Bevegelseslys som demper seg om natten:</strong><br>Bruk <em>Smart Dim</em>. Sett dagslys-lysstyrke til 100% og natt til 15%. Appen velger automatisk riktig niv\u00e5 basert p\u00e5 gjeldende tid.<br><br><strong>Enheter vises ikke?</strong><br>G\u00e5 til <strong>Enheter</strong>-fanen og trykk <strong>Oppdater</strong>. Appen bufrer enhetslisten \u2014 en oppdatering henter det siste fra Homey.<br><br><strong>Teste en automatisering:</strong><br>\u00c5pne en automatisering og bytt til <strong>\ud83e\uddea Test</strong>-fanen. Trykk testknappen for \u00e5 kj\u00f8re handlingene umiddelbart uten \u00e5 vente p\u00e5 en utl\u00f8ser.',
     help_log_hdr:'\ud83d\udccb Hendelser-fanen',
@@ -741,7 +704,6 @@ var I18N = {
     pat_saved:'Token lagret \u2014 flows opprettes automatisk.',
     pat_removed:'Token fjernet.',
     cd_off_in:'\u23f1 av om ',
-    cd_paused_pfx:'\u23f8 pauset ',
     cd_ending_soon:'slutter snart',
     toast_saving:'Lagrer\u2026',
     toast_saved:'Lagret',
@@ -762,12 +724,6 @@ var I18N = {
     sum_action_s:'handling',
     sum_actions_pl:'handlinger',
     sum_unknown:'Ukjent',
-    ov_active_pfx:'\u23f8 Overstyring aktiv \u2014 ',
-    ov_remaining:'igjen',
-    ov_30min:'\u23f8 30 min',
-    ov_1h:'\u23f8 1 time',
-    ov_2h:'\u23f8 2 timer',
-    ov_4h:'\u23f8 4 timer',
     picker_other:'Andre',
     dev_cls_light:'Lys',
     dev_cls_sensor:'Sensorer',
@@ -863,7 +819,6 @@ Object.assign(I18N.en, {
   "overview_active": "Active",
   "overview_active_single": "Active",
   "Individual lights": "Individual lights",
-  "overview_paused": "Paused",
   "overview_disabled": "Disabled",
   "overview_partial": "Partly disabled",
   "overview_ready": "Build your first room automation to get started.",
@@ -890,8 +845,6 @@ Object.assign(I18N.en, {
   "settings_about": "Room automations for your lights, with the familiar House Guard and Power Guard design.",
   "settings_source": "Source code on GitHub",
   "help_overview_title": "Overview and room status",
-  "help_overview_body": "Overview groups your automations by room. Active means the automation is enabled; it does not mean the lights are currently on. Paused automations resume when the displayed time expires. Open a room entry to edit it. Automations controlling devices in several rooms appear under Multiple rooms. Find the full activity log under Events.",
-  "help_pause_body": "Configure <strong>Button override</strong> in a supported automation to pause it from a wall switch or remote. Choose the pause duration in the automation settings. While paused, the automation ignores triggers and resumes when the pause expires. Overview and Automations show the remaining time. A configured OFF button can cancel the override early.",
   "log_title": "Events",
   "help_log_hdr": "Events tab",
   "help_log_body": "Events shows triggers, actions and errors with timestamps. Use Copy Log to copy the full log for troubleshooting.",
@@ -930,7 +883,6 @@ Object.assign(I18N.no, {
   "overview_active": "Aktive",
   "overview_active_single": "Aktiv",
   "Individual lights": "Individuelle lys",
-  "overview_paused": "Pauset",
   "overview_disabled": "Deaktivert",
   "overview_partial": "Delvis deaktivert",
   "overview_ready": "Lag din første romautomasjon for å komme i gang.",
@@ -957,8 +909,6 @@ Object.assign(I18N.no, {
   "settings_about": "Romautomasjoner for lysene dine, med det kjente designet fra House Guard og Power Guard.",
   "settings_source": "Kildekode på GitHub",
   "help_overview_title": "Oversikt og romstatus",
-  "help_overview_body": "Oversikt samler automasjonene etter rom. Aktiv betyr at automasjonen er slått på, ikke at lysene lyser akkurat nå. Pausede automasjoner starter igjen når tiden som vises er ute. Åpne en automasjon i romkortet for å redigere. Automasjoner som styrer enheter i flere rom vises under Flere rom. Hele aktivitetsloggen finner du under Hendelser.",
-  "help_pause_body": "Sett opp <strong>Knappoverstyr</strong> i en automasjon som støtter dette, for å sette den på pause fra en veggbryter eller fjernkontroll. Velg varigheten i automasjonens innstillinger. Under pausen ignoreres utløsere, og automasjonen starter igjen når pausen utløper. Oversikt og Automasjoner viser tiden som gjenstår. En konfigurert AV-knapp kan avslutte overstyringen tidlig.",
   "log_title": "Hendelser",
   "help_log_hdr": "Hendelser-fanen",
   "help_log_body": "Hendelser viser utløsere, handlinger og feil med tidsstempel. Bruk Kopier logg for å kopiere hele loggen til feilsøking.",
@@ -967,6 +917,30 @@ Object.assign(I18N.no, {
   "a11y_delete": "Slett automasjon",
   "a11y_toggle": "Aktiver automasjon",
   "a11y_close": "Lukk"
+});
+Object.assign(I18N.en, {
+  "help_manual_hdr": "Manual light control",
+  "help_manual_body": "Dimming or switching a light manually keeps your chosen light values while the room is occupied. Motion still resets the empty-room countdown. After the configured inactivity time, the lights switch completely off and normal motion control resumes. This also applies when night lighting is enabled. No extra button setup is required when the dimmer or switch reports the light change to Homey.",
+  "manual_control_hint": "Manual dimming or switching is kept until this room has had no motion for the configured inactivity time. The lights then switch off and automatic control resumes.",
+  "manual_control_status": "Manual light control · automatic switch-off after no motion",
+  "manual_group_prefix": "Manual:",
+  "Optional wall button for manual light control": "Optional wall button for manual light control",
+  "Inactivity time before switching off": "Inactivity time before switching off",
+  "Manual OFF (optional)": "Manual OFF (optional)",
+  "help_overview_body": "Overview groups enabled and disabled automations by room. Active means the automation is enabled; it does not mean the lights are currently on. Manual light adjustments keep the automation active and retain automatic switch-off after no motion. Open a room entry to edit it. Find the activity log under Events.",
+  "help_opt_body": "<strong>Lux threshold</strong> — Prevent automatic switch-on when the room is already bright enough.<br><br><strong>Active hours</strong> — Restrict automatic switch-on to a time window.<br><br><strong>Manual light control</strong> — Dim or switch the lights yourself. Motion will keep those values until the room has been empty for the configured inactivity time, then switch off and resume automatic control.<br><br><strong>Optional wall button</strong> — Assign a remote button to select a manual brightness, or an OFF button to turn off manually. These use the same empty-room time."
+});
+Object.assign(I18N.no, {
+  "help_manual_hdr": "Manuell lysstyring",
+  "help_manual_body": "Dimmer du eller slår av eller på et lys manuelt, beholdes lysinnstillingen din mens rommet er i bruk. Bevegelse nullstiller fortsatt nedtellingen for tomt rom. Etter valgt tid uten bevegelse slås lysene helt av, og vanlig bevegelsesstyring gjenopptas. Dette gjelder også med nattlys aktivert. Du trenger ikke sette opp en ekstra knapp når dimmeren eller bryteren rapporterer lysendringen til Homey.",
+  "manual_control_hint": "Manuell dimming eller av/på beholdes til rommet har vært uten bevegelse i valgt inaktivitetstid. Da slukkes lysene og vanlig automatikk gjenopptas.",
+  "manual_control_status": "Manuell lysstyring · automatisk av etter inaktivitet",
+  "manual_group_prefix": "Manuell:",
+  "Optional wall button for manual light control": "Valgfri veggknapp for manuell lysstyring",
+  "Inactivity time before switching off": "Tid uten bevegelse før lyset slukkes",
+  "Manual OFF (optional)": "Manuell AV (valgfritt)",
+  "help_overview_body": "Oversikt samler aktiverte og deaktiverte automasjoner etter rom. Aktiv betyr at automasjonen er slått på, ikke at lysene lyser. Manuelle lysjusteringer beholder automasjonen aktiv og automatisk slukking etter inaktivitet. Åpne en automasjon i romkortet for å redigere. Aktivitetsloggen finnes under Hendelser.",
+  "help_opt_body": "<strong>Lux-terskel</strong> — Hindrer automatisk tenning når rommet allerede er lyst nok.<br><br><strong>Aktive timer</strong> — Begrens automatisk tenning til et tidsvindu.<br><br><strong>Manuell lysstyring</strong> — Dim eller slå lysene av og på selv. Bevegelse beholder disse verdiene til rommet har vært tomt i valgt inaktivitetstid. Da slukkes lysene og vanlig automatikk gjenopptas.<br><br><strong>Valgfri veggknapp</strong> — Tilordne en fjernkontrollknapp til manuell lysstyrke, eller en AV-knapp til manuell slukking. Disse bruker samme tid for tomt rom."
 });
 function i18n(key) {
   var d = EA_LANG !== 'en' ? I18N[EA_LANG] : null;
@@ -1005,7 +979,7 @@ function setStatus(msg, t) {
 }
 
 // ── State ──────────────────────────────────────────────────────────────────────
-var State = { devices: [], automations: [], holdStatus: {}, overrides: {}, nightIdle: {}, pinnedDevices: [], logs: [], loaded: false, syncError: false };
+var State = { devices: [], automations: [], holdStatus: {}, manualLights: {}, nightIdle: {}, pinnedDevices: [], logs: [], loaded: false, syncError: false };
 
 // ── API (settings-based, works on permanent install) ──────────────────────────
 var API = {
@@ -1057,14 +1031,14 @@ var PATSettings = {
 var App = {
   init: async function() {
     try {
-      var res = await Promise.all([API.getDevices(), API.getAutomations(), window._hGet('_pinnedDevices'), window._hGet('_holdStatus'), window._hGet('_overrides'), window._hGet('_appLog'), window._hGet('_nightIdleStatus')]);
+      var res = await Promise.all([API.getDevices(), API.getAutomations(), window._hGet('_pinnedDevices'), window._hGet('_holdStatus'), window._hGet('_manualLightStatus'), window._hGet('_appLog'), window._hGet('_nightIdleStatus')]);
       State.devices = Array.isArray(res[0]) ? res[0] : [];
       State.automations = Array.isArray(res[1]) ? res[1] : [];
       var parse = function(raw, fallback) { return raw ? (typeof raw === 'string' ? JSON.parse(raw) : raw) : fallback; };
       State.pinnedDevices = parse(res[2], []);
       if (!Array.isArray(State.pinnedDevices)) State.pinnedDevices = [];
       State.holdStatus = parse(res[3], {});
-      State.overrides = parse(res[4], {});
+      State.manualLights = parse(res[4], {});
       State.logs = parse(res[5], []);
       State.nightIdle = parse(res[6], {});
       State.loaded = true;
@@ -1084,10 +1058,10 @@ var App = {
     if (App._syncing) return;
     App._syncing = true;
     try {
-      var values = await Promise.all([window._hGet('_holdStatus'), window._hGet('_overrides'), window._hGet('_appLog'), window._hGet('_nightIdleStatus')]);
+      var values = await Promise.all([window._hGet('_holdStatus'), window._hGet('_manualLightStatus'), window._hGet('_appLog'), window._hGet('_nightIdleStatus')]);
       var parse = function(raw, fallback) { return raw ? (typeof raw === 'string' ? JSON.parse(raw) : raw) : fallback; };
       State.holdStatus = parse(values[0], {});
-      State.overrides = parse(values[1], {});
+      State.manualLights = parse(values[1], {});
       State.logs = parse(values[2], []);
       State.nightIdle = parse(values[3], {});
       State.syncError = false;
@@ -1194,7 +1168,7 @@ var Countdown = {
     Overview.updateStatus();
     var now = Date.now();
     var hs  = State.holdStatus || {};
-    var ov  = State.overrides  || {};
+    var manual = State.manualLights || {};
 
     document.querySelectorAll('[data-cd-gid]').forEach(function(el) {
       var gid   = el.getAttribute('data-cd-gid');
@@ -1203,7 +1177,7 @@ var Countdown = {
       var secs  = Math.round((endsAt - now) / 1000);
       var mins  = Math.floor(secs / 60);
       var s     = secs % 60;
-      var hasNight = State.automations.some(function(a) { return (a._groupId || a.id) === gid && a._nightIdle; });
+      var hasNight = !manual[gid] && State.automations.some(function(a) { return (a._groupId || a.id) === gid && a._nightIdle; });
       el.textContent = i18n(hasNight ? 'night_idle_hold' : 'cd_off_in') + (mins > 0 ? mins + ':' + String(s).padStart(2,'0') : s + 's');
       el.style.display = '';
     });
@@ -1217,22 +1191,10 @@ var Countdown = {
       element.style.display = '';
     });
 
-    document.querySelectorAll('[data-ov-gid]').forEach(function(el) {
-      var gid      = el.getAttribute('data-ov-gid');
-      var expiresAt = ov[gid];
-      var btn = document.querySelector('[data-ov-btn="' + gid + '"]');
-      if (!expiresAt || expiresAt <= now) {
-        el.style.display = 'none';
-        if (btn) btn.classList.remove('active');
-        return;
-      }
-      var rem  = expiresAt - now;
-      var h    = Math.floor(rem / 3600000);
-      var m    = Math.floor((rem % 3600000) / 60000);
-      var disp = h > 0 ? h + 'h ' + m + 'm' : (m > 0 ? m + 'm' : i18n('cd_ending_soon'));
-      el.textContent = i18n('cd_paused_pfx') + disp;
-      el.style.display = '';
-      if (btn) btn.classList.add('active');
+    document.querySelectorAll('[data-manual-gid]').forEach(function(element) {
+      var state = manual[element.getAttribute('data-manual-gid')];
+      element.style.display = state ? '' : 'none';
+      if (state) element.textContent = i18n('manual_control_status');
     });
   }
 };
@@ -1267,7 +1229,7 @@ var AutoList = {
             '<div class="card-name">' + esc(g.name || 'Automation') + '</div>' +
             '<div class="card-sub">' + esc(groupSummary(g)) + '</div>' +
             '<div data-cd-gid="' + esc(g.id) + '" style="display:none;font-size:12px;color:#ff9500;font-weight:600;margin-top:3px"></div>' +
-            '<div data-ov-gid="' + esc(g.id) + '" style="display:none;font-size:12px;color:#af52de;font-weight:600;margin-top:2px"></div>' +
+            '<div data-manual-gid="' + esc(g.id) + '" style="display:none;font-size:12px;color:#af52de;font-weight:600;margin-top:2px"></div>' +
             '<div data-night-gid="' + esc(g.id) + '" class="hint" style="display:none"></div>' +
           '</div>' +
           '<span class="card-chevron">›</span>' +
@@ -1541,7 +1503,7 @@ var TModal = {
       var fadeIn0 = fadeInM ? (fadeInM.duration || 0) : 0;
       var offItem0 = g.items.find(function(it){return it.a.trigger&&it.a.trigger.type==='motion_stop';});
       var hasOff   = !!offItem0;
-      var hold0    = offItem0 ? (offItem0.a._holdMinutes || 0) : 5;
+      var hold0    = offItem0 ? (offItem0.a._holdMinutes || 0) : (onItem._manualHoldMinutes == null ? 5 : onItem._manualHoldMinutes);
       var fadeOutAc = offItem0 && (offItem0.a.actions||[]).find(function(ac){return ac.type==='fade_off';});
       var fadeOut0  = fadeOutAc ? (fadeOutAc.duration || 0) : 0;
       Picker.render('dp-lights', lights, 'dim');
@@ -1563,7 +1525,7 @@ var TModal = {
         if (el('t-fadein'))   { el('t-fadein').value = fadeIn0; if(el('t-fadein-val')) el('t-fadein-val').textContent = window._siF(fadeIn0); }
         if (el('t-turnoff'))  el('t-turnoff').checked = hasOff;
         if (el('t-hold'))     { el('t-hold').value = hold0; if(el('t-holdval')) el('t-holdval').textContent = hold0===0?i18n('slider_instant'):hold0+' min'; }
-        if (el('t-hold-wrap'))    el('t-hold-wrap').style.display = hasOff ? '' : 'none';
+        if (el('t-hold-wrap'))    el('t-hold-wrap').style.display = '';
         if (el('t-fadeout'))  { el('t-fadeout').value = fadeOut0; if(el('t-fadeout-val')) el('t-fadeout-val').textContent = window._siF(fadeOut0); }
         if (el('t-fadeout-wrap')) el('t-fadeout-wrap').style.display = hasOff ? '' : 'none';
         TModal._fillNightIdle(offItem0 && offItem0.a._nightIdle);
@@ -1580,9 +1542,7 @@ var TModal = {
           el('t-ov-en').checked = true; el('t-ov-wrap').style.display = '';
           if (el('t-ov-device')) el('t-ov-device').value = onItem._overrideSwitch.deviceId;
           var _ovB = Math.round((onItem._overrideSwitch.brightness||1)*100);
-          var _ovD = onItem._overrideSwitch.durationMinutes||30;
           if (el('t-ov-bright')) { el('t-ov-bright').value = _ovB; if(el('t-ov-bval')) el('t-ov-bval').textContent = _ovB+'%'; }
-          if (el('t-ov-dur'))    { el('t-ov-dur').value = _ovD;    if(el('t-ov-durval')) el('t-ov-durval').textContent = _ovD+' min'; }
           TModal._ovDeviceChanged({ onMapping: onItem._overrideSwitch.onMapping || null, offMapping: onItem._overrideSwitch.offMapping || null });
         }
         if (el('t-name'))     el('t-name').value = g.name || '';
@@ -1602,7 +1562,7 @@ var TModal = {
       var dayCond   = (dayItem.conditions||[])[0];
       var dayFrom   = dayCond ? (dayCond.from||'07:00') : '07:00';
       var nightFrom = dayCond ? (dayCond.to  ||'22:00') : '22:00';
-      var holdSD    = offItem ? (offItem.a._holdMinutes || 0) : 5;
+      var holdSD    = offItem ? (offItem.a._holdMinutes || 0) : (dayItem._manualHoldMinutes == null ? 5 : dayItem._manualHoldMinutes);
       var fadeInSD  = (dayItem.actions||[]).find(function(ac){return ac.type==='fade_to';});
       var fadeIn0SD = fadeInSD ? (fadeInSD.duration || 0) : 0;
       var fadeOutSDac = offItem && (offItem.a.actions||[]).find(function(ac){return ac.type==='fade_off';});
@@ -1640,7 +1600,7 @@ var TModal = {
         if (el('t-fadein'))  { el('t-fadein').value = fadeIn0SD; if(el('t-fadein-val')) el('t-fadein-val').textContent = fadeIn0SD===0?'instant':fadeIn0SD+'s'; }
         if (el('t-turnoff')) el('t-turnoff').checked = !!offItem;
         if (el('t-hold'))    { el('t-hold').value = holdSD; if(el('t-holdval')) el('t-holdval').textContent = holdSD===0?'off immediately':holdSD+' min'; }
-        if (el('t-hold-wrap'))    el('t-hold-wrap').style.display = offItem ? '' : 'none';
+        if (el('t-hold-wrap'))    el('t-hold-wrap').style.display = '';
         if (el('t-fadeout'))  { el('t-fadeout').value = fadeOut0SD; if(el('t-fadeout-val')) el('t-fadeout-val').textContent = fadeOut0SD===0?'instant':fadeOut0SD+'s'; }
         if (el('t-fadeout-wrap')) el('t-fadeout-wrap').style.display = offItem ? '' : 'none';
         if (el('t-lux-en') && luxCondSD && luxCondSD.deviceId) {
@@ -1653,9 +1613,7 @@ var TModal = {
           el('t-ov-en').checked = true; el('t-ov-wrap').style.display = '';
           if (el('t-ov-device')) el('t-ov-device').value = _ovItemSD.deviceId;
           var _ovBSD = Math.round((_ovItemSD.brightness||1)*100);
-          var _ovDSD = _ovItemSD.durationMinutes||30;
           if (el('t-ov-bright')) { el('t-ov-bright').value = _ovBSD; if(el('t-ov-bval')) el('t-ov-bval').textContent = _ovBSD+'%'; }
-          if (el('t-ov-dur'))    { el('t-ov-dur').value = _ovDSD;    if(el('t-ov-durval')) el('t-ov-durval').textContent = _ovDSD+' min'; }
           TModal._ovDeviceChanged({ onMapping: _ovItemSD.onMapping || null, offMapping: _ovItemSD.offMapping || null });
         }
         if (el('t-name'))    el('t-name').value = g.name || '';
@@ -1785,7 +1743,7 @@ var TModal = {
       var fadeInZ  = fadeInMZ ? (fadeInMZ.duration || 0) : 0;
       var offItemZ = g.items.find(function(it){return it.a.trigger&&it.a.trigger.type==='motion_stop';});
       var hasOffZ  = !!offItemZ;
-      var holdZ    = offItemZ ? (offItemZ.a._holdMinutes || 0) : 5;
+      var holdZ    = offItemZ ? (offItemZ.a._holdMinutes || 0) : (onItemZ._manualHoldMinutes == null ? 5 : onItemZ._manualHoldMinutes);
       var fadeOutAcZ = offItemZ && (offItemZ.a.actions||[]).find(function(ac){return ac.type==='fade_off';});
       var fadeOutZ  = fadeOutAcZ ? (fadeOutAcZ.duration || 0) : 0;
       var savedZone = onItemZ._zone || '';
@@ -1808,7 +1766,7 @@ var TModal = {
         if (el('t-fadein'))   { el('t-fadein').value = fadeInZ; if(el('t-fadein-val')) el('t-fadein-val').textContent = fadeInZ===0?'instant':fadeInZ+'s'; }
         if (el('t-turnoff'))  el('t-turnoff').checked = hasOffZ;
         if (el('t-hold'))     { el('t-hold').value = holdZ; if(el('t-holdval')) el('t-holdval').textContent = holdZ===0?'off immediately':holdZ+' min'; }
-        if (el('t-hold-wrap'))    el('t-hold-wrap').style.display = hasOffZ ? '' : 'none';
+        if (el('t-hold-wrap'))    el('t-hold-wrap').style.display = '';
         if (el('t-fadeout'))  { el('t-fadeout').value = fadeOutZ; if(el('t-fadeout-val')) el('t-fadeout-val').textContent = fadeOutZ===0?'instant':fadeOutZ+'s'; }
         if (el('t-fadeout-wrap')) el('t-fadeout-wrap').style.display = hasOffZ ? '' : 'none';
         if (el('t-lux-en') && luxCondZ && luxCondZ.deviceId) {
@@ -1824,9 +1782,7 @@ var TModal = {
           el('t-ov-en').checked = true; el('t-ov-wrap').style.display = '';
           if (el('t-ov-device')) el('t-ov-device').value = onItemZ._overrideSwitch.deviceId;
           var _ovBZ = Math.round((onItemZ._overrideSwitch.brightness||1)*100);
-          var _ovDZ = onItemZ._overrideSwitch.durationMinutes||30;
           if (el('t-ov-bright')) { el('t-ov-bright').value = _ovBZ; if(el('t-ov-bval')) el('t-ov-bval').textContent = _ovBZ+'%'; }
-          if (el('t-ov-dur'))    { el('t-ov-dur').value = _ovDZ;    if(el('t-ov-durval')) el('t-ov-durval').textContent = _ovDZ+' min'; }
           TModal._ovDeviceChanged({ onMapping: onItemZ._overrideSwitch.onMapping || null, offMapping: onItemZ._overrideSwitch.offMapping || null });
         }
         if (el('t-name'))     el('t-name').value = g.name || '';
@@ -1860,13 +1816,9 @@ var TModal = {
                       TModal._swMapChanged(j);
                       if (m._isOverride) {
                         var bEl = el('t-sw-ov-bright-' + j);
-                        var dEl = el('t-sw-ov-dur-'    + j);
                         var bVEl = el('t-sw-ov-bv-'    + j);
-                        var dVEl = el('t-sw-ov-dv-'    + j);
                         if (bEl)  { bEl.value  = Math.round((m._overrideBright != null ? m._overrideBright : 1) * 100); }
-                        if (dEl)  { dEl.value  = m._overrideDur || 60; }
                         if (bVEl) { bVEl.textContent = (bEl  ? bEl.value  : '100') + '%'; }
-                        if (dVEl) { dVEl.textContent = (dEl  ? dEl.value  : '60')  + ' min'; }
                       }
                       break;
                     }
@@ -1892,13 +1844,9 @@ var TModal = {
                     TModal._swMapChanged(j);
                     if (runAct.type === 'override_group') {
                       var bEl = el('t-sw-ov-bright-' + j);
-                      var dEl = el('t-sw-ov-dur-'    + j);
                       var bVEl = el('t-sw-ov-bv-'    + j);
-                      var dVEl = el('t-sw-ov-dv-'    + j);
                       if (bEl)  { bEl.value  = Math.round((runAct.brightness != null ? runAct.brightness : 1) * 100); }
-                      if (dEl)  { dEl.value  = runAct.durationMinutes || 60; }
                       if (bVEl) { bVEl.textContent = (bEl  ? bEl.value  : '100') + '%'; }
-                      if (dVEl) { dVEl.textContent = (dEl  ? dEl.value  : '60')  + ' min'; }
                     }
                     break;
                   }
@@ -2378,9 +2326,10 @@ var TModal = {
       '<div class="fgrp"><label class="hy-nostyle flabel">Fade in (0 = instant)</label>' +
         '<div class="slider-row"><input class="hy-nostyle" type="range" id="t-fadein" min="0" max="10" value="0" oninput="el(\'t-fadein-val\').textContent=this.value==\'0\'?\'instant\':this.value+\'s\'"><span class="slider-val" id="t-fadein-val">instant</span></div></div>' +
       '<hr class="hy-nostyle sep">' +
-      '<div class="check-row"><input class="hy-nostyle" type="checkbox" id="t-turnoff" checked onchange="el(\'t-hold-wrap\').style.display=this.checked?\'\':\'none\';el(\'t-fadeout-wrap\').style.display=this.checked?\'\':\'none\'"><label class="hy-nostyle" for="t-turnoff">Turn lights off when motion stops</label></div>' +
-      '<div class="fgrp" id="t-hold-wrap"><label class="hy-nostyle flabel">Keep lights on for (after motion stops)</label>' +
+      '<div class="check-row"><input class="hy-nostyle" type="checkbox" id="t-turnoff" checked onchange="el(\'t-fadeout-wrap\').style.display=this.checked?\'\':\'none\'"><label class="hy-nostyle" for="t-turnoff">Turn lights off when motion stops</label></div>' +
+      '<div class="fgrp" id="t-hold-wrap"><label class="hy-nostyle flabel">Inactivity time before switching off</label>' +
         '<div class="slider-row"><input class="hy-nostyle" type="range" id="t-hold" min="0" max="60" value="5" oninput="el(\'t-holdval\').textContent=this.value==\'0\'?\'off immediately\':this.value+\' min\'"><span class="slider-val" id="t-holdval">5 min</span></div></div>' +
+      '<p class="hint">' + i18n('manual_control_hint') + '</p>' +
       '<div class="fgrp" id="t-fadeout-wrap"><label class="hy-nostyle flabel">Fade out (0 = instant)</label>' +
         '<div class="slider-row"><input class="hy-nostyle" type="range" id="t-fadeout" min="0" max="10" value="0" oninput="el(\'t-fadeout-val\').textContent=this.value==\'0\'?\'instant\':this.value+\'s\'"><span class="slider-val" id="t-fadeout-val">instant</span></div></div>' +
       '<hr class="hy-nostyle sep">' +
@@ -2396,15 +2345,14 @@ var TModal = {
         '<div class="fgrp"><label class="hy-nostyle flabel">Until</label>' + mkTimePicker('t-hours-to','23:00') + '</div>' +
       '</div>' +
       '<hr class="hy-nostyle sep">' +
-      '<div class="check-row"><input class="hy-nostyle" type="checkbox" id="t-ov-en" onchange="el(\'t-ov-wrap\').style.display=this.checked?\'\':\'none\'"><label class="hy-nostyle" for="t-ov-en">Button override — press a button to set a custom brightness and pause automation</label></div>' +
+      '<div class="check-row"><input class="hy-nostyle" type="checkbox" id="t-ov-en" onchange="el(\'t-ov-wrap\').style.display=this.checked?\'\':\'none\'"><label class="hy-nostyle" for="t-ov-en">Optional wall button for manual light control</label></div>' +
       '<div id="t-ov-wrap" style="display:none">' +
         '<div class="fgrp"><label class="hy-nostyle flabel">Button / switch device</label>' +
           '<select class="hy-nostyle finput" id="t-ov-device" onchange="TModal._ovDeviceChanged()"><option value="">— Select device —</option>' + ovDevOpts + '</select></div>' +
         '<div id="t-ov-buttons"></div>' +
         '<div class="fgrp"><label class="hy-nostyle flabel">Override brightness</label>' +
           '<div class="slider-row"><input class="hy-nostyle" type="range" id="t-ov-bright" min="10" max="100" value="100" oninput="el(\'t-ov-bval\').textContent=this.value+\'%\'"><span class="slider-val" id="t-ov-bval">100%</span></div></div>' +
-        '<div class="fgrp"><label class="hy-nostyle flabel">Override duration</label>' +
-          '<div class="slider-row"><input class="hy-nostyle" type="range" id="t-ov-dur" min="5" max="180" value="30" step="5" oninput="el(\'t-ov-durval\').textContent=this.value+\' min\'"><span class="slider-val" id="t-ov-durval">30 min</span></div></div>' +
+        '<p class="hint">' + i18n('manual_control_hint') + '</p>' +
       '</div>' +
       '<div class="fgrp" style="margin-top:12px"><label class="hy-nostyle flabel">Automation name</label>' +
         '<input class="hy-nostyle finput" id="t-name" type="text" placeholder="e.g. Living Room Zone"/></div>';
@@ -2500,7 +2448,7 @@ var TModal = {
   // ── Motion → Lights form ──
   _motionIdleVisibility: function() {
     var enabled = el('t-turnoff') && el('t-turnoff').checked;
-    ['t-hold-wrap', 't-fadeout-wrap', 't-night-section'].forEach(function(id) {
+    ['t-fadeout-wrap', 't-night-section'].forEach(function(id) {
       if (el(id)) el(id).style.display = enabled ? '' : 'none';
     });
     if (el('t-night-controls')) el('t-night-controls').style.display = enabled && el('t-night-idle').checked ? '' : 'none';
@@ -2558,8 +2506,9 @@ var TModal = {
         '<div class="slider-row"><input class="hy-nostyle" type="range" id="t-fadein" min="0" max="10" value="0" oninput="el(\'t-fadein-val\').textContent=this.value==\'0\'?\'instant\':this.value+\'s\'"><span class="slider-val" id="t-fadein-val">instant</span></div></div>' +
       '<hr class="hy-nostyle sep">' +
       '<div class="check-row"><input class="hy-nostyle" type="checkbox" id="t-turnoff" checked onchange="TModal._motionIdleVisibility()"><label class="hy-nostyle" for="t-turnoff">Change lights when motion stops</label></div>' +
-      '<div class="fgrp" id="t-hold-wrap"><label class="hy-nostyle flabel">Keep lights on for (after motion stops)</label>' +
+      '<div class="fgrp" id="t-hold-wrap"><label class="hy-nostyle flabel">Inactivity time before switching off</label>' +
         '<div class="slider-row"><input class="hy-nostyle" type="range" id="t-hold" min="0" max="180" value="5" oninput="el(\'t-holdval\').textContent=this.value==\'0\'?\'off immediately\':this.value+\' min\'"><span class="slider-val" id="t-holdval">5 min</span></div></div>' +
+      '<p class="hint">' + i18n('manual_control_hint') + '</p>' +
       '<div class="fgrp" id="t-fadeout-wrap"><label class="hy-nostyle flabel">Fade out (0 = instant)</label>' +
         '<div class="slider-row"><input class="hy-nostyle" type="range" id="t-fadeout" min="0" max="10" value="0" oninput="el(\'t-fadeout-val\').textContent=this.value==\'0\'?\'instant\':this.value+\'s\'"><span class="slider-val" id="t-fadeout-val">instant</span></div></div>' +
       TModal._nightIdleForm() +
@@ -2576,15 +2525,14 @@ var TModal = {
         '<div class="fgrp"><label class="hy-nostyle flabel">Until</label>' + mkTimePicker('t-hours-to','23:00') + '</div>' +
       '</div>' +
       '<hr class="hy-nostyle sep">' +
-      '<div class="check-row"><input class="hy-nostyle" type="checkbox" id="t-ov-en" onchange="el(\'t-ov-wrap\').style.display=this.checked?\'\':\'none\'"><label class="hy-nostyle" for="t-ov-en">Button override — press a button to set a custom brightness and pause automation</label></div>' +
+      '<div class="check-row"><input class="hy-nostyle" type="checkbox" id="t-ov-en" onchange="el(\'t-ov-wrap\').style.display=this.checked?\'\':\'none\'"><label class="hy-nostyle" for="t-ov-en">Optional wall button for manual light control</label></div>' +
       '<div id="t-ov-wrap" style="display:none">' +
         '<div class="fgrp"><label class="hy-nostyle flabel">Button / switch device</label>' +
           '<select class="hy-nostyle finput" id="t-ov-device" onchange="TModal._ovDeviceChanged()"><option value="">— Select device —</option>' + ovDevOpts + '</select></div>' +
         '<div id="t-ov-buttons"></div>' +
         '<div class="fgrp"><label class="hy-nostyle flabel">Override brightness</label>' +
           '<div class="slider-row"><input class="hy-nostyle" type="range" id="t-ov-bright" min="10" max="100" value="100" oninput="el(\'t-ov-bval\').textContent=this.value+\'%\'"><span class="slider-val" id="t-ov-bval">100%</span></div></div>' +
-        '<div class="fgrp"><label class="hy-nostyle flabel">Override duration</label>' +
-          '<div class="slider-row"><input class="hy-nostyle" type="range" id="t-ov-dur" min="5" max="180" value="30" step="5" oninput="el(\'t-ov-durval\').textContent=this.value+\' min\'"><span class="slider-val" id="t-ov-durval">30 min</span></div></div>' +
+        '<p class="hint">' + i18n('manual_control_hint') + '</p>' +
       '</div>' +
       '<div class="fgrp" style="margin-top:12px"><label class="hy-nostyle flabel">Automation name</label>' +
         '<input class="hy-nostyle finput" id="t-name" type="text" placeholder="e.g. Hallway Motion"/></div>';
@@ -2617,9 +2565,10 @@ var TModal = {
       '<hr class="hy-nostyle sep">' +
       '<div class="fgrp"><label class="hy-nostyle flabel">Fade in (0 = instant)</label>' +
         '<div class="slider-row"><input class="hy-nostyle" type="range" id="t-fadein" min="0" max="10" value="0" oninput="el(\'t-fadein-val\').textContent=this.value==\'0\'?\'instant\':this.value+\'s\'"><span class="slider-val" id="t-fadein-val">instant</span></div></div>' +
-      '<div class="check-row"><input class="hy-nostyle" type="checkbox" id="t-turnoff" checked onchange="el(\'t-hold-wrap\').style.display=this.checked?\'\':\'none\';el(\'t-fadeout-wrap\').style.display=this.checked?\'\':\'none\'"><label class="hy-nostyle" for="t-turnoff">Turn lights off when motion stops</label></div>' +
-      '<div class="fgrp" id="t-hold-wrap"><label class="hy-nostyle flabel">Keep lights on for (after motion stops)</label>' +
+      '<div class="check-row"><input class="hy-nostyle" type="checkbox" id="t-turnoff" checked onchange="el(\'t-fadeout-wrap\').style.display=this.checked?\'\':\'none\'"><label class="hy-nostyle" for="t-turnoff">Turn lights off when motion stops</label></div>' +
+      '<div class="fgrp" id="t-hold-wrap"><label class="hy-nostyle flabel">Inactivity time before switching off</label>' +
         '<div class="slider-row"><input class="hy-nostyle" type="range" id="t-hold" min="0" max="60" value="5" oninput="el(\'t-holdval\').textContent=this.value==\'0\'?\'off immediately\':this.value+\' min\'"><span class="slider-val" id="t-holdval">5 min</span></div></div>' +
+      '<p class="hint">' + i18n('manual_control_hint') + '</p>' +
       '<div class="fgrp" id="t-fadeout-wrap"><label class="hy-nostyle flabel">Fade out (0 = instant)</label>' +
         '<div class="slider-row"><input class="hy-nostyle" type="range" id="t-fadeout" min="0" max="10" value="0" oninput="el(\'t-fadeout-val\').textContent=this.value==\'0\'?\'instant\':this.value+\'s\'"><span class="slider-val" id="t-fadeout-val">instant</span></div></div>' +
       '<hr class="hy-nostyle sep">' +
@@ -2629,15 +2578,14 @@ var TModal = {
         '<div class="fgrp"><label class="hy-nostyle flabel">Maximum lux (only trigger below this)</label><div class="slider-row"><input class="hy-nostyle" type="range" id="t-lux-max" min="0" max="500" value="50" oninput="el(\'t-lux-val\').textContent=this.value+\' lx\'"><span class="slider-val" id="t-lux-val">50 lx</span></div></div>' +
       '</div>' +
       '<hr class="hy-nostyle sep">' +
-      '<div class="check-row"><input class="hy-nostyle" type="checkbox" id="t-ov-en" onchange="el(\'t-ov-wrap\').style.display=this.checked?\'\':\'none\'"><label class="hy-nostyle" for="t-ov-en">Button override — press a button to set a custom brightness and pause automation</label></div>' +
+      '<div class="check-row"><input class="hy-nostyle" type="checkbox" id="t-ov-en" onchange="el(\'t-ov-wrap\').style.display=this.checked?\'\':\'none\'"><label class="hy-nostyle" for="t-ov-en">Optional wall button for manual light control</label></div>' +
       '<div id="t-ov-wrap" style="display:none">' +
         '<div class="fgrp"><label class="hy-nostyle flabel">Button / switch device</label>' +
           '<select class="hy-nostyle finput" id="t-ov-device" onchange="TModal._ovDeviceChanged()"><option value="">— Select device —</option>' + ovDevOptsSD + '</select></div>' +
         '<div id="t-ov-buttons"></div>' +
         '<div class="fgrp"><label class="hy-nostyle flabel">Override brightness</label>' +
           '<div class="slider-row"><input class="hy-nostyle" type="range" id="t-ov-bright" min="10" max="100" value="100" oninput="el(\'t-ov-bval\').textContent=this.value+\'%\'"><span class="slider-val" id="t-ov-bval">100%</span></div></div>' +
-        '<div class="fgrp"><label class="hy-nostyle flabel">Override duration</label>' +
-          '<div class="slider-row"><input class="hy-nostyle" type="range" id="t-ov-dur" min="5" max="180" value="30" step="5" oninput="el(\'t-ov-durval\').textContent=this.value+\' min\'"><span class="slider-val" id="t-ov-durval">30 min</span></div></div>' +
+        '<p class="hint">' + i18n('manual_control_hint') + '</p>' +
       '</div>' +
       '<div class="fgrp" style="margin-top:12px"><label class="hy-nostyle flabel">Name prefix (e.g. room name)</label>' +
         '<input class="hy-nostyle finput" id="t-name" type="text" placeholder="e.g. Hallway"/></div>';
@@ -2792,7 +2740,6 @@ var TModal = {
     var ovEn      = el('t-ov-en') && el('t-ov-en').checked;
     var ovDevId   = ovEn ? (el('t-ov-device') ? el('t-ov-device').value : '') : null;
     var ovBright  = ovEn ? (parseInt(el('t-ov-bright') ? el('t-ov-bright').value : 100) / 100) : null;
-    var ovDur     = ovEn ? parseInt(el('t-ov-dur') ? el('t-ov-dur').value : 30) : null;
     var ovOnMapping  = (ovEn && ovDevId) ? (TModal._ovLearnedOn  || null) : null;
     var ovOffMapping = (ovEn && ovDevId) ? (TModal._ovLearnedOff || null) : null;
     var onConditions = [];
@@ -2816,12 +2763,12 @@ var TModal = {
       }
     });
     var onAuto = { id: TModal._mkId(), name: name + ' — ON', enabled: true,
-      _groupId: gid, _groupName: name, _templateType: 'motion_lights',
+      _groupId: gid, _groupName: name, _templateType: 'motion_lights', _manualHoldMinutes: hold,
       trigger: { type: 'motion_start', deviceId: sensor }, conditions: onConditions, actions: onActs };
     if (ovEn && ovDevId) {
       var _ovExisting = TModal._editingGroup && TModal._editingGroup.items.find(function(it){ return it.a._overrideSwitch && it.a._overrideSwitch.deviceId; });
       var _ovExistingFlowIds = _ovExisting && _ovExisting.a._overrideSwitch.flowIds || [];
-      onAuto._overrideSwitch = { deviceId: ovDevId, brightness: ovBright, durationMinutes: ovDur,
+      onAuto._overrideSwitch = { deviceId: ovDevId, brightness: ovBright,
         ...(ovOnMapping  ? { onMapping:  ovOnMapping  } : {}),
         ...(ovOffMapping ? { offMapping: ovOffMapping } : {}),
         ...(_ovExistingFlowIds.length ? { flowIds: _ovExistingFlowIds } : {}) };
@@ -2833,7 +2780,7 @@ var TModal = {
         return fadeOut > 0 ? { type: 'fade_off', deviceId: id, duration: fadeOut } : { type: 'turn_off', deviceId: id };
       });
       var offAuto = { id: TModal._mkId(), name: name + ' — OFF', enabled: true,
-        _groupId: gid, _groupName: name, _templateType: 'motion_lights',
+        _groupId: gid, _groupName: name, _templateType: 'motion_lights', _manualHoldMinutes: hold,
         _holdMinutes: hold,
         trigger: { type: 'motion_stop', deviceId: sensor }, conditions: [], actions: offActs };
       if (nightIdle) offAuto._nightIdle = nightIdle;
@@ -2860,7 +2807,6 @@ var TModal = {
     var ovEnSD     = el('t-ov-en') && el('t-ov-en').checked;
     var ovDevIdSD  = ovEnSD ? (el('t-ov-device') ? el('t-ov-device').value : '') : null;
     var ovBrightSD = ovEnSD ? (parseInt(el('t-ov-bright') ? el('t-ov-bright').value : 100) / 100) : null;
-    var ovDurSD    = ovEnSD ? parseInt(el('t-ov-dur') ? el('t-ov-dur').value : 30) : null;
     var ovOnMappingSD  = (ovEnSD && ovDevIdSD) ? (TModal._ovLearnedOn  || null) : null;
     var ovOffMappingSD = (ovEnSD && ovDevIdSD) ? (TModal._ovLearnedOff || null) : null;
     var gid = TModal._editingGroup ? TModal._editingGroup.id : TModal._mkId();
@@ -2892,14 +2838,14 @@ var TModal = {
 
     // Day automation (motion + time condition)
     var dayAuto = { id: TModal._mkId(), name: prefix + ' — Day', enabled: true,
-      _groupId: gid, _groupName: prefix, _templateType: 'smart_dim',
+      _groupId: gid, _groupName: prefix, _templateType: 'smart_dim', _manualHoldMinutes: hold,
       trigger: { type: 'motion_start', deviceId: sensor },
       conditions: dayConditions,
       actions: makeOnActs(dayBright, 'day') };
 
     // Night automation (motion + time condition)
     var nightAuto = { id: TModal._mkId(), name: prefix + ' — Night', enabled: true,
-      _groupId: gid, _groupName: prefix, _templateType: 'smart_dim',
+      _groupId: gid, _groupName: prefix, _templateType: 'smart_dim', _manualHoldMinutes: hold,
       trigger: { type: 'motion_start', deviceId: sensor },
       conditions: nightConditions,
       actions: makeOnActs(nightBright, 'night') };
@@ -2907,7 +2853,7 @@ var TModal = {
     if (ovEnSD && ovDevIdSD) {
       var _ovExSD = TModal._editingGroup && TModal._editingGroup.items.find(function(it){ return it.a._overrideSwitch && it.a._overrideSwitch.deviceId; });
       var _ovExFlowIdsSD = _ovExSD && _ovExSD.a._overrideSwitch.flowIds || [];
-      var _ovSwSD = { deviceId: ovDevIdSD, brightness: ovBrightSD, durationMinutes: ovDurSD,
+      var _ovSwSD = { deviceId: ovDevIdSD, brightness: ovBrightSD,
         ...(ovOnMappingSD  ? { onMapping:  ovOnMappingSD  } : {}),
         ...(ovOffMappingSD ? { offMapping: ovOffMappingSD } : {}),
         ...(_ovExFlowIdsSD.length ? { flowIds: _ovExFlowIdsSD } : {}) };
@@ -2923,7 +2869,7 @@ var TModal = {
         return fadeOut > 0 ? { type: 'fade_off', deviceId: id, duration: fadeOut } : { type: 'turn_off', deviceId: id };
       });
       list.push({ id: TModal._mkId(), name: prefix + ' — OFF', enabled: true,
-        _groupId: gid, _groupName: prefix, _templateType: 'smart_dim',
+        _groupId: gid, _groupName: prefix, _templateType: 'smart_dim', _manualHoldMinutes: hold,
         _holdMinutes: hold,
         trigger: { type: 'motion_stop', deviceId: sensor }, conditions: [], actions: offActsSD });
     }
@@ -3045,7 +2991,6 @@ var TModal = {
     var ovEn      = el('t-ov-en') && el('t-ov-en').checked;
     var ovDevId   = ovEn ? (el('t-ov-device') ? el('t-ov-device').value : '') : null;
     var ovBright  = ovEn ? (parseInt(el('t-ov-bright') ? el('t-ov-bright').value : 100) / 100) : null;
-    var ovDur     = ovEn ? parseInt(el('t-ov-dur') ? el('t-ov-dur').value : 30) : null;
     var ovOnMapping  = (ovEn && ovDevId) ? (TModal._ovLearnedOn  || null) : null;
     var ovOffMapping = (ovEn && ovDevId) ? (TModal._ovLearnedOff || null) : null;
     var onConditions = [];
@@ -3069,12 +3014,12 @@ var TModal = {
       }
     });
     var onAuto = { id: TModal._mkId(), name: name + (sensor ? ' — ON' : ''), enabled: true,
-      _groupId: gid, _groupName: name, _templateType: 'zone_control', _zone: zone,
+      _groupId: gid, _groupName: name, _templateType: 'zone_control', _manualHoldMinutes: hold, _zone: zone,
       trigger: { type: triggerType, deviceId: sensor || undefined }, conditions: onConditions, actions: onActs };
     if (ovEn && ovDevId) {
       var _ovExisting = TModal._editingGroup && TModal._editingGroup.items.find(function(it){ return it.a._overrideSwitch && it.a._overrideSwitch.deviceId; });
       var _ovExistingFlowIds = _ovExisting && _ovExisting.a._overrideSwitch.flowIds || [];
-      onAuto._overrideSwitch = { deviceId: ovDevId, brightness: ovBright, durationMinutes: ovDur,
+      onAuto._overrideSwitch = { deviceId: ovDevId, brightness: ovBright,
         ...(ovOnMapping  ? { onMapping:  ovOnMapping  } : {}),
         ...(ovOffMapping ? { offMapping: ovOffMapping } : {}),
         ...(_ovExistingFlowIds.length ? { flowIds: _ovExistingFlowIds } : {}) };
@@ -3086,7 +3031,7 @@ var TModal = {
         return fadeOut > 0 ? { type: 'fade_off', deviceId: id, duration: fadeOut } : { type: 'turn_off', deviceId: id };
       });
       list.push({ id: TModal._mkId(), name: name + ' — OFF', enabled: true,
-        _groupId: gid, _groupName: name, _templateType: 'zone_control', _zone: zone,
+        _groupId: gid, _groupName: name, _templateType: 'zone_control', _manualHoldMinutes: hold, _zone: zone,
         _holdMinutes: hold,
         trigger: { type: 'motion_stop', deviceId: sensor }, conditions: [], actions: offActs });
     }
@@ -3124,9 +3069,9 @@ var TModal = {
     var groupOpts = groups.map(function(g){
       return '<option value="' + esc(g.id) + '">' + esc(g.name || 'Automation') + '</option>';
     }).join('');
-    var ovGroups = groups.filter(function(g){ return g.type === 'motion_lights' || g.type === 'smart_dim'; });
+    var ovGroups = groups.filter(function(g){ return g.items.some(function(it){ return it.a.trigger && it.a.trigger.type === 'motion_start'; }); });
     var overrideOptsStr = ovGroups.map(function(g){
-      return '<option value="OVERRIDE:' + esc(g.id) + '">⏸ Override: ' + esc(g.name || 'Automation') + '</option>';
+      return '<option value="OVERRIDE:' + esc(g.id) + '">' + i18n('manual_group_prefix') + ' ' + esc(g.name || 'Automation') + '</option>';
     }).join('');
     var allGroupOpts = groupOpts + (overrideOptsStr ? '<optgroup label="— Override mode —">' + overrideOptsStr + '</optgroup>' : '');
 
@@ -3216,12 +3161,7 @@ var TModal = {
               'oninput="document.getElementById(\'t-sw-ov-bv-' + i + '\').textContent=this.value+\'%\'">' +
             '<span class="slider-val" id="t-sw-ov-bv-' + i + '">100%</span>' +
           '</div>' +
-          '<div class="slider-row" style="margin-top:6px">' +
-            '<span class="slider-val" style="min-width:80px;color:var(--ea-text)">' + i18n('Override duration') + '</span>' +
-            '<input class="hy-nostyle" type="range" id="t-sw-ov-dur-' + i + '" min="5" max="180" step="5" value="60" ' +
-              'oninput="document.getElementById(\'t-sw-ov-dv-' + i + '\').textContent=this.value+\' min\'">' +
-            '<span class="slider-val" id="t-sw-ov-dv-' + i + '">60 min</span>' +
-          '</div>' +
+          '<p class="hint">' + i18n('manual_control_hint') + '</p>' +
         '</div>' +
       '</div>';
     });
@@ -3321,7 +3261,7 @@ var TModal = {
         '<select class="hy-nostyle finput" id="t-ov-on-sel" onchange="TModal._ovSelChanged(\'on\')">' +
           '<option value="">\u2014 Not set \u2014</option>' + opts +
         '</select></div>' +
-      '<div class="fgrp"><label class="hy-nostyle flabel">Cancel override (OFF, optional)</label>' +
+      '<div class="fgrp"><label class="hy-nostyle flabel">Manual OFF (optional)</label>' +
         '<select class="hy-nostyle finput" id="t-ov-off-sel" onchange="TModal._ovSelChanged(\'off\')">' +
           '<option value="">\u2014 Not set (optional) \u2014</option>' + opts +
         '</select></div>';
@@ -3376,9 +3316,7 @@ var TModal = {
       var isOvM    = rawVal.indexOf('OVERRIDE:') === 0;
       var realIdM  = isOvM ? rawVal.slice(9) : rawVal;
       var bElM     = el('t-sw-ov-bright-' + i);
-      var dElM     = el('t-sw-ov-dur-' + i);
       var ovBrightM = isOvM ? (parseInt(bElM ? bElM.value : '100') / 100) : null;
-      var ovDurM    = isOvM ? parseInt(dElM ? dElM.value : '60') : null;
 
       if (trigType === 'flow_card') {
         isFlowMode = true;
@@ -3394,7 +3332,7 @@ var TModal = {
             groupId:      realIdM,
             groupName:    grp ? (grp.name || 'Automation') : realIdM
           };
-          if (isOvM) { mapping._isOverride = true; mapping._overrideBright = ovBrightM; mapping._overrideDur = ovDurM; }
+          if (isOvM) { mapping._isOverride = true; mapping._overrideBright = ovBrightM; }
           allFlowMappings.push(mapping);
           if (!isOvM) flowMappings.push(mapping);
         }
@@ -3404,7 +3342,7 @@ var TModal = {
         if (trigType === 'button_key')        trigger.capability = cap;
         if (trigType === 'device_capability') { trigger.capability = cap; trigger.value = true; }
         var action = isOvM
-          ? { type: 'override_group', groupId: realIdM, brightness: ovBrightM, durationMinutes: ovDurM }
+          ? { type: 'override_group', groupId: realIdM, brightness: ovBrightM }
           : { type: 'run_group',      groupId: rawVal };
         list.push({
           id: TModal._mkId(), name: name, enabled: true,
@@ -3601,69 +3539,6 @@ var CustomEditor = {
     else { State.automations.push(auto); }
     TModal.close();
     await AutoList.persist(i18n('toast_saved'));
-  }
-};
-
-// ── Override modal ──────────────────────────────────────────────────────────────
-var OverrideModal = {
-  _gid: null,
-
-  openByIndex: function(gi) {
-    var computed = computeGroups();
-    var g = computed.groups[gi];
-    if (!g) return;
-    OverrideModal.open(g.id, g.name || 'Automation');
-  },
-
-  open: function(gid, name) {
-    this._gid = gid;
-    el('ov-title').textContent = '⏸  ' + (name || 'Automation');
-    var expiresAt = (State.overrides || {})[gid];
-    var hasActive = expiresAt && Date.now() < expiresAt;
-    if (hasActive) {
-      var rem  = expiresAt - Date.now();
-      var h    = Math.floor(rem / 3600000);
-      var m    = Math.floor((rem % 3600000) / 60000);
-      var disp = h > 0 ? h + 'h ' + m + 'm ' + i18n('ov_remaining') : m + 'm ' + i18n('ov_remaining');
-      el('ov-active-label').textContent = i18n('ov_active_pfx') + disp;
-      el('ov-resume-wrap').style.display = '';
-    } else {
-      el('ov-resume-wrap').style.display = 'none';
-    }
-    el('ov-overlay').classList.add('on');
-  },
-
-  bgClose: function(e) { if (e.target === el('ov-overlay')) this.close(); },
-  close:   function()  { el('ov-overlay').classList.remove('on'); },
-
-  set: function(mins) {
-    var expiresAt = Date.now() + mins * 60 * 1000;
-    var ov = Object.assign({}, State.overrides || {});
-    ov[this._gid] = expiresAt;
-    State.overrides = ov;
-    window._hSet('_overrides', JSON.stringify(ov)).catch(function(){});
-    this.close();
-    Countdown.tick();
-  },
-
-  setMidnight: function() {
-    var now = new Date();
-    var midnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 0).getTime();
-    var ov = Object.assign({}, State.overrides || {});
-    ov[this._gid] = midnight;
-    State.overrides = ov;
-    window._hSet('_overrides', JSON.stringify(ov)).catch(function(){});
-    this.close();
-    Countdown.tick();
-  },
-
-  cancel: function() {
-    var ov = Object.assign({}, State.overrides || {});
-    delete ov[this._gid];
-    State.overrides = ov;
-    window._hSet('_overrides', JSON.stringify(ov)).catch(function(){});
-    this.close();
-    Countdown.tick();
   }
 };
 

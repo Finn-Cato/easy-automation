@@ -3,6 +3,8 @@
 const { App }    = require('homey');
 const { HomeyAPI } = require('homey-api');
 const NightIdle = require('./lib/night-idle');
+const ManualLights = require('./lib/manual-lights');
+const LightWrites = require('./lib/light-writes');
 const sunWindow = require('./lib/sun-window');
 
 class EasyAutomationApp extends App {
@@ -11,6 +13,7 @@ class EasyAutomationApp extends App {
 
   async onInit() {
     const manifest = this.homey.manifest;
+    this.homey.settings.set('_appVersion', manifest.version);
     this.log(`Light Guard v${manifest.version} starting...`);
 
     this._log            = [];
@@ -22,7 +25,6 @@ class EasyAutomationApp extends App {
     this._disconnectPromise = Promise.resolve();
     this._holdTimers     = new Map();
     this._safetyTimers   = new Map();
-    this._overrideTimers = new Map();
     this._minuteTimer    = null;
     this._reconnectTimer = null;
     this._cachedDevices  = [];
@@ -30,15 +32,25 @@ class EasyAutomationApp extends App {
     this._listenerApi    = null;
     this._liveDevices    = null;   // live device map reused across triggers to avoid repeated getDevices() calls
     this._sunLocationCache = null;
+    this._lightWrites = new LightWrites();
+    this._manualLights = new ManualLights({
+      homey: this.homey,
+      getAutomations: () => this._getAutomations(),
+      getDevices: async () => this._liveDevices || (await this._getApi()).devices.getDevices(),
+      getHold: gid => this._readHoldStatus()[gid],
+      setHold: (gid, endsAt) => this._setHoldStatus(gid, endsAt),
+      clearHold: gid => this._clearHoldStatus(gid),
+      cancelPending: gid => this._cancelGroupTimers(gid),
+      runActions: (actions, name, guard) => this._runActions(actions, name, guard),
+      log: (level, message) => this._addLog(level, message),
+    });
+    // Retire the old timed pauses. Manual control now ends after no motion.
+    this.homey.settings.set('_overrides', '{}');
     this._nightIdle = new NightIdle({
       homey: this.homey,
       getAutomations: () => this._getAutomations(),
-      getOverrides: () => this._readOverrides(),
-      getDevices: async () => {
-        const devices = await (await this._getApi()).devices.getDevices();
-        this._liveDevices = devices;
-        return devices;
-      },
+      isManual: gid => this._manualLights.isManual(gid),
+      getDevices: async () => this._liveDevices || (await this._getApi()).devices.getDevices(),
       getSunWindow: () => this._getSunWindow(),
       runActions: (actions, name, guard) => this._runActions(actions, name, guard),
       setHold: (gid, endsAt) => this._setHoldStatus(gid, endsAt),
@@ -119,6 +131,7 @@ class EasyAutomationApp extends App {
       );
       const target = automations.find(a => !a.trigger || !offTypes.has(a.trigger.type)) || automations[0];
       if (!target) throw new Error(`Automation group not found: ${groupId}`);
+      await this._manualLights.start(groupId);
       await this._runActions(target.actions || [], target.name);
     });
 
@@ -127,7 +140,7 @@ class EasyAutomationApp extends App {
     overrideGroupCard.registerArgumentAutocompleteListener('group', async query => {
       const groups = this._getGroups();
       return groups
-        .filter(g => (g.type === 'motion_lights' || g.type === 'smart_dim') &&
+        .filter(g => this._manualLights.groups().some(group => group.id === g.id) &&
                      g.name.toLowerCase().includes(query.toLowerCase()))
         .map(g => ({ id: g.id, name: g.name, description: g.type }));
     });
@@ -138,22 +151,24 @@ class EasyAutomationApp extends App {
         (a._groupId || a.id) === groupId && a._overrideSwitch
       );
       const ov = auto && auto._overrideSwitch;
-      await this._doOverride(groupId, ov ? ov.brightness : 1, ov ? ov.durationMinutes : 60);
+      const controlsOwnLight = ov && this._manualLights.groups().some(group => group.id === groupId && group.lightIds.includes(ov.deviceId));
+      if (controlsOwnLight) await this._manualLights.start(groupId);
+      else await this._doOverride(groupId, ov ? ov.brightness : 1);
     });
 
-    // Flow action: "Cancel override for automation group"
+    // Keep the legacy card ID so existing generated OFF-button Flows still work.
     const cancelOverrideCard = this.homey.flow.getActionCard('cancel_override');
     cancelOverrideCard.registerArgumentAutocompleteListener('group', async query => {
       const groups = this._getGroups();
       return groups
-        .filter(g => (g.type === 'motion_lights' || g.type === 'smart_dim') &&
+        .filter(g => this._manualLights.groups().some(group => group.id === g.id) &&
                      g.name.toLowerCase().includes(query.toLowerCase()))
         .map(g => ({ id: g.id, name: g.name, description: g.type }));
     });
     cancelOverrideCard.registerRunListener(async args => {
       const groupId = args.group.id;
-      this._addLog('trigger', `Flow action "cancel_override" → group "${args.group.name}"`);
-      await this._cancelOverride(groupId);
+      this._addLog('trigger', `Manual OFF Flow → group "${args.group.name}"`);
+      await this._doOverride(groupId, 0);
     });
 
     // Serialize initial setup with any settings changes that arrive during startup.
@@ -289,7 +304,6 @@ class EasyAutomationApp extends App {
   _readHoldStatus() {
     try { return JSON.parse(this.homey.settings.get('_holdStatus') || '{}'); } catch { return {}; }
   }
-  _readOverrides()  { try { return JSON.parse(this.homey.settings.get('_overrides') || '{}'); } catch(e) { return {}; } }
 
   _setHoldStatus(groupId, endsAt) {
     const s = this._readHoldStatus();
@@ -302,6 +316,20 @@ class EasyAutomationApp extends App {
     if (!(groupId in s)) return;
     delete s[groupId];
     try { this.homey.settings.set('_holdStatus', JSON.stringify(s)); } catch (e) {}
+  }
+
+  _cancelGroupTimers(gid) {
+    this._nightIdle?.cancelGroup(gid);
+    for (const automation of this._getAutomations()) {
+      if ((automation._groupId || automation.id) !== gid) continue;
+      const sensorId = automation.trigger?.deviceId;
+      for (const [timers, key] of [[this._holdTimers, sensorId + ':' + automation.id],
+        [this._safetyTimers, sensorId + ':safety:' + gid]]) {
+        if (timers.has(key)) this.homey.clearTimeout(timers.get(key));
+        timers.delete(key);
+      }
+    }
+    this._clearHoldStatus(gid);
   }
 
   //  Test request handler
@@ -367,11 +395,11 @@ class EasyAutomationApp extends App {
       // Blink 5 times — ON 400 ms, OFF 400 ms
       for (let i = 0; i < 5; i++) {
         await Promise.all(deviceIds.map(id =>
-          devices[id] ? devices[id].setCapabilityValue('onoff', true).catch(() => {}) : Promise.resolve()
+          devices[id] ? this._writeCapability(devices[id], 'onoff', true).catch(() => {}) : Promise.resolve()
         ));
         await wait(400);
         await Promise.all(deviceIds.map(id =>
-          devices[id] ? devices[id].setCapabilityValue('onoff', false).catch(() => {}) : Promise.resolve()
+          devices[id] ? this._writeCapability(devices[id], 'onoff', false).catch(() => {}) : Promise.resolve()
         ));
         await wait(400);
       }
@@ -382,10 +410,10 @@ class EasyAutomationApp extends App {
         const snap = snapshots[id];
         if (!d || !snap) return;
         if (snap.onoff) {
-          await d.setCapabilityValue('onoff', true).catch(() => {});
-          if (snap.dim !== null) await d.setCapabilityValue('dim', snap.dim).catch(() => {});
+          await this._writeCapability(d, 'onoff', true).catch(() => {});
+          if (snap.dim !== null) await this._writeCapability(d, 'dim', snap.dim).catch(() => {});
         } else {
-          await d.setCapabilityValue('onoff', false).catch(() => {});
+          await this._writeCapability(d, 'onoff', false).catch(() => {});
         }
       }));
     } catch (e) {
@@ -553,13 +581,14 @@ class EasyAutomationApp extends App {
     if (!device) { this._addLog('warn', `[preview] device not found: ${deviceId}`); return; }
     const hasCap = cap => device.capabilities && device.capabilities.includes(cap);
     if (capability === 'ct') {
-      if (hasCap('light_temperature')) await device.setCapabilityValue('light_temperature', value).catch(e => this._addLog('warn', `[preview] ct: ${e.message}`));
+      if (hasCap('light_temperature')) await this._writeCapability(device, 'light_temperature', value).catch(e => this._addLog('warn', `[preview] ct: ${e.message}`));
     } else {
+      await this._manualLights.lightChanged(deviceId);
       if (value <= 0) {
-        if (hasCap('onoff')) await device.setCapabilityValue('onoff', false).catch(e => this._addLog('warn', `[preview] onoff=false: ${e.message}`));
+        if (hasCap('onoff')) await this._writeCapability(device, 'onoff', false).catch(e => this._addLog('warn', `[preview] onoff=false: ${e.message}`));
       } else {
-        if (hasCap('onoff')) await device.setCapabilityValue('onoff', true).catch(e => this._addLog('warn', `[preview] onoff=true: ${e.message}`));
-        if (hasCap('dim')) await device.setCapabilityValue('dim', value).catch(e => this._addLog('warn', `[preview] dim=${value}: ${e.message}`));
+        if (hasCap('onoff')) await this._writeCapability(device, 'onoff', true).catch(e => this._addLog('warn', `[preview] onoff=true: ${e.message}`));
+        if (hasCap('dim')) await this._writeCapability(device, 'dim', value).catch(e => this._addLog('warn', `[preview] dim=${value}: ${e.message}`));
       }
     }
   }
@@ -670,7 +699,7 @@ class EasyAutomationApp extends App {
   async _attachAllListeners() {
     this._nightIdle.prune();
     const automations = this._getAutomations().filter(automation => automation.enabled);
-    if (!automations.length) { await this._nightIdle.restore({}); return; }
+    if (!automations.length) { await this._manualLights.restore({}); await this._nightIdle.restore({}); return; }
 
     const needsDeviceApi = automations.some(automation => {
       const triggerType = automation.trigger && automation.trigger.type;
@@ -679,6 +708,7 @@ class EasyAutomationApp extends App {
       return hasDeviceTrigger || hasOverrideDevice;
     });
     if (!needsDeviceApi) {
+      await this._manualLights.restore({});
       this._scheduleTimeChecks();
       return;
     }
@@ -689,7 +719,9 @@ class EasyAutomationApp extends App {
     this._listenerApi = await this._getApi();
     const devices     = await this._listenerApi.devices.getDevices();
     this._liveDevices = devices; // cache for use in _runActions
+    await this._manualLights.restore(devices);
     await this._nightIdle.restore(devices);
+    await this._attachManualLightListeners(devices);
 
     for (const automation of automations) {
       await this._attachTrigger(automation, devices).catch(e =>
@@ -717,7 +749,8 @@ class EasyAutomationApp extends App {
     const automations = this._getAutomations();
     for (const automation of automations) {
       if (!automation.enabled) continue;
-      if (NightIdle.supports(automation)) continue;
+      if (this._manualLights.isManual(automation._groupId || automation.id)) continue;
+      if (NightIdle.supports(automation)) continue; // restored with its original deadline above
       const t = automation.trigger;
       if (!t) continue;
 
@@ -776,7 +809,7 @@ class EasyAutomationApp extends App {
       const runMapping = async m => {
         if (m._isOverride) {
           this._addLog('trigger', `Override switch "${device.name}" → override group "${m.groupId}"`);
-          await this._doOverride(m.groupId, m._overrideBright != null ? m._overrideBright : 1, m._overrideDur || 30).catch(e =>
+          await this._doOverride(m.groupId, m._overrideBright != null ? m._overrideBright : 1).catch(e =>
             this._addLog('error', `doOverride: ${e.message}`)
           );
           return;
@@ -788,6 +821,7 @@ class EasyAutomationApp extends App {
         );
         const target = allAutos.find(a => !a.trigger || !offTypes.has(a.trigger.type)) || allAutos[0];
         if (target) {
+          await this._manualLights.start(m.groupId);
           await this._runActions(target.actions || [], target.name).catch(e =>
             this._addLog('error', `run "${m.groupName}": ${e.message}`)
           );
@@ -882,11 +916,11 @@ class EasyAutomationApp extends App {
     const handler = async value => {
       if (!this._triggerMatches(t, value)) return;
 
-      // Check if this automation group has an active override
+      // Manual values stay in place; a separate, live motion listener still
+      // performs the empty-room switch-off and then releases manual control.
       const gid = automation._groupId || automation.id;
-      const overrides = this._readOverrides();
-      if (overrides[gid] && Date.now() < overrides[gid]) {
-        this._addLog('skipped', `"${automation.name}" — override active, skipping trigger`);
+      if (this._manualLights.isManual(gid)) {
+        this._addLog('skipped', `"${automation.name}" — keeping manual light values until the room is empty`);
         return;
       }
 
@@ -924,7 +958,7 @@ class EasyAutomationApp extends App {
         const safetyMs  = offHoldMs + 30 * 60 * 1000; // hold time + 30 min buffer
         const safetyTimer = this.homey.setTimeout(async () => {
           this._safetyTimers.delete(safetyKey);
-          this._addLog('warn', `Safety timer fired for "${automation.name}" — forcing lights off`);
+          this._addLog('warn', `Safety timer fired for "${automation.name}" — running inactivity actions`);
           if (offAuto) {
             await this._evaluateAndRun(offAuto).catch(e =>
               this._addLog('error', `safety run "${offAuto.name}": ${e.message}`)
@@ -981,6 +1015,42 @@ class EasyAutomationApp extends App {
     }
   }
 
+  async _attachManualLightListeners(devices) {
+    const groups = this._manualLights.groups();
+    const sensorIds = new Set(groups.flatMap(group => group.sensorIds));
+    const lightIds = new Set(groups.flatMap(group => group.lightIds));
+    for (const sensorId of sensorIds) {
+      const sensor = devices[sensorId];
+      if (!sensor) continue;
+      try {
+        const instance = await sensor.makeCapabilityInstance('alarm_motion', value => this._manualLights.motionChanged(sensorId, value));
+        this._connectedItems.add(sensor);
+        this._capInstances.push(instance);
+      } catch (error) { this._addLog('warn', `Manual control sensor "${sensor.name}": ${error.message}`); }
+    }
+    for (const lightId of lightIds) {
+      const device = devices[lightId];
+      if (!device) continue;
+      this._lightWrites.seed(device);
+      for (const capability of ['onoff', 'dim']) {
+        if (!device.capabilities?.includes(capability)) continue;
+        try {
+          const instance = await device.makeCapabilityInstance(capability, () => {});
+          this._capInstances.push(instance);
+        } catch (error) { this._addLog('warn', `Manual control light "${device.name}": ${error.message}`); }
+      }
+      this._connectedItems.add(device);
+      this._addRawListener(device, 'capability', data => {
+        const { capabilityId, value, transactionId } = data || {};
+        if (capabilityId !== 'onoff' && capabilityId !== 'dim') return;
+        if (capabilityId === 'onoff' ? typeof value !== 'boolean' : !Number.isFinite(value)) return;
+        if (this._lightWrites.observe(lightId, capabilityId, value, transactionId)) {
+          this._manualLights.lightChanged(lightId).catch(error => this._addLog('error', 'Manual light control: ' + error.message));
+        }
+      });
+    }
+  }
+
   _switchMappingMatches(triggerArgs, eventData) {
     if (!eventData || typeof eventData !== 'object') return false;
     const keys = Object.keys(triggerArgs);
@@ -1010,6 +1080,9 @@ class EasyAutomationApp extends App {
       }
 
       const caps = device.capabilities || [];
+      // The dimmer's own light state already supplies manual values. An old
+      // override mapping must not replace those values with a preset brightness.
+      if (this._manualLights.groups().some(group => group.id === gid && group.lightIds.includes(ov.deviceId))) continue;
 
       // Normalise: support new { onMapping, offMapping } format + legacy triggerMappings[]
       const slotMappings = [];
@@ -1033,8 +1106,8 @@ class EasyAutomationApp extends App {
           const handler = async value => {
             if (value !== true) return;
             this._addLog('trigger', `Override switch "${device.name}" → group "${gid}" (${capL}, ${m._role})`);
-            if (m._role === 'off') await this._cancelOverride(gid);
-            else await this._doOverride(gid, ov.brightness, ov.durationMinutes).catch(e =>
+            if (m._role === 'off') await this._doOverride(gid, 0);
+            else await this._doOverride(gid, ov.brightness).catch(e =>
               this._addLog('error', `doOverride: ${e.message}`)
             );
           };
@@ -1054,8 +1127,8 @@ class EasyAutomationApp extends App {
             this._addRawListener(device, evName, async data => {
               if (!this._switchMappingMatches(m.eventData || {}, data || {})) return;
               this._addLog('trigger', `Override switch "${device.name}" → "${evName}" → group "${gid}" (${m._role})`);
-              if (m._role === 'off') await this._cancelOverride(gid);
-              else await this._doOverride(gid, ov.brightness, ov.durationMinutes).catch(() => {});
+              if (m._role === 'off') await this._doOverride(gid, 0);
+              else await this._doOverride(gid, ov.brightness).catch(() => {});
             });
           }
         }
@@ -1076,7 +1149,7 @@ class EasyAutomationApp extends App {
         const handler = async value => {
           if (value !== true) return;
           this._addLog('trigger', `Override switch "${device.name}" → group "${gid}"`);
-          await this._doOverride(gid, ov.brightness, ov.durationMinutes).catch(e =>
+          await this._doOverride(gid, ov.brightness).catch(e =>
             this._addLog('error', `doOverride: ${e.message}`)
           );
         };
@@ -1093,10 +1166,9 @@ class EasyAutomationApp extends App {
     }
   }
 
-  async _doOverride(gid, brightness, durationMinutes) {
-    this._nightIdle.cancelGroup(gid);
+  async _doOverride(gid, brightness) {
+    await this._manualLights.start(gid);
     const b        = brightness != null ? brightness : 1;
-    const durationMs = (durationMinutes || 30) * 60 * 1000;
 
     // Collect light device IDs from all ON automations in this group
     const lightIds = [];
@@ -1111,54 +1183,14 @@ class EasyAutomationApp extends App {
       }
     }
 
-    // Set lights to override brightness
-    try {
-      const api = await this._getApi();
-      const allDevices = await api.devices.getDevices();
-      await Promise.all(lightIds.map(async id => {
-        const d = allDevices[id];
-        if (!d) return;
-        if (d.capabilities && d.capabilities.includes('onoff'))
-          await d.setCapabilityValue('onoff', true).catch(() => {});
-        if (d.capabilities && d.capabilities.includes('dim'))
-          await d.setCapabilityValue('dim', b).catch(() => {});
-      }));
-      this._addLog('action', `Override: ${lightIds.length} light(s) → ${Math.round(b * 100)}% for ${durationMinutes}min`);
-    } catch (e) {
-      this._addLog('error', `Override set lights: ${e.message}`);
-      this._resetApi();
-    }
-
-    // Store override timestamp so motion triggers are skipped during the period
-    const endsAt    = Date.now() + durationMs;
-    const overrides = this._readOverrides();
-    overrides[gid]  = endsAt;
-    try { this.homey.settings.set('_overrides', JSON.stringify(overrides)); } catch (e) {}
-
-    // Cancel any previous override timer and set a new one
-    const timerKey = 'override:' + gid;
-    if (this._overrideTimers.has(timerKey))
-      this.homey.clearTimeout(this._overrideTimers.get(timerKey));
-    const timer = this.homey.setTimeout(() => {
-      this._overrideTimers.delete(timerKey);
-      const ov2 = this._readOverrides();
-      delete ov2[gid];
-      try { this.homey.settings.set('_overrides', JSON.stringify(ov2)); } catch (e) {}
-      this._addLog('info', `Override expired for group "${gid}"`);
-    }, durationMs);
-    this._overrideTimers.set(timerKey, timer);
-    this._addLog('info', `Override active for ${durationMinutes}min, group "${gid}"`);
-  }
-
-  _cancelOverride(gid) {
-    const timerKey = 'override:' + gid;
-    if (this._overrideTimers.has(timerKey))
-      this.homey.clearTimeout(this._overrideTimers.get(timerKey));
-    this._overrideTimers.delete(timerKey);
-    const overrides = this._readOverrides();
-    delete overrides[gid];
-    try { this.homey.settings.set('_overrides', JSON.stringify(overrides)); } catch (e) {}
-    this._addLog('info', `Override cancelled for group "${gid}"`);
+    const devices = this._liveDevices || await (await this._getApi()).devices.getDevices();
+    const actions = lightIds.flatMap(deviceId => {
+      const device = devices[deviceId];
+      if (b <= 0) return [{ type: 'turn_off', deviceId }];
+      return device?.capabilities?.includes('dim') ? [{ type: 'set_dim', deviceId, value: b }]
+        : [{ type: 'turn_on', deviceId }];
+    });
+    await this._runActions(actions, 'Manual light control');
   }
 
   async _runOvLearnRequest() {
@@ -1301,10 +1333,12 @@ class EasyAutomationApp extends App {
       const option = await api.geolocation.getOptionLocation();
       let location = option && (Object.hasOwn(option, 'value') ? option.value : option);
       if (typeof location === 'string') location = JSON.parse(location);
-      sunWindow(now, location);
+      sunWindow(now, location); // validate before caching
       this._sunLocationCache = { location, updatedAt: now };
     }
     const result = sunWindow(now, this._sunLocationCache.location);
+    const json = JSON.stringify(result);
+    if (this.homey.settings.get('_sunInfo') !== json) this.homey.settings.set('_sunInfo', json);
     return result;
   }
 
@@ -1334,6 +1368,7 @@ class EasyAutomationApp extends App {
 
   _detachAllListeners() {
     this._nightIdle.stop();
+    this._manualLights.stop();
     for (const { emitter, eventName, dispatch } of this._rawListeners) {
       try { emitter.removeListener(eventName, dispatch); } catch (e) {}
     }
@@ -1363,11 +1398,6 @@ class EasyAutomationApp extends App {
     }
     this._safetyTimers.clear();
 
-    for (const timer of this._overrideTimers.values()) {
-      try { this.homey.clearTimeout(timer); } catch (e) {}
-    }
-    this._overrideTimers.clear();
-
     try { this.homey.settings.set('_holdStatus', '{}'); } catch (e) {}
 
     if (this._minuteTimer) {
@@ -1383,13 +1413,29 @@ class EasyAutomationApp extends App {
   //  Conditions 
 
   async _evaluateAndRun(automation) {
+    const gid = automation._groupId || automation.id;
+    const automatic = () => !this._manualLights?.isManual(gid);
+    if (!automatic()) return;
     const ok = await this._checkConditions(automation.conditions || []);
     if (!ok) {
       this._addLog('skipped', `"${automation.name}" conditions not met`);
       return;
     }
+    if (!automatic()) return;
     if (NightIdle.supports(automation)) await this._nightIdle.start(automation, true);
-    else await this._runActions(automation.actions || [], automation.name);
+    else {
+      const actions = [...(automation.actions || [])];
+      // Older 100% motion templates stored only turn_on. Restore their normal
+      // brightness after a manual interval instead of retaining the manual dim.
+      if (automation.trigger?.type === 'motion_start') {
+        for (const action of automation.actions || []) {
+          if (action.type !== 'turn_on' || !this._liveDevices?.[action.deviceId]?.capabilities?.includes('dim')) continue;
+          if (!actions.some(a => a.deviceId === action.deviceId && (a.type === 'set_dim' || a.type === 'fade_to' ||
+            (a.type === 'set_capability' && a.capability === 'dim')))) actions.push({ type: 'set_dim', deviceId: action.deviceId, value: 1 });
+        }
+      }
+      await this._runActions(actions, automation.name, automatic);
+    }
 
     // Cancel safety timer if this was an OFF automation
     const offTypes = new Set(['motion_stop', 'door_close', 'switch_off']);
@@ -1539,6 +1585,12 @@ class EasyAutomationApp extends App {
   }
 
 
+  _writeCapability(device, capability, value, options) {
+    if (!this._lightWrites) return device.setCapabilityValue(capability, value, options);
+    const transactionId = this._lightWrites.command(device, capability, value, options);
+    return device.setCapabilityValue({ capabilityId: capability, value, opts: options, transactionId });
+  }
+
   async _runAction(action, devices, initiallyOn = new Set(), shouldRun = () => true) {
     const dev = id => {
       const d = devices[id];
@@ -1548,39 +1600,39 @@ class EasyAutomationApp extends App {
 
     switch (action.type) {
       case 'turn_on':
-        return dev(action.deviceId).setCapabilityValue('onoff', true);
+        return this._writeCapability(dev(action.deviceId), 'onoff', true);
       case 'turn_off':
-        return dev(action.deviceId).setCapabilityValue('onoff', false);
+        return this._writeCapability(dev(action.deviceId), 'onoff', false);
       case 'set_dim':
-        return dev(action.deviceId).setCapabilityValue('dim', parseFloat(action.value));
+        return this._writeCapability(dev(action.deviceId), 'dim', parseFloat(action.value));
       case 'set_color_temp':
-        return dev(action.deviceId).setCapabilityValue('light_temperature', parseFloat(action.value));
+        return this._writeCapability(dev(action.deviceId), 'light_temperature', parseFloat(action.value));
       case 'set_capability':
-        return dev(action.deviceId).setCapabilityValue(action.capability, action.value);
+        return this._writeCapability(dev(action.deviceId), action.capability, action.value);
       case 'fade_to': {
         const device = dev(action.deviceId);
         const target = Math.max(0, Math.min(1, parseFloat(action.value) || 1));
         const durMs  = Math.round((parseFloat(action.duration) || 0) * 1000);
-        if (durMs <= 0) return device.setCapabilityValue('dim', target);
+        if (durMs <= 0) return this._writeCapability(device, 'dim', target);
         // Only snap to 0 if the light was OFF when this action batch started.
         // Skipping the snap prevents the visible blink when lights are already on.
         if (!initiallyOn.has(action.deviceId)) {
-          await device.setCapabilityValue('dim', 0, { duration: 0 }).catch(() => {});
+          await this._writeCapability(device, 'dim', 0, { duration: 0 }).catch(() => {});
           await new Promise(r => this.homey.setTimeout(r, 150));
         }
         if (!shouldRun()) return;
-        return device.setCapabilityValue('dim', target, { duration: durMs });
+        return this._writeCapability(device, 'dim', target, { duration: durMs });
       }
       case 'fade_off': {
         const device = dev(action.deviceId);
         const durMs  = Math.round((parseFloat(action.duration) || 0) * 1000);
-        if (durMs <= 0) return device.setCapabilityValue('onoff', false);
+        if (durMs <= 0) return this._writeCapability(device, 'onoff', false);
         // Let the device driver handle the smooth dim-down
-        await device.setCapabilityValue('dim', 0, { duration: durMs });
+        await this._writeCapability(device, 'dim', 0, { duration: durMs });
         // Wait for transition to finish, then cut power
         await new Promise(r => this.homey.setTimeout(r, durMs + 200));
         if (!shouldRun()) return;
-        return device.setCapabilityValue('onoff', false);
+        return this._writeCapability(device, 'onoff', false);
       }
       case 'run_group': {
         const allAutos = this._getAutomations().filter(
@@ -1589,13 +1641,13 @@ class EasyAutomationApp extends App {
         const offTypes = new Set(['motion_stop', 'door_close', 'switch_off']);
         const target = allAutos.find(a => !a.trigger || !offTypes.has(a.trigger.type)) || allAutos[0];
         if (!target) throw new Error(`No automation found in group: ${action.groupId}`);
+        await this._manualLights?.start(action.groupId);
         return this._runActions(target.actions || [], target.name);
       }
       case 'override_group':
         return this._doOverride(
           action.groupId,
-          action.brightness != null ? action.brightness : 1,
-          action.durationMinutes || 30
+          action.brightness != null ? action.brightness : 1
         );
       case 'notify':
         return this.homey.notifications.createNotification({ excerpt: String(action.message) });

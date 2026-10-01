@@ -15,13 +15,10 @@ var Overview = {
     var byDevice = Object.create(null);
     State.devices.forEach(function(d) { byDevice[d.id] = d; });
     var rooms = Object.create(null);
-    var counts = { active: 0, paused: 0, disabled: 0, partial: 0 };
+    var counts = { active: 0, disabled: 0, partial: 0 };
     entries.forEach(function(entry) {
       var enabled = entry.items.filter(function(item) { return !!item.a.enabled; }).length;
-      var expires = Number((State.overrides || {})[entry.id]) || 0;
-      entry.status = enabled === 0 ? 'disabled' : enabled !== entry.items.length ? 'partial'
-        : expires > now ? 'paused' : 'active';
-      entry.expires = expires;
+      entry.status = enabled === 0 ? 'disabled' : enabled !== entry.items.length ? 'partial' : 'active';
       counts[entry.status]++;
       var targetZones = [], sensorZones = [], savedZone = '';
       entry.items.forEach(function(item) {
@@ -46,10 +43,6 @@ var Overview = {
 
   statusText: function(entry, now) {
     var text = i18n(entry.status === 'active' ? 'overview_active_single' : 'overview_' + entry.status);
-    if (entry.status === 'paused') {
-      var minutes = Math.max(1, Math.ceil((entry.expires - now) / 60000));
-      text += ' · ' + (minutes >= 60 ? Math.floor(minutes / 60) + ' h ' + (minutes % 60) + ' min' : minutes + ' min');
-    }
     return text;
   },
 
@@ -79,7 +72,6 @@ var Overview = {
     var now = Date.now(), model = Overview.model(now);
     el('overview-total').textContent = model.total;
     el('overview-active').textContent = model.counts.active;
-    el('overview-paused').textContent = model.counts.paused;
     el('overview-disabled').textContent = model.counts.disabled + model.counts.partial;
     el('overview-devices').textContent = model.devices;
     el('overview-summary').textContent = model.total ? i18n('overview_summary')
