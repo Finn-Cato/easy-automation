@@ -2,6 +2,8 @@
 
 const { App }    = require('homey');
 const { HomeyAPI } = require('homey-api');
+const NightIdle = require('./lib/night-idle');
+const sunWindow = require('./lib/sun-window');
 
 class EasyAutomationApp extends App {
 
@@ -9,7 +11,7 @@ class EasyAutomationApp extends App {
 
   async onInit() {
     const manifest = this.homey.manifest;
-    this.log(`Easy Automation v${manifest.version} starting...`);
+    this.log(`Light Guard v${manifest.version} starting...`);
 
     this._log            = [];
     this._logSaveTimer   = null;
@@ -27,9 +29,31 @@ class EasyAutomationApp extends App {
     this._api            = null;   // single shared HomeyAPI instance for all queries/actions
     this._listenerApi    = null;
     this._liveDevices    = null;   // live device map reused across triggers to avoid repeated getDevices() calls
+    this._sunLocationCache = null;
+    this._nightIdle = new NightIdle({
+      homey: this.homey,
+      getAutomations: () => this._getAutomations(),
+      getOverrides: () => this._readOverrides(),
+      getDevices: async () => {
+        const devices = await (await this._getApi()).devices.getDevices();
+        this._liveDevices = devices;
+        return devices;
+      },
+      getSunWindow: () => this._getSunWindow(),
+      runActions: (actions, name, guard) => this._runActions(actions, name, guard),
+      setHold: (gid, endsAt) => this._setHoldStatus(gid, endsAt),
+      clearHold: gid => this._clearHoldStatus(gid),
+      clearSafety: (gid, sensorId) => {
+        const key = sensorId + ':safety:' + gid;
+        if (this._safetyTimers.has(key)) this.homey.clearTimeout(this._safetyTimers.get(key));
+        this._safetyTimers.delete(key);
+      },
+      log: (level, message) => this._addLog(level, message),
+    });
 
     // Cache all devices now (API handlers have limited homey access)
     await this._refreshDeviceCache();
+    await this._getSunWindow().catch(error => this._addLog('warn', 'Sunset calculation: ' + error.message));
 
     // Watch for settings changes from the settings page
     this.homey.settings.on('set', key => {
@@ -135,7 +159,7 @@ class EasyAutomationApp extends App {
     // Serialize initial setup with any settings changes that arrive during startup.
     await this._queueListenerRefresh('startup');
 
-    this.log('Easy Automation ready');
+    this.log('Light Guard ready');
   }
 
   async onUninit() {
@@ -486,14 +510,15 @@ class EasyAutomationApp extends App {
       for (const m of (req.mappings || [])) {
         if (!m.groupId) continue;
         try {
-          const actionId = m._actionType === 'cancel_override'
-            ? 'homey:app:no.easy.automation:cancel_override'
+          const actionName = m._actionType === 'cancel_override'
+            ? 'cancel_override'
             : m._actionType === 'override' || m._isOverride
-              ? 'homey:app:no.easy.automation:override_group'
-              : 'homey:app:no.easy.automation:run_group';
+              ? 'override_group'
+              : 'run_group';
+          const actionId = `homey:app:${this.homey.manifest.id}:${actionName}`;
           // m.triggerId is already the fully-qualified combined ID e.g. "homey:device:{id}:sr_on_button_mode_g4"
           const flow = await api.flow.createFlow({ flow: {
-            name:    `[Easy Auto] ${m.groupName} ← ${m.triggerTitle}`,
+            name:    `[Light Guard] ${m.groupName} ← ${m.triggerTitle}`,
             enabled: true,
             trigger: { id: m.triggerId, args: m.triggerArgs || {} },
             conditions: [],
@@ -643,8 +668,9 @@ class EasyAutomationApp extends App {
   //  Listener management 
 
   async _attachAllListeners() {
+    this._nightIdle.prune();
     const automations = this._getAutomations().filter(automation => automation.enabled);
-    if (!automations.length) return;
+    if (!automations.length) { await this._nightIdle.restore({}); return; }
 
     const needsDeviceApi = automations.some(automation => {
       const triggerType = automation.trigger && automation.trigger.type;
@@ -663,6 +689,7 @@ class EasyAutomationApp extends App {
     this._listenerApi = await this._getApi();
     const devices     = await this._listenerApi.devices.getDevices();
     this._liveDevices = devices; // cache for use in _runActions
+    await this._nightIdle.restore(devices);
 
     for (const automation of automations) {
       await this._attachTrigger(automation, devices).catch(e =>
@@ -690,6 +717,7 @@ class EasyAutomationApp extends App {
     const automations = this._getAutomations();
     for (const automation of automations) {
       if (!automation.enabled) continue;
+      if (NightIdle.supports(automation)) continue;
       const t = automation.trigger;
       if (!t) continue;
 
@@ -865,6 +893,7 @@ class EasyAutomationApp extends App {
       this._addLog('trigger', `"${automation.name}" triggered by ${device.name}`);
 
       if (isOnTrigger) {
+        this._nightIdle.motionStarted(t.deviceId);
         const prefix = t.deviceId + ':';
         const toCancel = [...this._holdTimers.keys()].filter(k => k.startsWith(prefix));
         toCancel.forEach(key => {
@@ -906,7 +935,9 @@ class EasyAutomationApp extends App {
         this._addLog('info', `Safety timer set for "${automation.name}" (${Math.round(safetyMs/60000)} min)`);
       }
 
-      if (holdMs > 0) {
+      if (isOffTrigger && NightIdle.supports(automation)) {
+        await this._nightIdle.start(automation);
+      } else if (holdMs > 0) {
         const key = t.deviceId + ':' + automation.id;
         if (this._holdTimers.has(key)) this.homey.clearTimeout(this._holdTimers.get(key));
         const endsAt = Date.now() + holdMs;
@@ -1063,6 +1094,7 @@ class EasyAutomationApp extends App {
   }
 
   async _doOverride(gid, brightness, durationMinutes) {
+    this._nightIdle.cancelGroup(gid);
     const b        = brightness != null ? brightness : 1;
     const durationMs = (durationMinutes || 30) * 60 * 1000;
 
@@ -1262,6 +1294,20 @@ class EasyAutomationApp extends App {
     return fmt.format(now).replace('\u202f','').replace(' ',''); // "HH:MM"
   }
 
+  async _getSunWindow() {
+    const now = Date.now();
+    if (!this._sunLocationCache || now - this._sunLocationCache.updatedAt > 5 * 60 * 1000) {
+      const api = await this._getApi();
+      const option = await api.geolocation.getOptionLocation();
+      let location = option && (Object.hasOwn(option, 'value') ? option.value : option);
+      if (typeof location === 'string') location = JSON.parse(location);
+      sunWindow(now, location);
+      this._sunLocationCache = { location, updatedAt: now };
+    }
+    const result = sunWindow(now, this._sunLocationCache.location);
+    return result;
+  }
+
   _localDow() {
     const tz  = this.homey.clock.getTimezone();
     const now = new Date();
@@ -1287,6 +1333,7 @@ class EasyAutomationApp extends App {
   }
 
   _detachAllListeners() {
+    this._nightIdle.stop();
     for (const { emitter, eventName, dispatch } of this._rawListeners) {
       try { emitter.removeListener(eventName, dispatch); } catch (e) {}
     }
@@ -1341,7 +1388,8 @@ class EasyAutomationApp extends App {
       this._addLog('skipped', `"${automation.name}" conditions not met`);
       return;
     }
-    await this._runActions(automation.actions || [], automation.name);
+    if (NightIdle.supports(automation)) await this._nightIdle.start(automation, true);
+    else await this._runActions(automation.actions || [], automation.name);
 
     // Cancel safety timer if this was an OFF automation
     const offTypes = new Set(['motion_stop', 'door_close', 'switch_off']);
@@ -1406,7 +1454,7 @@ class EasyAutomationApp extends App {
 
   //  Actions 
 
-  async _runActions(actions, name) {
+  async _runActions(actions, name, shouldRun = () => true) {
     let devices;
     if (this._liveDevices) {
       devices = this._liveDevices;
@@ -1423,6 +1471,8 @@ class EasyAutomationApp extends App {
       }
     }
 
+    if (!shouldRun()) return [];
+
     // Snapshot which devices are already on BEFORE we run any actions.
     // Used by fade_to to skip the "snap to 0" step when lights are already lit,
     // which would otherwise cause a visible blink.
@@ -1436,6 +1486,7 @@ class EasyAutomationApp extends App {
     let i = 0;
 
     while (i < actions.length) {
+      if (!shouldRun()) break;
       const action = actions[i];
       const isFade = action.type === 'fade_to' || action.type === 'fade_off';
 
@@ -1462,7 +1513,8 @@ class EasyAutomationApp extends App {
         }
         const batchResults = await Promise.all(batch.map(async a => {
           try {
-            await this._runAction(a, devices, initiallyOn);
+            if (!shouldRun()) return { action: a.type, deviceId: a.deviceId, ok: false, skipped: true };
+            await this._runAction(a, devices, initiallyOn, shouldRun);
             this._addLog('action', `[${name}] ${a.type} OK`);
             return { action: a.type, deviceId: a.deviceId, ok: true };
           } catch (e) {
@@ -1473,7 +1525,7 @@ class EasyAutomationApp extends App {
         results.push(...batchResults);
       } else {
         try {
-          await this._runAction(action, devices, initiallyOn);
+          await this._runAction(action, devices, initiallyOn, shouldRun);
           results.push({ action: action.type, deviceId: action.deviceId, ok: true });
           this._addLog('action', `[${name}] ${action.type} OK`);
         } catch (e) {
@@ -1487,7 +1539,7 @@ class EasyAutomationApp extends App {
   }
 
 
-  async _runAction(action, devices, initiallyOn = new Set()) {
+  async _runAction(action, devices, initiallyOn = new Set(), shouldRun = () => true) {
     const dev = id => {
       const d = devices[id];
       if (!d) throw new Error(`Device not found: ${id}`);
@@ -1516,6 +1568,7 @@ class EasyAutomationApp extends App {
           await device.setCapabilityValue('dim', 0, { duration: 0 }).catch(() => {});
           await new Promise(r => this.homey.setTimeout(r, 150));
         }
+        if (!shouldRun()) return;
         return device.setCapabilityValue('dim', target, { duration: durMs });
       }
       case 'fade_off': {
@@ -1526,6 +1579,7 @@ class EasyAutomationApp extends App {
         await device.setCapabilityValue('dim', 0, { duration: durMs });
         // Wait for transition to finish, then cut power
         await new Promise(r => this.homey.setTimeout(r, durMs + 200));
+        if (!shouldRun()) return;
         return device.setCapabilityValue('onoff', false);
       }
       case 'run_group': {

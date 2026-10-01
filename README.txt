@@ -1,3 +1,5 @@
-Easy Automation lets you create room-based automations for lights, switches, doors, and other devices — all configured directly inside the app's settings page. No flows needed. Simply add a Room device, set up your automations with motion sensors, door contacts or switches as triggers, and let the app handle the rest.
+Light Guard creates room-based automations for lights, switches, doors, and other Homey devices. Set up motion sensors, door contacts, schedules, scenes, and wall switches directly in the app. An overview groups automations by room and shows recent activity.
 
-The app includes a built-in activity log, hold and override support for temporary pausing, and a Flow action card so you can trigger automation groups from Homey Flows when needed.
+Motion-controlled lights can stay dimly lit after sunset and switch off later or at sunrise. The app also supports hold times, temporary overrides, an activity log, and Flow action cards for automation groups.
+
+This app retains the technical Homey ID no.easy.automation so existing local installations keep their settings. The Light Guard features and interface build on work by Thomas Solvik; see NOTICE.md for attribution and the UI stylesheet license.

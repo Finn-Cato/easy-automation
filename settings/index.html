@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>Easy Automation</title>
+  <title>Light Guard</title>
 
   <script type="text/javascript" src="/homey.js" data-origin="settings"></script>
   <script>
@@ -53,374 +53,86 @@
           }
           await new Promise(function(resolve) { setTimeout(resolve, 350); });
         }
-        throw new Error('Homey did not respond in time. Check the Logs tab.');
+        throw new Error('Homey did not respond in time. Check the Events tab.');
       };
       translateDOM();
       App.init();
     }
   </script>
 
-  <style>
-    /* ── Colour tokens — light default, dark via OS/Homey ── */
-    :root {
-      --ea-bg:       #f2f2f7;
-      --ea-surface:  #ffffff;
-      --ea-card:     #ffffff;
-      --ea-border:   #e0e0e5;
-      --ea-divider:  #f2f2f7;
-      --ea-text:     #000000;
-      --ea-sub:      #000000;
-      --ea-accent:   #e8622a;
-      --ea-accent2:  #c94e1e;
-      --ea-green:    #34c759;
-      --ea-red:      #ff3b30;
-      --ea-input-bg: #fafafa;
-    }
-    @media (prefers-color-scheme: dark) {
-      :root {
-        --ea-bg:       #111111;
-        --ea-surface:  #1a1a1a;
-        --ea-card:     #1e1e1e;
-        --ea-border:   #2e2e2e;
-        --ea-divider:  #252525;
-        --ea-text:     #f0f0f0;
-        --ea-sub:      #ffffff;
-        --ea-input-bg: #252525;
-      }
-    }
-    .homey-dark-mode {
-      --ea-bg:       #111111;
-      --ea-surface:  #1a1a1a;
-      --ea-card:     #1e1e1e;
-      --ea-border:   #2e2e2e;
-      --ea-divider:  #252525;
-      --ea-text:     #f0f0f0;
-      --ea-sub:      #ffffff;
-      --ea-input-bg: #252525;
-    }
-
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 14px; background-color: var(--ea-bg); color: var(--ea-text); }
-    label { color: var(--ea-text) !important; }
-    #app { background-color: var(--ea-bg); color: var(--ea-text); min-height: 100vh; }
-
-    /* Top bar */
-    .topbar { background-color: var(--ea-surface); border-bottom: 1px solid var(--ea-border); padding: 10px 16px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 5; }
-    .topbar h1 { font-size: 15px; font-weight: 700; color: var(--ea-text); }
-    .topbar h1 span { color: var(--ea-accent); }
-    #status-msg { font-size: 11px; color: var(--ea-text); min-width: 60px; text-align: right; }
-
-    /* Tabs */
-    .tabs { display: flex; background-color: var(--ea-surface); border-bottom: 1px solid var(--ea-border); padding: 0 14px; }
-    .tab { padding: 8px 12px; background: none; border: none; border-bottom: 2px solid transparent; font-size: 12px; font-weight: 600; color: var(--ea-text); cursor: pointer; margin-bottom: -1px; }
-    .tab.on { color: var(--ea-accent); border-bottom-color: var(--ea-accent); }
-
-    /* Views */
-    .view { display: none; padding: 14px; max-width: 640px; margin: 0 auto; background-color: var(--ea-bg); color: var(--ea-text); }
-    .view.on { display: block; }
-    .sec-hdr { font-size: 13px; font-weight: 700; color: var(--ea-text); text-transform: uppercase; letter-spacing: .5px; margin: 14px 0 8px; }
-
-    /* Template cards */
-    .templates { display: grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap: 8px; margin-bottom: 6px; }
-    .tmpl-btn { -webkit-appearance: none; appearance: none; background-color: var(--ea-card) !important; border: 1.5px solid var(--ea-border); border-radius: 10px; padding: 10px 6px 8px; cursor: pointer; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 5px; transition: border-color .15s, box-shadow .15s; }
-    .tmpl-btn:hover { border-color: var(--ea-accent); box-shadow: 0 2px 12px rgba(232,98,42,.2); }
-    .tmpl-icon { font-size: 22px; line-height: 1; }
-    .tmpl-name { font-size: 11px; font-weight: 600; color: var(--ea-text); line-height: 1.3; }
-    @media (max-width: 480px) {
-      .templates { grid-template-columns: repeat(4, 1fr); gap: 5px; }
-      .tmpl-btn { padding: 7px 4px 6px; border-radius: 8px; gap: 3px; }
-      .tmpl-icon { font-size: 18px; }
-      .tmpl-name { font-size: 10px; }
-    }
-
-    /* Automation cards */
-    .auto-list-wrap { background-color: var(--ea-surface); border-radius: 10px; box-shadow: 0 1px 4px rgba(0,0,0,.3); overflow: hidden; border: 1px solid var(--ea-border); }
-    .card { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-bottom: 1px solid var(--ea-divider); cursor: default; border-left: 3px solid transparent; }
-    .card:last-child { border-bottom: none; }
-    .card-type-icon { font-size: 22px; line-height: 1; flex-shrink: 0; width: 28px; text-align: center; }
-    .card-active   { border-left-color: var(--ea-green); }
-    .card-paused   { border-left-color: var(--ea-text); }
-    .card-override { border-left-color: var(--ea-accent); }
-    .card-body { flex: 1; min-width: 0; cursor: pointer; padding: 2px 0; }
-    .card-body:hover .card-name { color: var(--ea-accent); }
-    .card-name { font-weight: 600; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: color .15s; color: var(--ea-text); }
-    .card-sub { font-size: 13px; font-weight: 600; color: var(--ea-text); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .card-chevron { color: var(--ea-text); font-size: 14px; flex-shrink: 0; pointer-events: none; }
-    .ico { -webkit-appearance: none; appearance: none; background-color: transparent !important; border: none; cursor: pointer; color: var(--ea-text); font-size: 14px; padding: 6px; border-radius: 6px; flex-shrink: 0; min-width: 28px; min-height: 28px; display: flex; align-items: center; justify-content: center; }
-    .ico:hover { background: rgba(255,59,48,.15); color: var(--ea-red); }
-    .ico-run:hover { background: rgba(232,98,42,.15) !important; color: var(--ea-accent) !important; }
-    .ico-pause:hover { background: rgba(232,98,42,.15) !important; color: var(--ea-accent) !important; }
-    .ico-pause.active { color: var(--ea-accent); }
-    .ov-time-btn { -webkit-appearance: none; appearance: none; flex: 1; padding: 8px 6px; border: 1.5px solid var(--ea-border); border-radius: 8px; background-color: var(--ea-input-bg); font-size: 13px; font-weight: 600; color: var(--ea-text); cursor: pointer; text-align: center; transition: border-color .15s, background .15s; }
-    .ov-time-btn:hover { border-color: var(--ea-accent); background: rgba(232,98,42,.12); color: var(--ea-accent); }
-    .ov-resume-btn { -webkit-appearance: none; appearance: none; width: 100%; padding: 8px; border: 1.5px solid var(--ea-red); border-radius: 8px; background: rgba(255,59,48,.12); color: var(--ea-red); font-size: 13px; font-weight: 600; cursor: pointer; margin-top: 10px; }
-    .ov-resume-btn:hover { background: var(--ea-red); color: #fff; }
-    .light-grid { display: flex; flex-wrap: wrap; gap: 8px; padding: 10px; background-color: var(--ea-input-bg); border-radius: 10px; margin-bottom: 10px; }
-    .light-tile { display: flex; flex-direction: column; align-items: center; gap: 3px; min-width: 56px; max-width: 80px; }
-    .light-tile-icon { font-size: 22px; line-height: 1; }
-    .light-tile-name { font-size: 10px; font-weight: 600; text-align: center; color: var(--ea-text); word-break: break-word; line-height: 1.2; }
-    .light-tile-state { font-size: 10px; font-weight: 700; }
-
-    /* Toggle */
-    .tog { position: relative; width: 36px; height: 20px; flex-shrink: 0; }
-    .tog input { opacity: 0; width: 0; height: 0; position: absolute; }
-    .tog-track { position: absolute; inset: 0; background: var(--ea-border); border-radius: 10px; cursor: pointer; transition: background .2s; }
-    .tog-track::after { content: ''; position: absolute; width: 16px; height: 16px; background: #888; border-radius: 50%; top: 2px; left: 2px; transition: transform .2s; box-shadow: 0 1px 3px rgba(0,0,0,.5); }
-    .tog input:checked + .tog-track { background-color: var(--ea-green); }
-    .tog input:checked + .tog-track::after { transform: translateX(16px); background: #fff; }
-
-    /* Buttons */
-    .btn { -webkit-appearance: none; appearance: none; padding: 7px 14px; border: none; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; transition: opacity .15s; }
-    .btn:disabled { opacity: .4; cursor: not-allowed; }
-    .btn-blue { background-color: var(--ea-accent) !important; color: #fff; }
-    .btn-blue:hover:not(:disabled) { background-color: var(--ea-accent2) !important; }
-    .btn-gray { background-color: var(--ea-border) !important; color: var(--ea-text) !important; border: 1px solid var(--ea-border); }
-    .btn-gray:hover:not(:disabled) { background-color: var(--ea-divider) !important; }
-
-    /* Modal overlay */
-    .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.75); z-index: 50; overflow: auto; padding: 14px; }
-    .overlay.on { display: flex; align-items: center; justify-content: center; }
-    .modal { background-color: var(--ea-surface); border: 1px solid var(--ea-border); border-radius: 12px; width: 100%; max-width: 480px; padding: 16px 18px 20px; margin: auto; box-shadow: 0 8px 40px rgba(0,0,0,.6); min-width: 0; overflow-x: clip; }
-    .modal-hdr { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
-    .modal-hdr h2 { font-size: 15px; font-weight: 700; color: var(--ea-text); }
-    .modal-ftr { display: flex; gap: 8px; justify-content: flex-end; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--ea-border); }
-    .close-btn { background: none; border: none; cursor: pointer; color: var(--ea-text); font-size: 18px; padding: 2px 6px; border-radius: 6px; }
-    .close-btn:hover { background-color: var(--ea-border); color: var(--ea-text); }
-
-    /* Form */
-    .fgrp { margin-bottom: 10px; }
-    .flabel { display: block; font-size: 13px; font-weight: 800; color: var(--ea-text) !important; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 4px; }
-    .finput { width: 100%; padding: 7px 10px; border: 1.5px solid var(--ea-border); border-radius: 8px; font-size: 14px; color: var(--ea-text); background-color: var(--ea-input-bg); outline: none; font-family: inherit; transition: border-color .15s; }
-    .finput:focus { border-color: var(--ea-accent); background-color: var(--ea-card); }
-    select.finput { cursor: pointer; }
-    .sep { border: none; border-top: 1px solid var(--ea-border); margin: 10px 0; }
-
-    /* Time row */
-    .time-row { display: flex; gap: 10px; align-items: flex-end; }
-    .time-row .fgrp { flex: 1; }
-
-    /* Day-of-week selector */
-    .day-row { display:flex; gap:6px; flex-wrap:wrap; }
-    .day-btn { cursor:pointer; }
-    .day-btn input { display:none; }
-    .day-btn span { display:inline-block; padding:4px 8px; border-radius:6px; font-size:12px; font-weight:600; background-color:var(--ea-input-bg); border:1.5px solid var(--ea-border); color:var(--ea-text); transition:all 0.15s; }
-    .day-btn input:checked + span { background-color:var(--ea-accent); border-color:var(--ea-accent); color:#fff; }
-
-    /* Custom 24h time picker (dropdown) */
-    .tp-wrap { display:inline-flex; align-items:center; gap:2px; user-select:none; }
-    .tp-sel  { font-size:15px; font-weight:600; color:var(--ea-text); background-color:var(--ea-input-bg); border:1px solid var(--ea-border); border-radius:4px; padding:4px 3px; cursor:pointer; font-family:inherit; -webkit-appearance:none; appearance:none; text-align:center; width:44px; }
-    .tp-sel:focus { border-color:var(--ea-accent); outline:none; }
-    .tp-sep  { font-size:15px; font-weight:700; color:var(--ea-text); }
-
-    /* Brightness slider */
-    .slider-row { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
-    .slider-row input[type=range] { flex: 1; -webkit-appearance: none; height: 4px; background: var(--ea-border); border-radius: 2px; outline: none; cursor: pointer; }
-    .slider-row input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 20px; height: 20px; background-color: var(--ea-accent); border-radius: 50%; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,.4); }
-    .slider-val { font-size: 15px; font-weight: 700; color: var(--ea-accent); min-width: 36px; text-align: right; }
-
-    /* Device picker */
-    .dp-wrap { max-height: 180px; overflow-y: auto; border: 1.5px solid var(--ea-border); border-radius: 8px; background-color: var(--ea-input-bg); }
-    .dp-item { display: flex; align-items: center; gap: 8px; padding: 7px 10px; cursor: pointer; border-bottom: 1px solid var(--ea-card); }
-    .dp-item:last-child { border-bottom: none; }
-    .dp-item:hover { background: rgba(232,98,42,.1); }
-    .dp-item input[type=checkbox] { width: 16px; height: 16px; cursor: pointer; accent-color: var(--ea-accent); }
-    .dp-name { font-size: 13px; flex: 1; color: var(--ea-text); }
-    .dp-zone { font-size: 11px; color: var(--ea-text); }
-    .dp-empty { padding: 12px; text-align: center; color: var(--ea-text); font-size: 12px; }
-    .dp-grp { padding: 4px 10px 2px; font-size: 10px; font-weight: 700; color: var(--ea-text); text-transform: uppercase; letter-spacing: .4px; background-color: var(--ea-card); }
-    .dp-selall { font-size: 11px; color: var(--ea-accent); cursor: pointer; margin-top: 4px; display: inline-block; }
-    .scene-picker-tools { margin:0 0 6px; color:var(--ea-sub); font-size:11px; line-height:1.35; }
-
-    /* Check row */
-    .check-row { display: flex; align-items: center; gap: 8px; padding: 6px 0; }
-    .check-row input[type=checkbox] { width: 16px; height: 16px; accent-color: var(--ea-accent); cursor: pointer; flex-shrink: 0; }
-    .check-row label { font-size: 14px; font-weight: 700; cursor: pointer; color: var(--ea-text) !important; }
-
-    /* Devices tab */
-    .device-card { background-color: var(--ea-card); border: 1px solid var(--ea-border); border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,.2); margin-bottom: 6px; padding: 8px 10px; display: flex; align-items: center; gap: 8px; }
-    .device-card-info { flex: 1; }
-    .device-card-name { font-weight: 600; font-size: 13px; color: var(--ea-text); }
-    .device-card-sub { font-size: 13px; color: var(--ea-text); margin-top: 1px; }
-    .badge { font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 5px; background: rgba(232,98,42,.15); color: var(--ea-accent); }
-
-    /* Log */
-    .log-row { display: flex; gap: 8px; padding: 5px 12px; border-bottom: 1px solid var(--ea-divider); font-size: 12px; align-items: baseline; }
-    .log-ts { color: var(--ea-text); font-size: 10px; white-space: nowrap; flex-shrink: 0; }
-    .log-lv { font-size: 9px; font-weight: 700; text-transform: uppercase; border-radius: 3px; padding: 1px 5px; flex-shrink: 0; width: 48px; text-align: center; }
-    .log-lv.info { background: rgba(41,128,185,.2); color: #5dade2; }
-    .log-lv.error { background: rgba(255,59,48,.2); color: #ff6b60; }
-    .log-lv.warn { background: rgba(255,149,0,.2); color: #ffb340; }
-    .log-lv.trigger { background: rgba(52,199,89,.2); color: #4cd964; }
-    .log-lv.action { background: rgba(232,98,42,.2); color: var(--ea-accent); }
-    .log-lv.skipped { background-color: var(--ea-divider); color: var(--ea-text); }
-    .log-lv.test { background: rgba(255,149,0,.2); color: #ffb340; }
-    .log-msg { flex: 1; color: var(--ea-text); }
-
-    .loader { text-align: center; padding: 28px; color: var(--ea-text); font-size: 13px; }
-    .empty { text-align: center; padding: 30px 16px; color: var(--ea-text); }
-    .empty .icon { font-size: 28px; margin-bottom: 8px; }
-    .empty p { font-size: 13px; line-height: 1.6; }
-    .row-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-    .row-top h2 { font-size: 14px; font-weight: 700; color: var(--ea-text); }
-
-    /* Modal inner tabs */
-    .modal-tab { background: none; border: none; border-bottom: 2px solid transparent; padding: 7px 12px; font-size: 12px; font-weight: 600; color: var(--ea-text); cursor: pointer; margin-bottom: -1px; font-family: inherit; }
-    .modal-tab.on { color: var(--ea-accent); border-bottom-color: var(--ea-accent); }
-
-    /* Small action button */
-    .btn-sm { background-color:var(--ea-input-bg); border:1px solid var(--ea-border); color:var(--ea-text); border-radius:6px; padding:5px 10px; font-size:12px; font-weight:600; cursor:pointer; font-family:inherit; transition:border-color .15s; }
-    .btn-sm:hover { border-color:var(--ea-accent); color:var(--ea-accent); }
-
-    /* Lights tab */
-    .lt-card { padding: 10px 12px; border-bottom: 1px solid var(--ea-divider); }
-    .lt-card:last-child { border-bottom: none; }
-    .lt-name { font-weight: 600; font-size: 13px; margin-bottom: 6px; color: var(--ea-text); }
-    .lt-row { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
-    .lt-row:last-child { margin-bottom: 0; }
-    .lt-label { font-size: 13px; font-weight: 700; color: var(--ea-text); width: 52px; flex-shrink: 0; }
-
-    /* ── Mobile: prevent iOS zoom on input focus ── */
-    @media (max-width: 480px) {
-      .finput { font-size: 16px; }
-    }
-
-    /* Refined Homey settings UI */
-    :root {
-      --ea-bg: #f4f7fb;
-      --ea-surface: #fff;
-      --ea-card: #fff;
-      --ea-border: #dfe6ef;
-      --ea-divider: #edf1f6;
-      --ea-text: #172334;
-      --ea-sub: #65748a;
-      --ea-accent: #1565c0;
-      --ea-accent2: #0d4f9b;
-      --ea-input-bg: #f8fafc;
-    }
-    @media (prefers-color-scheme: dark) {
-      :root {
-        --ea-bg: #101722;
-        --ea-surface: #172230;
-        --ea-card: #1b2939;
-        --ea-border: #2d3b4d;
-        --ea-divider: #243244;
-        --ea-text: #edf3fa;
-        --ea-sub: #a8b6c8;
-        --ea-accent: #64a9f5;
-        --ea-accent2: #438ddd;
-        --ea-input-bg: #121d2a;
-      }
-    }
-    .homey-dark-mode {
-      --ea-bg: #101722;
-      --ea-surface: #172230;
-      --ea-card: #1b2939;
-      --ea-border: #2d3b4d;
-      --ea-divider: #243244;
-      --ea-text: #edf3fa;
-      --ea-sub: #a8b6c8;
-      --ea-accent: #64a9f5;
-      --ea-accent2: #438ddd;
-      --ea-input-bg: #121d2a;
-    }
-    body { line-height: 1.45; }
-    .topbar { padding: 14px max(18px, calc((100vw - 1000px) / 2)); }
-    .topbar h1 { font-size: 17px; letter-spacing: -.02em; }
-    .tabs { position: sticky; top: 49px; z-index: 4; gap: 4px; padding: 0 max(12px, calc((100vw - 1000px) / 2)); overflow-x: auto; scrollbar-width: none; }
-    .tabs::-webkit-scrollbar { display: none; }
-    .tab { min-height: 44px; padding: 10px 16px; white-space: nowrap; font-size: 13px; color: var(--ea-sub); }
-    .tab.on { color: var(--ea-accent); }
-    .view { max-width: 1000px; padding: 24px 20px 36px; }
-    .sec-hdr { margin-top: 20px; color: var(--ea-sub); font-size: 11px; letter-spacing: .09em; }
-    .templates { gap: 10px; }
-    .tmpl-btn { min-height: 88px; border-radius: 14px; padding: 14px 10px; box-shadow: 0 1px 2px rgba(16,35,58,.04); }
-    .tmpl-btn:hover { transform: translateY(-1px); box-shadow: 0 5px 16px rgba(21,101,192,.12); }
-    .tmpl-icon { font-size: 25px; }
-    .tmpl-name { font-size: 12px; }
-    .auto-list-wrap { border-radius: 14px; box-shadow: 0 3px 12px rgba(16,35,58,.06); }
-    .card { min-height: 70px; gap: 11px; padding: 12px 14px; transition: background-color .15s; }
-    .card:hover { background: color-mix(in srgb, var(--ea-accent) 4%, var(--ea-surface)); }
-    .card-name { font-size: 14px; }
-    .card-sub, .device-card-sub, .log-ts, .dp-zone { color: var(--ea-sub); font-weight: 400; }
-    .card-sub { font-size: 12px; }
-    .ico { min-width: 36px; min-height: 36px; }
-    .btn, .btn-sm, .ov-time-btn { min-height: 38px; }
-    .finput { min-height: 42px; }
-    .dp-wrap { max-height: 240px; }
-    .device-card { min-height: 64px; border-radius: 12px; padding: 10px 12px; }
-    .log-row { padding: 8px 12px; }
-    .log-msg { overflow-wrap: anywhere; }
-    .overlay { background: rgba(7,16,28,.58); backdrop-filter: blur(3px); }
-    .modal { max-height: calc(100vh - 28px); overflow-y: auto; overflow-x: clip; border-radius: 18px; padding: 20px; box-shadow: 0 18px 60px rgba(0,0,0,.24); }
-    .modal-hdr h2 { font-size: 17px; }
-    .modal-ftr { position: sticky; bottom: 0; background: var(--ea-surface); padding: 12px 0 4px; }
-    .close-btn { min-width: 36px; min-height: 36px; }
-    :focus-visible { outline: 3px solid color-mix(in srgb, var(--ea-accent) 55%, transparent); outline-offset: 2px; }
-    button { font-family: inherit; }
-    @media (max-width: 600px) {
-      .topbar { padding: 12px 16px; }
-      .tabs { top: 45px; padding: 0 8px; }
-      .tab { padding: 9px 12px; }
-      .view { padding: 18px 14px 28px; }
-      .card { gap: 8px; padding: 10px; }
-      .card-type-icon { width: 24px; font-size: 20px; }
-      .card-sub { white-space: normal; }
-      .modal { padding: 16px; }
-      .modal-ftr { bottom: 0; }
-    }
-    @media (prefers-reduced-motion: reduce) {
-      *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; }
-    }
-  </style>
+  <link rel="stylesheet" href="base.css">
+  <link rel="stylesheet" href="style.css">
 </head>
-<body>
+<body class="light-guard-settings">
 <div id="app">
 
-<div class="topbar">
-  <h1>Easy <span>Automation</span></h1>
-  <span id="status-msg"></span>
-</div>
-
-<div class="tabs" role="tablist" aria-label="Easy Automation sections">
-  <button class="tab on"  id="tab-auto"    role="tab" aria-selected="true" aria-controls="view-auto" onclick="UI.tab('auto')" data-i18n="tab_auto">Automations</button>
-  <button class="tab"     id="tab-devices" role="tab" aria-selected="false" aria-controls="view-devices" onclick="UI.tab('devices')" data-i18n="tab_devices">Devices</button>
-  <button class="tab"     id="tab-logs"    role="tab" aria-selected="false" aria-controls="view-logs" onclick="UI.tab('logs')" data-i18n="tab_logs">Logs</button>
-  <button class="tab"     id="tab-help"    role="tab" aria-selected="false" aria-controls="view-help" onclick="UI.tab('help')" data-i18n="tab_help">Help</button>
-</div>
+<header class="header-top">
+  <div class="header-title"><h1>Light <span>Guard</span></h1><p class="header-subtitle" data-i18n="header_subtitle">Lights and automations, room by room</p></div>
+  <div class="header-mark" aria-hidden="true"><svg viewBox="0 0 48 48"><path d="M16 30c0-5-5-7-5-14a13 13 0 0 1 26 0c0 7-5 9-5 14M16 30h16v6H16zM19 40h10M24 1V0M5 7 2 4m41 3 3-3M4 21H0m44 0h4"/></svg></div>
+  <span class="app-version">v0.1.14</span>
+</header>
+<div id="connection-status" class="connection-banner" role="status" data-i18n="overview_loading">Loading settings from Homey…</div>
+<nav class="tab-bar" aria-label="Main menu" data-i18n-aria="main_menu">
+  <button type="button" class="tab hy-nostyle on" id="tab-overview" onclick="UI.tab('overview')" aria-current="page" aria-controls="view-overview"><span class="tab-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m3 10 9-7 9 7M5 9v12h5v-7h4v7h5V9"/></svg></span><span class="tab-label" data-i18n="tab_overview">Overview</span></button>
+  <button type="button" class="tab hy-nostyle" id="tab-auto" onclick="UI.tab('auto')" aria-controls="view-auto"><span class="tab-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m13 2-9 12h7l-1 8 10-12h-7z"/></svg></span><span class="tab-label" data-i18n="tab_auto">Automations</span></button>
+  <button type="button" class="tab hy-nostyle" id="tab-devices" onclick="UI.tab('devices')" aria-controls="view-devices"><span class="tab-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 21h8m-4-5v5"/></svg></span><span class="tab-label" data-i18n="tab_devices">Devices</span></button>
+  <button type="button" class="tab hy-nostyle" id="tab-logs" onclick="UI.tab('logs')" aria-controls="view-logs"><span class="tab-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 3h14v18H5zM9 7h6m-6 5h6m-6 5h4"/></svg></span><span class="tab-label" data-i18n="tab_logs">Events</span></button>
+  <button type="button" class="tab hy-nostyle" id="tab-settings" onclick="UI.tab('settings')" aria-controls="view-settings"><span class="tab-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="3"/><circle cx="15" cy="17" r="3"/></svg></span><span class="tab-label" data-i18n="tab_settings">Settings</span></button>
+</nav>
+<div id="status-msg" role="status" aria-live="polite"></div>
+<section class="view on" id="view-overview" aria-labelledby="tab-overview">
+  <div class="surface-card overview-hero">
+    <div class="eyebrow" data-i18n="overview_eyebrow">YOUR LIGHT AUTOMATIONS</div>
+    <div class="overview-total"><strong id="overview-total">–</strong><span data-i18n="overview_automations">automations</span></div>
+    <p class="hint" id="overview-summary" data-i18n="overview_ready">Build your first room automation to get started.</p>
+    <div class="status-grid">
+      <div class="status-box"><span class="status-label"><i class="status-dot active" aria-hidden="true"></i><span data-i18n="overview_active">Active</span></span><strong id="overview-active">–</strong></div>
+      <div class="status-box"><span class="status-label"><i class="status-dot paused" aria-hidden="true"></i><span data-i18n="overview_paused">Paused</span></span><strong id="overview-paused">–</strong></div>
+      <div class="status-box"><span class="status-label"><i class="status-dot" aria-hidden="true"></i><span data-i18n="overview_disabled">Disabled</span></span><strong id="overview-disabled">–</strong></div>
+      <div class="status-box"><span class="status-label"><i class="status-dot devices" aria-hidden="true"></i><span data-i18n="tab_devices">Devices</span></span><strong id="overview-devices">–</strong></div>
+    </div>
+    <div class="hero-actions"><button class="btn btn-blue hy-nostyle" onclick="UI.tab('auto')" data-i18n="overview_manage">Manage automations</button><button class="btn btn-gray hy-nostyle" onclick="UI.tab('devices')" data-i18n="overview_choose_devices">Choose devices</button></div>
+  </div>
+  <div class="section-heading"><h2 data-i18n="overview_rooms">Rooms and groups</h2><button class="btn-sm hy-nostyle" onclick="UI.tab('auto')" data-i18n="overview_new">+ New automation</button></div>
+  <div id="overview-rooms" class="room-grid"><div class="loader" data-i18n="overview_loading">Loading settings from Homey…</div></div>
+  <div class="section-heading"><h2 data-i18n="overview_recent">Recent events</h2><button class="btn-sm hy-nostyle" onclick="UI.tab('logs')" data-i18n="overview_all_events">View all</button></div>
+  <div class="surface-card" id="overview-events"><p class="hint" data-i18n="overview_no_events">Events appear here when an automation runs.</p></div>
+</section>
 
 <!-- Automations -->
-<div class="view on" id="view-auto" role="tabpanel" aria-labelledby="tab-auto">
+<div class="view" id="view-auto" aria-labelledby="tab-auto">
+  <div class="page-heading"><h2 data-i18n="tab_auto">Automations</h2><p data-i18n="auto_intro">Choose a template, then set up the lights and sensors for your room.</p></div>
   <div class="sec-hdr" data-i18n="sec_add_auto">Add new automation</div>
   <div class="templates">
-    <button class="tmpl-btn" onclick="TModal.open('motion_lights')">
+    <button class="hy-nostyle tmpl-btn" onclick="TModal.open('motion_lights')">
       <span class="tmpl-icon">🏃</span>
       <span class="tmpl-name" data-i18n-html="tmpl_motion">Motion<br>→ Lights</span>
     </button>
-    <button class="tmpl-btn" onclick="TModal.open('smart_dim')">
+    <button class="hy-nostyle tmpl-btn" onclick="TModal.open('smart_dim')">
       <span class="tmpl-icon">🌙</span>
       <span class="tmpl-name" data-i18n-html="tmpl_smart_dim">Smart Dim<br>Day / Night</span>
     </button>
-    <button class="tmpl-btn" onclick="TModal.open('door_lights')">
+    <button class="hy-nostyle tmpl-btn" onclick="TModal.open('door_lights')">
       <span class="tmpl-icon">🚪</span>
       <span class="tmpl-name" data-i18n-html="tmpl_door">Door<br>→ Lights</span>
     </button>
-    <button class="tmpl-btn" onclick="TModal.open('schedule')">
+    <button class="hy-nostyle tmpl-btn" onclick="TModal.open('schedule')">
       <span class="tmpl-icon">⏰</span>
       <span class="tmpl-name" data-i18n-html="tmpl_schedule">Schedule<br>Lights</span>
     </button>
-    <button class="tmpl-btn" onclick="TModal.open('scene')">
+    <button class="hy-nostyle tmpl-btn" onclick="TModal.open('scene')">
       <span class="tmpl-icon">💡</span>
       <span class="tmpl-name" data-i18n-html="tmpl_scene">Light<br>Group</span>
     </button>
-    <button class="tmpl-btn" onclick="TModal.open('switch')">
+    <button class="hy-nostyle tmpl-btn" onclick="TModal.open('switch')">
       <span class="tmpl-icon">🔘</span>
       <span class="tmpl-name" data-i18n-html="tmpl_switch">Wall Switch<br>/ Button</span>
     </button>
-    <button class="tmpl-btn" onclick="TModal.open('zone_control')">
+    <button class="hy-nostyle tmpl-btn" onclick="TModal.open('zone_control')">
       <span class="tmpl-icon">🏠</span>
       <span class="tmpl-name" data-i18n-html="tmpl_zone">Zone<br>Control</span>
     </button>
-    <button class="tmpl-btn" onclick="TModal.open('custom')">
+    <button class="hy-nostyle tmpl-btn" onclick="TModal.open('custom')">
       <span class="tmpl-icon">⚙️</span>
       <span class="tmpl-name" data-i18n-html="tmpl_custom">Custom<br>Advanced</span>
     </button>
@@ -431,20 +143,20 @@
 </div>
 
 <!-- Devices tab -->
-<div class="view" id="view-devices" role="tabpanel" aria-labelledby="tab-devices">
+<div class="view" id="view-devices" aria-labelledby="tab-devices">
   <div class="row-top">
     <h2 data-i18n="tab_devices">Devices</h2>
-    <button class="btn btn-blue" id="btn-refresh-dev" onclick="DevTab.refresh()" data-i18n="btn_refresh">Refresh</button>
+    <button class="hy-nostyle btn btn-blue" id="btn-refresh-dev" onclick="DevTab.refresh()" data-i18n="btn_refresh">Refresh</button>
   </div>
   <div style="font-size:13px;color:var(--ea-text);margin-bottom:12px" data-i18n="dev_desc">Check the devices you want to use in automations. Unchecked devices are hidden from all pickers. If nothing is checked, all devices are shown.</div>
   <div id="dev-filter-bar" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px"></div>
   <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;flex-wrap:wrap">
     <span style="font-size:11px;font-weight:600;color:var(--ea-text);text-transform:uppercase;letter-spacing:.5px;white-space:nowrap" data-i18n="dev_filtered">Filtered:</span>
-    <button class="btn-sm" onclick="DevTab.selectVisible()" data-i18n="dev_check_all">✓ Check all</button>
-    <button class="btn-sm" onclick="DevTab.uncheckVisible()" data-i18n="dev_uncheck_all">✗ Uncheck all</button>
+    <button class="hy-nostyle btn-sm" onclick="DevTab.selectVisible()" data-i18n="dev_check_all">✓ Check all</button>
+    <button class="hy-nostyle btn-sm" onclick="DevTab.uncheckVisible()" data-i18n="dev_uncheck_all">✗ Uncheck all</button>
     <div style="width:1px;height:20px;background:var(--ea-border);flex-shrink:0"></div>
     <span style="font-size:11px;font-weight:600;color:var(--ea-text);text-transform:uppercase;letter-spacing:.5px;white-space:nowrap" data-i18n="dev_all">All:</span>
-    <button class="btn-sm" onclick="DevTab.selectNone()" data-i18n="dev_clear">Clear selection</button>
+    <button class="hy-nostyle btn-sm" onclick="DevTab.selectNone()" data-i18n="dev_clear">Clear selection</button>
   </div>
   <div id="device-list"><div class="loader">Loading…</div></div>
 </div>
@@ -452,13 +164,13 @@
 
 <!-- Test tab -->
 
-<!-- Logs tab -->
-<div class="view" id="view-logs" role="tabpanel" aria-labelledby="tab-logs">
+<!-- Events tab -->
+<div class="view" id="view-logs" aria-labelledby="tab-logs">
   <div class="row-top">
-    <h2 data-i18n="log_title">Activity Log</h2>
+    <h2 data-i18n="log_title">Events</h2>
     <div style="display:flex;gap:8px">
-      <button class="btn btn-gray" onclick="LogTab.copy()" data-i18n="btn_copy_log">Copy Log</button>
-      <button class="btn btn-gray" onclick="LogTab.load()" data-i18n="btn_refresh">Refresh</button>
+      <button class="hy-nostyle btn btn-gray" onclick="LogTab.copy()" data-i18n="btn_copy_log">Copy Log</button>
+      <button class="hy-nostyle btn btn-gray" onclick="LogTab.load()" data-i18n="btn_refresh">Refresh</button>
     </div>
   </div>
   <div style="background:var(--ea-surface);border:1px solid var(--ea-border);border-radius:14px;overflow:hidden">
@@ -466,16 +178,36 @@
   </div>
 </div>
 
-<!-- Help tab -->
-<div class="view" id="view-help" role="tabpanel" aria-labelledby="tab-help">
+<section class="view" id="view-settings" aria-labelledby="tab-settings">
+  <div class="page-heading"><h2 data-i18n="tab_settings">Settings</h2><p data-i18n="settings_intro">Homey connection, help and information about Light Guard.</p></div>
+      <!-- PAT section -->
+    <div class="surface-card settings-token">
+      <div style="font-size:13px;font-weight:700;color:var(--ea-text);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px" data-i18n="help_pat_hdr">🔑 Personal Access Token</div>
+      <div style="font-size:13px;color:var(--ea-text);margin-bottom:14px;line-height:1.6" data-i18n-html="help_pat_desc">
+        Required for <strong>Wall Switch</strong> automations that use Homey Flows (e.g. Z-Wave remotes like NAMRON). Without this token the app cannot create the flows automatically.<br><br>
+        To create a token: go to <strong>my.homey.app</strong> → Settings → API → <em>Create a Personal Access Token</em> and enable the <strong>Flows</strong> permission.
+      </div>
+      <div class="pat-controls">
+        <input class="hy-nostyle" aria-label="Personal Access Token" data-i18n-aria="help_pat_hdr" id="pat-input" type="password" placeholder="Paste token here…" data-i18n-ph="help_pat_ph"
+          style="flex:1;padding:9px 12px;border:1.5px solid var(--ea-border);border-radius:10px;background:var(--ea-input-bg);color:var(--ea-text);font-size:14px;font-family:inherit;outline:none"/>
+        <button class="hy-nostyle btn btn-blue" onclick="PATSettings.save()" style="white-space:nowrap" data-i18n="btn_save">Save</button>
+        <button class="hy-nostyle btn btn-gray" onclick="PATSettings.clear()" id="pat-clear-btn" style="display:none;white-space:nowrap" data-i18n="btn_remove">Remove</button>
+      </div>
+      <div id="pat-status" style="font-size:12px;color:var(--ea-text);margin-top:8px"></div>
+    </div>
+
+  <details class="help-details" id="settings-help"><summary data-i18n="settings_help">Help and getting started</summary><div><!-- Help tab -->
+<div id="view-help">
   <div style="max-width:600px;margin:0 auto;padding-bottom:40px">
 
     <div style="text-align:center;padding:28px 0 20px">
       <div style="font-size:48px;line-height:1">⚡</div>
-      <div style="font-size:22px;font-weight:800;color:var(--ea-text);margin-top:10px">Easy Automation</div>
+      <div style="font-size:22px;font-weight:800;color:var(--ea-text);margin-top:10px">Light Guard</div>
       <div style="font-size:13px;color:var(--ea-text);margin-top:4px" data-i18n="help_subtitle">Control your lights and automations from Homey</div>
     </div>
 
+<div class="surface-card"><h3 data-i18n="help_overview_title">Overview and room status</h3><p class="hint" data-i18n="help_overview_body">Overview groups your automations by room. Active means the automation is enabled; it does not mean the lights are currently on. Paused automations resume when the displayed time expires. Open a room entry to edit it. Automations controlling devices in several rooms appear under Multiple rooms. Find the full activity log under Events.</p></div>
+<div class="surface-card"><h3 data-i18n="night_idle_help_title">Night light after movement stops</h3><p class="hint" data-i18n="night_idle_help_body">In Motion → Lights, enable Dim instead of switching off after sunset. Set the brightness (1–100%, default 1%) and optionally a later switch-off, for example 3 hours. The usual hold time runs first, then night lighting starts. New movement returns the lights to their motion brightness and resets the countdown. At sunrise the lights switch off. Daytime behaviour follows the normal switch-off settings. Timers continue through app restarts. Dimmable lights are required.</p></div>
     <!-- Getting started -->
     <div style="background:var(--ea-surface);border:1px solid var(--ea-border);border-radius:14px;padding:20px 22px;margin-bottom:14px">
       <div style="font-size:13px;font-weight:700;color:var(--ea-text);text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px" data-i18n="help_gs_hdr">Getting started</div>
@@ -495,7 +227,7 @@
         <span style="font-size:26px;line-height:1;flex-shrink:0">🏃</span>
         <div>
           <div style="font-weight:700;font-size:14px;color:var(--ea-text)" data-i18n="help_t1_name">Motion → Lights</div>
-          <div style="font-size:13px;color:var(--ea-text);margin-top:2px;line-height:1.5" data-i18n-html="help_t1_desc">Turns lights on when a motion sensor detects movement, and optionally off again after motion stops. You can set a hold time (e.g. keep lights on for 5 minutes after the last movement) and a fade-in / fade-out duration.</div>
+          <div style="font-size:13px;color:var(--ea-text);margin-top:2px;line-height:1.5" data-i18n-html="help_t1_desc">Turns lights on when a motion sensor detects movement. After movement stops, use a hold time and optionally fade out. Enable night lighting to dim to an adjustable level after sunset instead of switching off, with an optional later switch-off.</div>
         </div>
       </div>
 
@@ -593,7 +325,7 @@
     <div style="background:var(--ea-surface);border:1px solid var(--ea-border);border-radius:14px;padding:20px 22px;margin-bottom:14px">
       <div style="font-size:13px;font-weight:700;color:var(--ea-text);text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px" data-i18n="help_pause_hdr">⏸ Pausing an automation</div>
       <div style="font-size:14px;color:var(--ea-text);line-height:1.7" data-i18n-html="help_pause_body">
-        Press the <strong>⏸</strong> icon on an automation card to pause it for 30 min, 1 hour, 2 hours, 4 hours, or until midnight. While paused, the automation will not react to any triggers. Useful when you want to override the lights manually for a while. Press <strong>Resume</strong> to cancel early.
+        Configure <strong>Button override</strong> in a supported automation to pause it from a wall switch or remote. Choose the pause duration in the automation settings. While paused, the automation ignores triggers and resumes when the pause expires. Overview and Automations show the remaining time. A configured OFF button can cancel the override early.
       </div>
     </div>
 
@@ -619,50 +351,39 @@
 
     <!-- Log tab -->
     <div style="background:var(--ea-surface);border:1px solid var(--ea-border);border-radius:14px;padding:20px 22px;margin-bottom:14px">
-      <div style="font-size:13px;font-weight:700;color:var(--ea-text);text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px" data-i18n="help_log_hdr">📋 Logs tab</div>
+      <div style="font-size:13px;font-weight:700;color:var(--ea-text);text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px" data-i18n="help_log_hdr">📋 Events tab</div>
       <div style="font-size:14px;color:var(--ea-text);line-height:1.7" data-i18n-html="help_log_body">
-        The Logs tab shows a timestamped activity log of everything the app has done: triggers fired, conditions checked, actions executed, and any errors. Press <strong>Copy Log</strong> to copy the full log to your clipboard for troubleshooting.
+        The Events tab shows a timestamped activity log of everything the app has done: triggers fired, conditions checked, actions executed, and any errors. Press <strong>Copy Log</strong> to copy the full log to your clipboard for troubleshooting.
       </div>
     </div>
 
-    <!-- PAT section -->
-    <div style="background:var(--ea-surface);border:1px solid var(--ea-border);border-radius:14px;padding:20px 22px;margin-bottom:0">
-      <div style="font-size:13px;font-weight:700;color:var(--ea-text);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px" data-i18n="help_pat_hdr">🔑 Personal Access Token</div>
-      <div style="font-size:13px;color:var(--ea-text);margin-bottom:14px;line-height:1.6" data-i18n-html="help_pat_desc">
-        Required for <strong>Wall Switch</strong> automations that use Homey Flows (e.g. Z-Wave remotes like NAMRON). Without this token the app cannot create the flows automatically.<br><br>
-        To create a token: go to <strong>my.homey.app</strong> → Settings → API → <em>Create a Personal Access Token</em> and enable the <strong>Flows</strong> permission.
-      </div>
-      <div style="display:flex;gap:8px;align-items:center">
-        <input id="pat-input" type="password" placeholder="Paste token here…" data-i18n-ph="help_pat_ph"
-          style="flex:1;padding:9px 12px;border:1.5px solid var(--ea-border);border-radius:10px;background:var(--ea-input-bg);color:var(--ea-text);font-size:14px;font-family:inherit;outline:none"/>
-        <button class="btn btn-blue" onclick="PATSettings.save()" style="white-space:nowrap" data-i18n="btn_save">Save</button>
-        <button class="btn btn-gray" onclick="PATSettings.clear()" id="pat-clear-btn" style="display:none;white-space:nowrap" data-i18n="btn_remove">Remove</button>
-      </div>
-      <div id="pat-status" style="font-size:12px;color:var(--ea-text);margin-top:8px"></div>
-    </div>
 
   </div>
 </div>
+
+</div></details>
+  <div class="surface-card settings-about" style="margin-top:14px"><h2>Light Guard</h2><p class="hint" data-i18n="settings_about">Room automations for your lights, with the familiar House Guard and Power Guard design.</p><a href="https://github.com/Finn-Cato/easy-automation" target="_blank" rel="noopener noreferrer" data-i18n="settings_source">Source code on GitHub</a></div>
+</section>
 
 <!-- Override modal -->
 <div class="overlay" id="ov-overlay" onclick="OverrideModal.bgClose(event)">
   <div class="modal" style="max-width:360px">
     <div class="modal-hdr">
       <h2 id="ov-title" style="font-size:16px" data-i18n="ov_title">Pause automation</h2>
-      <button class="close-btn" onclick="OverrideModal.close()">✕</button>
+      <button aria-label="Close" data-i18n-aria="a11y_close" class="hy-nostyle close-btn" onclick="OverrideModal.close()">✕</button>
     </div>
     <p style="font-size:13px;color:var(--ea-text);margin-bottom:14px" data-i18n="ov_para">Triggers are paused — lights stay as you set them manually. Automation resumes when the override expires.</p>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-      <button class="ov-time-btn" onclick="OverrideModal.set(30)" data-i18n="ov_30min">⏸ 30 min</button>
-      <button class="ov-time-btn" onclick="OverrideModal.set(60)" data-i18n="ov_1h">⏸ 1 hour</button>
-      <button class="ov-time-btn" onclick="OverrideModal.set(120)" data-i18n="ov_2h">⏸ 2 hours</button>
-      <button class="ov-time-btn" onclick="OverrideModal.set(240)" data-i18n="ov_4h">⏸ 4 hours</button>
+      <button class="hy-nostyle ov-time-btn" onclick="OverrideModal.set(30)" data-i18n="ov_30min">⏸ 30 min</button>
+      <button class="hy-nostyle ov-time-btn" onclick="OverrideModal.set(60)" data-i18n="ov_1h">⏸ 1 hour</button>
+      <button class="hy-nostyle ov-time-btn" onclick="OverrideModal.set(120)" data-i18n="ov_2h">⏸ 2 hours</button>
+      <button class="hy-nostyle ov-time-btn" onclick="OverrideModal.set(240)" data-i18n="ov_4h">⏸ 4 hours</button>
     </div>
-    <button class="ov-time-btn" style="width:100%;margin-top:8px" onclick="OverrideModal.setMidnight()" data-i18n="ov_midnight">🌙 Until midnight</button>
+    <button class="hy-nostyle ov-time-btn" style="width:100%;margin-top:8px" onclick="OverrideModal.setMidnight()" data-i18n="ov_midnight">🌙 Until midnight</button>
     <div id="ov-resume-wrap" style="display:none">
-      <hr class="sep" style="margin:14px 0">
+      <hr class="hy-nostyle sep" style="margin:14px 0">
       <div style="font-size:12px;color:#af52de;font-weight:600;margin-bottom:8px" id="ov-active-label"></div>
-      <button class="ov-resume-btn" onclick="OverrideModal.cancel()" data-i18n="ov_resume">▶ Resume automation now</button>
+      <button class="hy-nostyle ov-resume-btn" onclick="OverrideModal.cancel()" data-i18n="ov_resume">▶ Resume automation now</button>
     </div>
   </div>
 </div>
@@ -672,12 +393,12 @@
   <div class="modal" id="tmpl-modal" role="dialog" aria-modal="true" aria-labelledby="tmpl-title">
     <div class="modal-hdr">
       <h2 id="tmpl-title">Add Automation</h2>
-      <button class="close-btn" onclick="TModal.close()">✕</button>
+      <button aria-label="Close" data-i18n-aria="a11y_close" class="hy-nostyle close-btn" onclick="TModal.close()">✕</button>
     </div>
     <div id="tmpl-inner-tabs" style="display:none;border-bottom:1px solid var(--ea-border);margin:0 0 16px;padding:0;overflow-x:auto;max-width:100%">
-      <button id="tmpl-tab-settings" class="modal-tab on" onclick="TModal._modalTab('settings')" data-i18n="modal_settings">⚙️ Settings</button>
-      <button id="tmpl-tab-lights"   class="modal-tab"    onclick="TModal._modalTab('lights')" data-i18n="modal_lights">💡 Lights</button>
-      <button id="tmpl-tab-test"     class="modal-tab"    onclick="TModal._modalTab('test')" data-i18n="modal_test">🧪 Test</button>
+      <button id="tmpl-tab-settings" class="hy-nostyle modal-tab on" onclick="TModal._modalTab('settings')" data-i18n="modal_settings">⚙️ Settings</button>
+      <button id="tmpl-tab-lights"   class="hy-nostyle modal-tab"    onclick="TModal._modalTab('lights')" data-i18n="modal_lights">💡 Lights</button>
+      <button id="tmpl-tab-test"     class="hy-nostyle modal-tab"    onclick="TModal._modalTab('test')" data-i18n="modal_test">🧪 Test</button>
     </div>
     <div id="tmpl-settings-tab">
       <div id="tmpl-body"></div>
@@ -685,17 +406,18 @@
     <div id="tmpl-lights-tab" style="display:none;padding:0 0 4px;max-height:55vh;overflow-y:auto;min-width:0"></div>
     <div id="tmpl-test-tab"   style="display:none;padding:4px 0 8px"></div>
     <div class="modal-ftr" id="tmpl-ftr">
-      <label style="display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer">
-        <input type="checkbox" id="tmpl-enabled" checked> <span data-i18n="lbl_active">Active</span>
+      <label class="hy-nostyle" style="display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer">
+        <input class="hy-nostyle" type="checkbox" id="tmpl-enabled" checked> <span data-i18n="lbl_active">Active</span>
       </label>
       <div style="display:flex;gap:8px;margin-left:auto">
-        <button class="btn btn-gray" onclick="TModal.close()" data-i18n="btn_cancel">Cancel</button>
-        <button class="btn btn-blue" id="tmpl-save-btn" onclick="TModal.save()">Add</button>
+        <button class="hy-nostyle btn btn-gray" onclick="TModal.close()" data-i18n="btn_cancel">Cancel</button>
+        <button class="hy-nostyle btn btn-blue" id="tmpl-save-btn" onclick="TModal.save()">Add</button>
       </div>
     </div>
   </div>
 </div>
 
+<script src="overview.js"></script>
 <script>
 'use strict';
 
@@ -743,8 +465,8 @@ var I18N = {
     err_map_button:'Please map at least one button to an automation',
     empty_auto:'No automations yet.<br>Choose a template above to get started.',
     empty_auto_test:'No automations yet.',
-    err_flows_ov:'Could not create override Homey Flows:\n{0}\n\nFix: Go to the Help tab and add a Personal Access Token with Flows permission.',
-    err_flows_sw:'Could not create Homey Flows:\n{0}\n\nFix: Go to the Help tab and add a Personal Access Token with Flows permission.',
+    err_flows_ov:'Could not create override Homey Flows:\n{0}\n\nFix: Go to Settings and add a Personal Access Token with Flows permission.',
+    err_flows_sw:'Could not create Homey Flows:\n{0}\n\nFix: Go to Settings and add a Personal Access Token with Flows permission.',
     days:['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],
     lbl_light_s:'light', lbl_lights_pl:'lights', lbl_btn_s:'button', lbl_btns_pl:'buttons',
     lbl_via_flows:'(via Flows)',
@@ -863,7 +585,7 @@ var I18N = {
     log_copied:'Log copied to clipboard',
     test_running:'Running\u2026',
     test_no_device:'Please select a device first.',
-    test_no_response:'\u26a0\ufe0f No response from app. Check the Logs tab for errors.',
+    test_no_response:'\u26a0\ufe0f No response from app. Check the Events tab for errors.',
     test_no_actions:'No actions were run.',
     test_state_error:'Error',
     test_state_on:'ON',
@@ -899,7 +621,7 @@ var I18N = {
     ce_act_notify:'Notification',
     ce_act_wait:'Wait (seconds)',
     err_no_buttons:'No buttons found for this device.',
-    switch_check_logs:'Check Logs tab for details.',
+    switch_check_logs:'Check Events tab for details.',
     err_load:'Load error: '
   },
   no: {
@@ -932,8 +654,8 @@ var I18N = {
     err_map_button:'Tilordne minst \u00e9n knapp til en automatisering',
     empty_auto:'Ingen automatiseringer enn\u00e5.<br>Velg en mal ovenfor for \u00e5 komme i gang.',
     empty_auto_test:'Ingen automatiseringer enn\u00e5.',
-    err_flows_ov:'Kunne ikke opprette Homey Flows:\n{0}\n\nL\u00f8sning: G\u00e5 til Hjelp-fanen og legg til et Personal Access Token med Flows-tillatelse.',
-    err_flows_sw:'Kunne ikke opprette Homey Flows:\n{0}\n\nL\u00f8sning: G\u00e5 til Hjelp-fanen og legg til et Personal Access Token med Flows-tillatelse.',
+    err_flows_ov:'Kunne ikke opprette Homey Flows:\n{0}\n\nL\u00f8sning: G\u00e5 til Innstillinger og legg til et Personal Access Token med Flows-tillatelse.',
+    err_flows_sw:'Kunne ikke opprette Homey Flows:\n{0}\n\nL\u00f8sning: G\u00e5 til Innstillinger og legg til et Personal Access Token med Flows-tillatelse.',
     days:['Man','Tir','Ons','Tor','Fre','L\u00f8r','S\u00f8n'],
     lbl_light_s:'lys', lbl_lights_pl:'lys', lbl_btn_s:'knapp', lbl_btns_pl:'knapper',
     lbl_via_flows:'(via Flows)',
@@ -1011,8 +733,8 @@ var I18N = {
     help_pause_body:'Trykk p\u00e5 <strong>\u23f8</strong>-ikonet p\u00e5 et automatiseringskort for \u00e5 sette det p\u00e5 pause i 30 min, 1 time, 2 timer, 4 timer eller til midnatt. Mens det er p\u00e5 pause reagerer automatiseringen ikke p\u00e5 noen utl\u00f8sere. Nyttig n\u00e5r du vil overstyre lysene manuelt en stund. Trykk <strong>Gjenoppta</strong> for \u00e5 avslutte tidlig.',
     help_tips_hdr:'\ud83d\udcac Tips og vanlige oppsett',
     help_tips_body:'<strong>Nattscene via veggbryter:</strong><br>1. Opprett en <em>Lysgruppe</em> kalt \u00abNattscene\u00bb. Legg til alle lysene du vil styre. Sett ganglys til 5% og soveromslys til 0% i Lys-fanen.<br>2. Opprett en <em>Veggbryter</em>-automatisering. Tilordne \u00e9n knapp til Nattscene-gruppen.<br>3. Trykk knappen om natten \u2014 gangen dempes, soveromslys slukker.<br><br><strong>Bevegelseslys som demper seg om natten:</strong><br>Bruk <em>Smart Dim</em>. Sett dagslys-lysstyrke til 100% og natt til 15%. Appen velger automatisk riktig niv\u00e5 basert p\u00e5 gjeldende tid.<br><br><strong>Enheter vises ikke?</strong><br>G\u00e5 til <strong>Enheter</strong>-fanen og trykk <strong>Oppdater</strong>. Appen bufrer enhetslisten \u2014 en oppdatering henter det siste fra Homey.<br><br><strong>Teste en automatisering:</strong><br>\u00c5pne en automatisering og bytt til <strong>\ud83e\uddea Test</strong>-fanen. Trykk testknappen for \u00e5 kj\u00f8re handlingene umiddelbart uten \u00e5 vente p\u00e5 en utl\u00f8ser.',
-    help_log_hdr:'\ud83d\udccb Logger-fanen',
-    help_log_body:'Logger-fanen viser en tidsstemplet aktivitetslogg over alt appen har gjort: utl\u00f8sere avfyrt, betingelser sjekket, handlinger utf\u00f8rt og eventuelle feil. Trykk <strong>Kopier logg</strong> for \u00e5 kopiere hele loggen til utklippsbordet for feils\u00f8king.',
+    help_log_hdr:'\ud83d\udccb Hendelser-fanen',
+    help_log_body:'Hendelser-fanen viser en tidsstemplet aktivitetslogg over alt appen har gjort: utl\u00f8sere avfyrt, betingelser sjekket, handlinger utf\u00f8rt og eventuelle feil. Trykk <strong>Kopier logg</strong> for \u00e5 kopiere hele loggen til utklippsbordet for feils\u00f8king.',
     help_pat_hdr:'\ud83d\udd11 Personal Access Token',
     help_pat_desc:'Kreves for <strong>Veggbryter</strong>-automatiseringer som bruker Homey Flows (f.eks. Z-Wave-fjernkontroller som NAMRON). Uten dette tokenet kan ikke appen opprette flows automatisk.<br><br>For \u00e5 opprette et token: g\u00e5 til <strong>my.homey.app</strong> \u2192 Innstillinger \u2192 API \u2192 <em>Opprett et Personal Access Token</em> og aktiver <strong>Flows</strong>-tillatelsen.',
     help_pat_ph:'Lim inn token her\u2026',
@@ -1073,7 +795,7 @@ var I18N = {
     log_copied:'Logg kopiert til utklippsbordet',
     test_running:'Kj\u00f8rer\u2026',
     test_no_device:'Velg en enhet f\u00f8rst.',
-    test_no_response:'\u26a0\ufe0f Ingen respons fra appen. Sjekk Logger-fanen for feil.',
+    test_no_response:'\u26a0\ufe0f Ingen respons fra appen. Sjekk Hendelser-fanen for feil.',
     test_no_actions:'Ingen handlinger ble kj\u00f8rt.',
     test_state_error:'Feil',
     test_state_on:'P\u00c5',
@@ -1109,15 +831,150 @@ var I18N = {
     ce_act_notify:'Varsling',
     ce_act_wait:'Vent (sekunder)',
     err_no_buttons:'Ingen knapper funnet for denne enheten.',
-    switch_check_logs:'Sjekk Logger-fanen for detaljer.',
+    switch_check_logs:'Sjekk Hendelser-fanen for detaljer.',
     err_load:'Lastfeil: '
   }
 };
+Object.assign(I18N.en, {
+  night_idle_enable: 'Dim instead of switching off after sunset',
+  night_idle_level: 'Night-light brightness',
+  night_idle_later_off: 'Switch night lights off after a chosen time',
+  night_idle_hours: 'Hours with night light before switching off',
+  night_idle_hint: 'Between sunset and sunrise, lights dim to this level after the normal hold time. New movement restores the motion brightness and cancels the countdown. The optional switch-off delay starts when night lighting begins; lights switch off at sunrise at the latest. Sun times use the location configured in Homey.',
+  night_idle_error_level: 'Choose a night-light brightness between 1 and 100%.',
+  night_idle_error_hours: 'Choose between 0.25 and 24 hours before switching off.',
+  night_idle_status: 'Night light · {0}% · off in {1} min',
+  night_idle_hold: 'Dims/switches off in ',
+  night_idle_status_until_sunrise: 'Night light · {0}% · until sunrise',
+  night_idle_help_title: 'Night light after movement stops',
+  night_idle_help_body: 'In Motion → Lights, enable Dim instead of switching off after sunset. Set the brightness (1–100%, default 1%) and optionally a later switch-off, for example 3 hours. The usual hold time runs first, then night lighting starts. New movement returns the lights to their motion brightness and resets the countdown. At sunrise the lights switch off. Daytime behaviour follows the normal switch-off settings. Timers continue through app restarts. Dimmable lights are required.',
+  'Change lights when motion stops': 'Change lights when motion stops',
+  help_t1_desc: 'Turns lights on when a motion sensor detects movement. After movement stops, use a hold time and optionally fade out. Enable night lighting to dim to an adjustable level after sunset instead of switching off, with an optional later switch-off.',
+  "tab_overview": "Overview",
+  "tab_auto": "Automations",
+  "tab_devices": "Devices",
+  "dev_desc": "Check the devices you want to use in automations. Unchecked devices are hidden from all pickers. If nothing is checked, all devices are shown.",
+  "tab_logs": "Events",
+  "tab_settings": "Settings",
+  "main_menu": "Main menu",
+  "header_subtitle": "Lights and automations, room by room",
+  "overview_eyebrow": "YOUR LIGHT AUTOMATIONS",
+  "overview_automations": "automations",
+  "overview_active": "Active",
+  "overview_active_single": "Active",
+  "Individual lights": "Individual lights",
+  "overview_paused": "Paused",
+  "overview_disabled": "Disabled",
+  "overview_partial": "Partly disabled",
+  "overview_ready": "Build your first room automation to get started.",
+  "overview_summary": "{0} automations across {1} room groups. Open a card to edit.",
+  "overview_loading": "Loading settings from Homey…",
+  "overview_connected": "Settings loaded from Homey",
+  "overview_sync_error": "Could not refresh status from Homey. Try reopening the settings.",
+  "overview_manage": "Manage automations",
+  "overview_choose_devices": "Choose devices",
+  "overview_rooms": "Rooms and groups",
+  "overview_new": "+ New automation",
+  "overview_recent": "Recent events",
+  "overview_all_events": "View all",
+  "overview_no_events": "Events appear here when an automation runs.",
+  "overview_unnamed": "Unnamed automation",
+  "overview_shared_rooms": "Multiple rooms",
+  "overview_no_room": "Other automations",
+  "overview_empty_title": "Start with one room",
+  "overview_empty_body": "Choose your Homey devices, then use a template for motion lights, a schedule or a light scene.",
+  "overview_first_automation": "Create an automation",
+  "auto_intro": "Choose a template, then set up the lights and sensors for your room.",
+  "settings_intro": "Homey connection, help and information about Light Guard.",
+  "settings_help": "Help and getting started",
+  "settings_about": "Room automations for your lights, with the familiar House Guard and Power Guard design.",
+  "settings_source": "Source code on GitHub",
+  "help_overview_title": "Overview and room status",
+  "help_overview_body": "Overview groups your automations by room. Active means the automation is enabled; it does not mean the lights are currently on. Paused automations resume when the displayed time expires. Open a room entry to edit it. Automations controlling devices in several rooms appear under Multiple rooms. Find the full activity log under Events.",
+  "help_pause_body": "Configure <strong>Button override</strong> in a supported automation to pause it from a wall switch or remote. Choose the pause duration in the automation settings. While paused, the automation ignores triggers and resumes when the pause expires. Overview and Automations show the remaining time. A configured OFF button can cancel the override early.",
+  "log_title": "Events",
+  "help_log_hdr": "Events tab",
+  "help_log_body": "Events shows triggers, actions and errors with timestamps. Use Copy Log to copy the full log for troubleshooting.",
+  "help_pat_hdr": "Personal Access Token",
+  "a11y_edit": "Edit automation",
+  "a11y_duplicate": "Duplicate automation",
+  "a11y_delete": "Delete automation",
+  "a11y_toggle": "Enable automation",
+  "a11y_close": "Close"
+});
+Object.assign(I18N.no, {
+  night_idle_enable: 'Demp i stedet for å slukke etter solnedgang',
+  night_idle_level: 'Lysstyrke for nattlys',
+  night_idle_later_off: 'Slukk nattlys etter en valgt tid',
+  night_idle_hours: 'Timer med nattlys før slukking',
+  night_idle_hint: 'Mellom solnedgang og soloppgang dimmes lysene til dette nivået etter vanlig holdtid. Ny bevegelse gir vanlig lysstyrke igjen og avbryter nedtellingen. Valgfri slukktid regnes fra nattlyset starter; lysene slukkes senest ved soloppgang. Soltidene bruker posisjonen som er satt i Homey.',
+  night_idle_error_level: 'Velg en lysstyrke for nattlys mellom 1 og 100%.',
+  night_idle_error_hours: 'Velg mellom 0,25 og 24 timer før slukking.',
+  night_idle_status: 'Nattlys · {0}% · slukker om {1} min',
+  night_idle_hold: 'Demper/slukker om ',
+  night_idle_status_until_sunrise: 'Nattlys · {0}% · til soloppgang',
+  night_idle_help_title: 'Nattlys når bevegelsen stopper',
+  night_idle_help_body: 'Under Bevegelse → Lys kan du aktivere Demp i stedet for å slukke etter solnedgang. Velg lysstyrke (1–100 %, standard 1 %) og eventuelt slukking senere, for eksempel etter 3 timer. Vanlig holdtid går først, deretter starter nattlyset. Ny bevegelse gir vanlig lysstyrke igjen og nullstiller nedtellingen. Ved soloppgang slukkes lysene. På dagtid brukes vanlig slukking. Nedtellingen fortsetter gjennom omstart av appen. Lysene må støtte dimming.',
+  'Change lights when motion stops': 'Slukk eller demp når bevegelsen stopper',
+  help_t1_desc: 'Slår på lys når en bevegelsessensor oppdager bevegelse. Etter at bevegelsen stopper, kan du bruke holdtid og eventuell fading. Aktiver nattlys for å dimme til et justerbart nivå etter solnedgang i stedet for å slukke, med valgfri slukking senere.',
+  "tab_overview": "Oversikt",
+  "tab_auto": "Automasjoner",
+  "tab_devices": "Enheter",
+  "dev_desc": "Merk enhetene du vil bruke i automasjonene. Enheter som ikke er merket, skjules i alle enhetsvelgere. Hvis ingen er merket, vises alle enheter.",
+  "tab_logs": "Hendelser",
+  "tab_settings": "Innstillinger",
+  "main_menu": "Hovedmeny",
+  "header_subtitle": "Lys og automasjoner, rom for rom",
+  "overview_eyebrow": "LYSAUTOMASJONENE DINE",
+  "overview_automations": "automasjoner",
+  "overview_active": "Aktive",
+  "overview_active_single": "Aktiv",
+  "Individual lights": "Individuelle lys",
+  "overview_paused": "Pauset",
+  "overview_disabled": "Deaktivert",
+  "overview_partial": "Delvis deaktivert",
+  "overview_ready": "Lag din første romautomasjon for å komme i gang.",
+  "overview_summary": "{0} automasjoner fordelt på {1} romgrupper. Åpne et kort for å redigere.",
+  "overview_loading": "Laster oppsett fra Homey…",
+  "overview_connected": "Oppsett lastet fra Homey",
+  "overview_sync_error": "Kunne ikke oppdatere status fra Homey. Prøv å åpne innstillingene på nytt.",
+  "overview_manage": "Se automasjoner",
+  "overview_choose_devices": "Velg enheter",
+  "overview_rooms": "Rom og grupper",
+  "overview_new": "+ Ny automasjon",
+  "overview_recent": "Siste hendelser",
+  "overview_all_events": "Se alle",
+  "overview_no_events": "Hendelser vises her når en automasjon kjøres.",
+  "overview_unnamed": "Automasjon uten navn",
+  "overview_shared_rooms": "Flere rom",
+  "overview_no_room": "Andre automasjoner",
+  "overview_empty_title": "Begynn med ett rom",
+  "overview_empty_body": "Velg Homey-enhetene dine, og bruk en mal for bevegelseslys, en tidsplan eller en lysscene.",
+  "overview_first_automation": "Lag en automasjon",
+  "auto_intro": "Velg en mal, og sett opp lysene og sensorene for rommet ditt.",
+  "settings_intro": "Tilkobling til Homey, hjelp og informasjon om Light Guard.",
+  "settings_help": "Hjelp og kom i gang",
+  "settings_about": "Romautomasjoner for lysene dine, med det kjente designet fra House Guard og Power Guard.",
+  "settings_source": "Kildekode på GitHub",
+  "help_overview_title": "Oversikt og romstatus",
+  "help_overview_body": "Oversikt samler automasjonene etter rom. Aktiv betyr at automasjonen er slått på, ikke at lysene lyser akkurat nå. Pausede automasjoner starter igjen når tiden som vises er ute. Åpne en automasjon i romkortet for å redigere. Automasjoner som styrer enheter i flere rom vises under Flere rom. Hele aktivitetsloggen finner du under Hendelser.",
+  "help_pause_body": "Sett opp <strong>Knappoverstyr</strong> i en automasjon som støtter dette, for å sette den på pause fra en veggbryter eller fjernkontroll. Velg varigheten i automasjonens innstillinger. Under pausen ignoreres utløsere, og automasjonen starter igjen når pausen utløper. Oversikt og Automasjoner viser tiden som gjenstår. En konfigurert AV-knapp kan avslutte overstyringen tidlig.",
+  "log_title": "Hendelser",
+  "help_log_hdr": "Hendelser-fanen",
+  "help_log_body": "Hendelser viser utløsere, handlinger og feil med tidsstempel. Bruk Kopier logg for å kopiere hele loggen til feilsøking.",
+  "a11y_edit": "Rediger automasjon",
+  "a11y_duplicate": "Dupliser automasjon",
+  "a11y_delete": "Slett automasjon",
+  "a11y_toggle": "Aktiver automasjon",
+  "a11y_close": "Lukk"
+});
 function i18n(key) {
   var d = EA_LANG !== 'en' ? I18N[EA_LANG] : null;
   return (d && d[key] !== undefined) ? d[key] : (I18N.en[key] !== undefined ? I18N.en[key] : key);
 }
 function translateDOM() {
+  document.documentElement.lang = EA_LANG === 'no' ? 'nb' : 'en';
+  document.querySelectorAll('[data-i18n-aria]').forEach(function(e) { e.setAttribute('aria-label', i18n(e.getAttribute('data-i18n-aria'))); });
   if (EA_LANG === 'en') return;
   document.querySelectorAll('[data-i18n]').forEach(function(e) { e.textContent = i18n(e.getAttribute('data-i18n')); });
   document.querySelectorAll('[data-i18n-html]').forEach(function(e) { e.innerHTML = i18n(e.getAttribute('data-i18n-html')); });
@@ -1148,7 +1005,7 @@ function setStatus(msg, t) {
 }
 
 // ── State ──────────────────────────────────────────────────────────────────────
-var State = { devices: [], automations: [], holdStatus: {}, overrides: {}, pinnedDevices: [] };
+var State = { devices: [], automations: [], holdStatus: {}, overrides: {}, nightIdle: {}, pinnedDevices: [], logs: [], loaded: false, syncError: false };
 
 // ── API (settings-based, works on permanent install) ──────────────────────────
 var API = {
@@ -1200,52 +1057,60 @@ var PATSettings = {
 var App = {
   init: async function() {
     try {
-      var res = await Promise.all([API.getDevices(), API.getAutomations(), window._hGet('_pinnedDevices')]);
-      State.devices       = Array.isArray(res[0]) ? res[0] : [];
-      State.automations   = Array.isArray(res[1]) ? res[1] : [];
-      var pinRaw = res[2];
-      State.pinnedDevices = pinRaw ? (typeof pinRaw === 'string' ? JSON.parse(pinRaw) : pinRaw) : [];
+      var res = await Promise.all([API.getDevices(), API.getAutomations(), window._hGet('_pinnedDevices'), window._hGet('_holdStatus'), window._hGet('_overrides'), window._hGet('_appLog'), window._hGet('_nightIdleStatus')]);
+      State.devices = Array.isArray(res[0]) ? res[0] : [];
+      State.automations = Array.isArray(res[1]) ? res[1] : [];
+      var parse = function(raw, fallback) { return raw ? (typeof raw === 'string' ? JSON.parse(raw) : raw) : fallback; };
+      State.pinnedDevices = parse(res[2], []);
       if (!Array.isArray(State.pinnedDevices)) State.pinnedDevices = [];
+      State.holdStatus = parse(res[3], {});
+      State.overrides = parse(res[4], {});
+      State.logs = parse(res[5], []);
+      State.nightIdle = parse(res[6], {});
+      State.loaded = true;
       AutoList.render();
       DevTab.render();
       PATSettings.load();
     } catch(e) {
-      el('auto-list').innerHTML = '<div class="loader" style="color:#ff3b30">' + i18n('err_load') + e.message + '</div>';
+      State.syncError = true;
+      el('auto-list').innerHTML = '<div class="loader">' + i18n('err_load') + esc(e.message) + '</div>';
+      el('overview-rooms').innerHTML = '<div class="surface-card"><p>' + i18n('err_load') + esc(e.message) + '</p></div>';
     }
-    // Load hold status and overrides once on init
-    window._hGet('_holdStatus').then(function(raw) {
-      State.holdStatus = raw ? (typeof raw === 'string' ? JSON.parse(raw) : raw) : {};
-    }).catch(function(){});
-    window._hGet('_overrides').then(function(raw) {
-      State.overrides = raw ? (typeof raw === 'string' ? JSON.parse(raw) : raw) : {};
-    }).catch(function(){});
-    // Ticker: update countdown display every second
+    Overview.updateStatus();
     setInterval(function() { Countdown.tick(); }, 1000);
-    // Sync hold status and overrides from backend every 8 seconds
-    setInterval(function() {
-      window._hGet('_holdStatus').then(function(raw) {
-        State.holdStatus = raw ? (typeof raw === 'string' ? JSON.parse(raw) : raw) : {};
-      }).catch(function(){});
-      window._hGet('_overrides').then(function(raw) {
-        State.overrides = raw ? (typeof raw === 'string' ? JSON.parse(raw) : raw) : {};
-      }).catch(function(){});
-    }, 8000);
+    setInterval(function() { App.syncStatus(); }, 8000);
+  },
+  syncStatus: async function() {
+    if (App._syncing) return;
+    App._syncing = true;
+    try {
+      var values = await Promise.all([window._hGet('_holdStatus'), window._hGet('_overrides'), window._hGet('_appLog'), window._hGet('_nightIdleStatus')]);
+      var parse = function(raw, fallback) { return raw ? (typeof raw === 'string' ? JSON.parse(raw) : raw) : fallback; };
+      State.holdStatus = parse(values[0], {});
+      State.overrides = parse(values[1], {});
+      State.logs = parse(values[2], []);
+      State.nightIdle = parse(values[3], {});
+      State.syncError = false;
+      Overview.renderEvents();
+    } catch(e) { State.syncError = true; }
+    finally { App._syncing = false; Overview.updateStatus(); }
   }
 };
-
-// ── UI tabs ────────────────────────────────────────────────────────────────────
 var UI = {
   tab: function(name) {
-    ['auto','devices','logs','help'].forEach(function(t) {
-      el('tab-'  + t).classList.toggle('on', t === name);
-      el('tab-'  + t).setAttribute('aria-selected', t === name ? 'true' : 'false');
-      el('view-' + t).classList.toggle('on', t === name);
+    if (name === 'help') { name = 'settings'; el('settings-help').open = true; }
+    ['overview','auto','devices','logs','settings'].forEach(function(t) {
+      var selected = t === name;
+      el('tab-' + t).classList.toggle('on', selected);
+      if (selected) el('tab-' + t).setAttribute('aria-current', 'page');
+      else el('tab-' + t).removeAttribute('aria-current');
+      el('view-' + t).classList.toggle('on', selected);
     });
     if (name === 'logs') LogTab.load();
+    if (name === 'overview') Overview.render();
   }
 };
 
-// ── Group automations by _groupId ──────────────────────────────────────────────
 function computeGroups() {
   var byId = {}, order = [], orphans = [];
   State.automations.forEach(function(a, i) {
@@ -1326,6 +1191,7 @@ function groupSummary(g) {
 // ── Hold countdown ─────────────────────────────────────────────────────────────
 var Countdown = {
   tick: function() {
+    Overview.updateStatus();
     var now = Date.now();
     var hs  = State.holdStatus || {};
     var ov  = State.overrides  || {};
@@ -1337,8 +1203,18 @@ var Countdown = {
       var secs  = Math.round((endsAt - now) / 1000);
       var mins  = Math.floor(secs / 60);
       var s     = secs % 60;
-      el.textContent = i18n('cd_off_in') + (mins > 0 ? mins + ':' + String(s).padStart(2,'0') : s + 's');
+      var hasNight = State.automations.some(function(a) { return (a._groupId || a.id) === gid && a._nightIdle; });
+      el.textContent = i18n(hasNight ? 'night_idle_hold' : 'cd_off_in') + (mins > 0 ? mins + ':' + String(s).padStart(2,'0') : s + 's');
       el.style.display = '';
+    });
+
+    document.querySelectorAll('[data-night-gid]').forEach(function(element) {
+      var state = State.nightIdle[element.getAttribute('data-night-gid')];
+      if (!state || state.phase !== 'idle') { element.style.display = 'none'; return; }
+      var key = state.endsAt ? 'night_idle_status' : 'night_idle_status_until_sunrise';
+      element.textContent = i18n(key).replace('{0}', Math.round(state.brightness * 100))
+        .replace('{1}', Math.max(0, Math.ceil((state.endsAt - now) / 60000)));
+      element.style.display = '';
     });
 
     document.querySelectorAll('[data-ov-gid]').forEach(function(el) {
@@ -1368,6 +1244,7 @@ var AutoList = {
   render: function() {
     var list = el('auto-list');
     AutoList._computed = computeGroups();
+    Overview.render();
     var groups  = AutoList._computed.groups;
     var orphans = AutoList._computed.orphans;
 
@@ -1383,7 +1260,7 @@ var AutoList = {
       groups.forEach(function(g, gi) {
         var enabled = g.items.every(function(it) { return it.a.enabled; });
         html += '<div class="card">' +
-          '<label class="tog"><input type="checkbox"' + (enabled ? ' checked' : '') +
+          '<label class="hy-nostyle tog"><input class="hy-nostyle" type="checkbox"' + (enabled ? ' checked' : '') +
             ' onchange="AutoList.toggleGroup(' + gi + ',this.checked)"/><span class="tog-track"></span></label>' +
           '<span class="card-type-icon">' + groupIcon(g) + '</span>' +
           '<div class="card-body" onclick="AutoList.editGroup(' + gi + ')">' +
@@ -1391,10 +1268,11 @@ var AutoList = {
             '<div class="card-sub">' + esc(groupSummary(g)) + '</div>' +
             '<div data-cd-gid="' + esc(g.id) + '" style="display:none;font-size:12px;color:#ff9500;font-weight:600;margin-top:3px"></div>' +
             '<div data-ov-gid="' + esc(g.id) + '" style="display:none;font-size:12px;color:#af52de;font-weight:600;margin-top:2px"></div>' +
+            '<div data-night-gid="' + esc(g.id) + '" class="hint" style="display:none"></div>' +
           '</div>' +
           '<span class="card-chevron">›</span>' +
-          '<button class="ico" onclick="event.stopPropagation();AutoList.dupGroup(' + gi + ')" title="Duplicate">⧉</button>' +
-          '<button class="ico" onclick="AutoList.delGroup(' + gi + ')">🗑</button>' +
+          '<button class="hy-nostyle ico" onclick="event.stopPropagation();AutoList.dupGroup(' + gi + ')" title="Duplicate">⧉</button>' +
+          '<button class="hy-nostyle ico" onclick="AutoList.delGroup(' + gi + ')">🗑</button>' +
         '</div>';
       });
       html += '</div>';
@@ -1406,20 +1284,27 @@ var AutoList = {
       orphans.forEach(function(item) {
         var a = item.a, i = item.i;
         html += '<div class="card">' +
-          '<label class="tog"><input type="checkbox"' + (a.enabled ? ' checked' : '') +
+          '<label class="hy-nostyle tog"><input class="hy-nostyle" type="checkbox"' + (a.enabled ? ' checked' : '') +
             ' onchange="AutoList.toggle(' + i + ',this.checked)"/><span class="tog-track"></span></label>' +
           '<div class="card-body" onclick="CustomEditor.open(' + i + ')">' +
             '<div class="card-name">' + esc(a.name || 'Unnamed') + '</div>' +
             '<div class="card-sub">' + esc(AutoList._singleSummary(a)) + '</div>' +
           '</div>' +
           '<span class="card-chevron">›</span>' +
-          '<button class="ico" onclick="AutoList.del(' + i + ')">🗑</button>' +
+          '<button class="hy-nostyle ico" onclick="AutoList.del(' + i + ')">🗑</button>' +
         '</div>';
       });
       html += '</div>';
     }
 
     list.innerHTML = html;
+    list.querySelectorAll('.card-body[onclick]').forEach(function(button) {
+      button.setAttribute('role', 'button'); button.tabIndex = 0;
+      button.setAttribute('aria-label', i18n('a11y_edit') + ': ' + button.querySelector('.card-name').textContent);
+      button.onkeydown = function(event) { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); button.click(); } };
+    });
+    list.querySelectorAll('.tog input').forEach(function(input) { input.setAttribute('aria-label', i18n('a11y_toggle') + ': ' + input.closest('.card').querySelector('.card-name').textContent); });
+    list.querySelectorAll('.ico').forEach(function(button) { button.setAttribute('aria-label', i18n(button.getAttribute('onclick').indexOf('dupGroup') !== -1 ? 'a11y_duplicate' : 'a11y_delete')); });
   },
 
   _singleSummary: function(a) {
@@ -1541,8 +1426,8 @@ var Picker = {
 
   _item: function(d, selectedIds) {
     var checked = selectedIds && selectedIds.indexOf(d.id) !== -1 ? ' checked' : '';
-    return '<label class="dp-item">' +
-      '<input type="checkbox" value="' + esc(d.id) + '"' + checked + '>' +
+    return '<label class="hy-nostyle dp-item">' +
+      '<input class="hy-nostyle" type="checkbox" value="' + esc(d.id) + '"' + checked + '>' +
       '<span class="dp-name">' + esc(d.name) + '</span>' +
       (d.zone ? '<span class="dp-zone">' + esc(d.zone) + '</span>' : '') +
     '</label>';
@@ -1592,7 +1477,7 @@ var TModal = {
     el('tmpl-body').innerHTML = TModal._form(type);
     el('tmpl-overlay').classList.add('on');
     var hasTabs = type !== 'custom';
-    el('tmpl-inner-tabs').style.display = hasTabs ? '' : 'none';
+    el('tmpl-inner-tabs').style.display = hasTabs ? 'flex' : 'none';
     el('tmpl-tab-lights').style.display = (type === 'switch' || type === 'scene') ? 'none' : '';
     el('tmpl-settings-tab').style.display = '';
     el('tmpl-lights-tab').style.display   = 'none';
@@ -1633,7 +1518,7 @@ var TModal = {
     TModal._lightDims  = {};
     TModal._prevGlobal = {};
     var _hasTabs = g.type !== 'custom';
-    el('tmpl-inner-tabs').style.display = _hasTabs ? '' : 'none';
+    el('tmpl-inner-tabs').style.display = _hasTabs ? 'flex' : 'none';
     el('tmpl-tab-lights').style.display = (g.type === 'switch' || g.type === 'scene') ? 'none' : '';
     el('tmpl-settings-tab').style.display = '';
     el('tmpl-lights-tab').style.display   = 'none';
@@ -1675,12 +1560,13 @@ var TModal = {
       setTimeout(function(){
         if (sensor && el('t-sensor')) el('t-sensor').value = sensor;
         if (el('t-bright'))   { el('t-bright').value = bright; if(el('t-bval')) el('t-bval').textContent = bright+'%'; }
-        if (el('t-fadein'))   { el('t-fadein').value = fadeIn0; if(el('t-fadein-val')) el('t-fadein-val').textContent = fadeIn0===0?'instant':fadeIn0+'s'; }
+        if (el('t-fadein'))   { el('t-fadein').value = fadeIn0; if(el('t-fadein-val')) el('t-fadein-val').textContent = window._siF(fadeIn0); }
         if (el('t-turnoff'))  el('t-turnoff').checked = hasOff;
-        if (el('t-hold'))     { el('t-hold').value = hold0; if(el('t-holdval')) el('t-holdval').textContent = hold0===0?'off immediately':hold0+' min'; }
+        if (el('t-hold'))     { el('t-hold').value = hold0; if(el('t-holdval')) el('t-holdval').textContent = hold0===0?i18n('slider_instant'):hold0+' min'; }
         if (el('t-hold-wrap'))    el('t-hold-wrap').style.display = hasOff ? '' : 'none';
-        if (el('t-fadeout'))  { el('t-fadeout').value = fadeOut0; if(el('t-fadeout-val')) el('t-fadeout-val').textContent = fadeOut0===0?'instant':fadeOut0+'s'; }
+        if (el('t-fadeout'))  { el('t-fadeout').value = fadeOut0; if(el('t-fadeout-val')) el('t-fadeout-val').textContent = window._siF(fadeOut0); }
         if (el('t-fadeout-wrap')) el('t-fadeout-wrap').style.display = hasOff ? '' : 'none';
+        TModal._fillNightIdle(offItem0 && offItem0.a._nightIdle);
         if (el('t-lux-en') && luxCond && luxCond.deviceId) {
           el('t-lux-en').checked = true; el('t-lux-wrap').style.display = '';
           if(el('t-lux-sensor')) el('t-lux-sensor').value = luxCond.deviceId;
@@ -2058,8 +1944,8 @@ var TModal = {
     var html = '';
     if (type === 'scene') {
       html += '<div style="padding:8px 0 12px;display:flex;gap:8px">' +
-        '<button class="btn-sm" onclick="TModal._setAllSceneDim(0)">Set all OFF</button>' +
-        '<button class="btn-sm" onclick="TModal._setAllSceneDim(null)">Reset to default</button>' +
+        '<button class="hy-nostyle btn-sm" onclick="TModal._setAllSceneDim(0)">Set all OFF</button>' +
+        '<button class="hy-nostyle btn-sm" onclick="TModal._setAllSceneDim(null)">Reset to default</button>' +
       '</div>';
     }
     lights.forEach(function(id) {
@@ -2077,7 +1963,7 @@ var TModal = {
         html += '<div class="lt-row">' +
           '<span class="lt-label">💡 Level</span>' +
           '<div class="slider-row" style="flex:1;margin-top:0">' +
-            '<input type="range" id="' + sid + '" min="0" max="100" value="' + pct + '"' +
+            '<input class="hy-nostyle" type="range" id="' + sid + '" min="0" max="100" value="' + pct + '"' +
               ' oninput="var v=parseInt(this.value);document.getElementById(\'' + vid + '\').textContent=v===0?\'OFF\':v+\'%\';TModal._setLightDim(\'' + id + '\',\'on\',v);TModal._previewLight(\'' + id + '\',v/100)">' +
             '<span class="slider-val" id="' + vid + '">' + (pct === 0 ? 'OFF' : pct + '%') + '</span>' +
           '</div></div>';
@@ -2088,7 +1974,7 @@ var TModal = {
           html += '<div class="lt-row">' +
             '<span class="lt-label">🌡 Temp</span>' +
             '<div class="slider-row" style="flex:1;margin-top:0">' +
-              '<input type="range" id="' + ctId + '" min="0" max="100" value="' + ctVal + '"' +
+              '<input class="hy-nostyle" type="range" id="' + ctId + '" min="0" max="100" value="' + ctVal + '"' +
                 ' oninput="var v=parseInt(this.value);document.getElementById(\'' + ctVid + '\').textContent=(v<30?\'Warm\':(v>70?\'Cool\':\'Mid\'));TModal._setLightDim(\'' + id + '\',\'ct\',v);TModal._previewLight(\'' + id + '\',v/100,\'ct\')">' +
               '<span class="slider-val" id="' + ctVid + '">' + (ctVal < 30 ? 'Warm' : (ctVal > 70 ? 'Cool' : 'Mid')) + '</span>' +
             '</div></div>';
@@ -2109,7 +1995,7 @@ var TModal = {
           html += '<div class="lt-row">' +
             '<span class="lt-label">' + m.label + '</span>' +
             '<div class="slider-row" style="flex:1;margin-top:0">' +
-              '<input type="range" id="' + sid + '" min="1" max="100" value="' + pct + '"' +
+              '<input class="hy-nostyle" type="range" id="' + sid + '" min="1" max="100" value="' + pct + '"' +
                 ' oninput="document.getElementById(\'' + vid + '\').textContent=this.value+\'%\';TModal._setLightDim(\'' + id + '\',\'' + m.key + '\',parseInt(this.value));TModal._previewLight(\'' + id + '\',parseInt(this.value)/100)">' +
               '<span class="slider-val" id="' + vid + '">' + pct + '%</span>' +
             '</div></div>';
@@ -2120,7 +2006,7 @@ var TModal = {
             html += '<div class="lt-row">' +
               '<span class="lt-label">🌡 Temp</span>' +
               '<div class="slider-row" style="flex:1;margin-top:0">' +
-                '<input type="range" id="' + ctId + '" min="0" max="100" value="' + ctVal + '"' +
+                '<input class="hy-nostyle" type="range" id="' + ctId + '" min="0" max="100" value="' + ctVal + '"' +
                   ' oninput="var v=parseInt(this.value);document.getElementById(\'' + ctVid + '\').textContent=(v<30?\'Warm\':(v>70?\'Cool\':\'Mid\'));TModal._setLightDim(\'' + id + '\',\'' + ctKey + '\',v);TModal._previewLight(\'' + id + '\',v/100,\'ct\')">' +
                 '<span class="slider-val" id="' + ctVid + '">' + (ctVal < 30 ? 'Warm' : (ctVal > 70 ? 'Cool' : 'Mid')) + '</span>' +
               '</div></div>';
@@ -2136,7 +2022,7 @@ var TModal = {
         html += '<div class="lt-row">' +
           '<span class="lt-label">💡 ON</span>' +
           '<div class="slider-row" style="flex:1;margin-top:0">' +
-            '<input type="range" id="' + sid + '" min="1" max="100" value="' + pct + '"' +
+            '<input class="hy-nostyle" type="range" id="' + sid + '" min="1" max="100" value="' + pct + '"' +
               ' oninput="document.getElementById(\'' + vid + '\').textContent=this.value+\'%\';TModal._setLightDim(\'' + id + '\',\'on\',parseInt(this.value));TModal._previewLight(\'' + id + '\',parseInt(this.value)/100)">' +
             '<span class="slider-val" id="' + vid + '">' + pct + '%</span>' +
           '</div></div>';
@@ -2147,7 +2033,7 @@ var TModal = {
           html += '<div class="lt-row">' +
             '<span class="lt-label">🌡 Temp</span>' +
             '<div class="slider-row" style="flex:1;margin-top:0">' +
-              '<input type="range" id="' + ctIdO + '" min="0" max="100" value="' + ctValO + '"' +
+              '<input class="hy-nostyle" type="range" id="' + ctIdO + '" min="0" max="100" value="' + ctValO + '"' +
                 ' oninput="var v=parseInt(this.value);document.getElementById(\'' + ctVidO + '\').textContent=(v<30?\'Warm\':(v>70?\'Cool\':\'Mid\'));TModal._setLightDim(\'' + id + '\',\'ct\',v);TModal._previewLight(\'' + id + '\',v/100,\'ct\')">' +
               '<span class="slider-val" id="' + ctVidO + '">' + (ctValO < 30 ? 'Warm' : (ctValO > 70 ? 'Cool' : 'Mid')) + '</span>' +
             '</div></div>';
@@ -2241,8 +2127,8 @@ var TModal = {
               return '<div style="background:var(--ea-card);border:1px solid var(--ea-border);border-radius:10px;padding:10px 12px;margin-bottom:8px;font-size:13px">' +
                 '<div style="font-weight:700;margin-bottom:4px">📋 ' + esc(m.triggerTitle || 'Button') + '</div>' +
                 '<div style="color:var(--ea-text);margin-bottom:2px">Trigger: <b>' + esc(devName) + '</b> — ' + esc(m.triggerTitle || '') + '</div>' +
-                '<div style="color:var(--ea-text);margin-bottom:6px">Action: <b>Easy Automation</b> → Run automation group → <b>' + esc(m.groupName || m.groupId) + '</b></div>' +
-                '<button class="btn btn-blue" style="width:100%;font-size:12px" onclick="TModal._runGroupTest(\'' + esc(m.groupId) + '\')">🧪 Test this automation</button>' +
+                '<div style="color:var(--ea-text);margin-bottom:6px">Action: <b>Light Guard</b> → Run automation group → <b>' + esc(m.groupName || m.groupId) + '</b></div>' +
+                '<button class="hy-nostyle btn btn-blue" style="width:100%;font-size:12px" onclick="TModal._runGroupTest(\'' + esc(m.groupId) + '\')">🧪 Test this automation</button>' +
               '</div>';
             }).join('');
             html = '<div style="background:rgba(255,149,0,.12);border:1px solid rgba(255,149,0,.4);border-radius:10px;padding:12px 14px;margin-bottom:12px;font-size:13px">' +
@@ -2254,7 +2140,7 @@ var TModal = {
             mappings.forEach(function(m) {
               if (!m.groupId) return;
               var label = (m.triggerTitle ? m.triggerTitle + ' → ' : '') + (m.groupName || m.groupId);
-              btns += '<button class="btn btn-blue" style="flex:1;min-width:120px" onclick="TModal._runGroupTest(\'' + esc(m.groupId) + '\')">' + esc(label) + '</button>';
+              btns += '<button class="hy-nostyle btn btn-blue" style="flex:1;min-width:120px" onclick="TModal._runGroupTest(\'' + esc(m.groupId) + '\')">' + esc(label) + '</button>';
             });
           }
         } else {
@@ -2269,12 +2155,12 @@ var TModal = {
                : trig.type === 'button_press' ? '🔘 Button'
                : '🔢 Button ' + (trig.capability || '').replace('button.', ''))
               : '▶ Run';
-            btns += '<button class="btn btn-blue" style="flex:1" onclick="TModal._runGroupTest(\'' + esc(runAct.groupId) + '\')">' + esc(label) + '</button>';
+            btns += '<button class="hy-nostyle btn btn-blue" style="flex:1" onclick="TModal._runGroupTest(\'' + esc(runAct.groupId) + '\')">' + esc(label) + '</button>';
           });
         }
         if (!html) {
           var flowCheckBtn = (firstIt && firstIt._useHomeyFlows && firstIt._homeyFlowIds && firstIt._homeyFlowIds.length)
-            ? '<button class="btn btn-gray" style="width:100%;margin-bottom:10px" onclick="TModal._checkSwitchFlows()">🔍 Check Homey Flows</button>'
+            ? '<button class="hy-nostyle btn btn-gray" style="width:100%;margin-bottom:10px" onclick="TModal._checkSwitchFlows()">🔍 Check Homey Flows</button>'
             : '';
           html = btns
             ? flowCheckBtn +
@@ -2293,22 +2179,22 @@ var TModal = {
     } else {
       var btns = '';
       if (type === 'scene') {
-        btns = '<button class="btn btn-blue" style="flex:1" onclick="TModal._runModalTest(\'scene\')">💡 Run Group</button>';
+        btns = '<button class="hy-nostyle btn btn-blue" style="flex:1" onclick="TModal._runModalTest(\'scene\')">💡 Run Group</button>';
       } else if (type === 'smart_dim') {
         btns =
-          '<button class="btn btn-blue" style="flex:1" onclick="TModal._runModalTest(\'day\')">☀️ Day scene</button>' +
-          '<button class="btn btn-blue" style="flex:1" onclick="TModal._runModalTest(\'night\')">🌙 Night scene</button>' +
-          '<button class="btn btn-gray" style="flex:1" onclick="TModal._runModalTest(\'off\')">⚫ Off</button>';
+          '<button class="hy-nostyle btn btn-blue" style="flex:1" onclick="TModal._runModalTest(\'day\')">☀️ Day scene</button>' +
+          '<button class="hy-nostyle btn btn-blue" style="flex:1" onclick="TModal._runModalTest(\'night\')">🌙 Night scene</button>' +
+          '<button class="hy-nostyle btn btn-gray" style="flex:1" onclick="TModal._runModalTest(\'off\')">⚫ Off</button>';
       } else if (type === 'motion_lights') {
         btns =
-          '<button class="btn btn-blue" style="flex:1" onclick="TModal._runModalTest(\'on\')">💡 Motion ON</button>' +
-          '<button class="btn btn-gray" style="flex:1" onclick="TModal._runModalTest(\'off\')">⚫ Off</button>';
+          '<button class="hy-nostyle btn btn-blue" style="flex:1" onclick="TModal._runModalTest(\'on\')">💡 Motion ON</button>' +
+          '<button class="hy-nostyle btn btn-gray" style="flex:1" onclick="TModal._runModalTest(\'off\')">⚫ Off</button>';
       } else if (type === 'door_lights') {
         btns =
-          '<button class="btn btn-blue" style="flex:1" onclick="TModal._runModalTest(\'on\')">🚪 Door opens</button>' +
-          '<button class="btn btn-gray" style="flex:1" onclick="TModal._runModalTest(\'off\')">⚫ Off</button>';
+          '<button class="hy-nostyle btn btn-blue" style="flex:1" onclick="TModal._runModalTest(\'on\')">🚪 Door opens</button>' +
+          '<button class="hy-nostyle btn btn-gray" style="flex:1" onclick="TModal._runModalTest(\'off\')">⚫ Off</button>';
       } else if (type === 'schedule') {
-        btns = '<button class="btn btn-blue" style="flex:1" onclick="TModal._runModalTest(\'on\')">▶ Run schedule</button>';
+        btns = '<button class="hy-nostyle btn btn-blue" style="flex:1" onclick="TModal._runModalTest(\'on\')">▶ Run schedule</button>';
       }
       html =
         '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">' + btns + '</div>' +
@@ -2358,7 +2244,7 @@ var TModal = {
         lines.map(function(l){ return '<p style="font-size:13px;margin:4px 0">' + l + '</p>'; }).join('') +
         (res.flows && Object.values(res.flows).some(function(f){ return !f; })
           ? '<p style="color:#ff3b30;font-size:12px;margin-top:8px">Missing flows — re-save the wall switch to recreate them.</p>'
-          : '<p style="color:var(--ea-text);font-size:12px;margin-top:8px">If the physical switch still doesn\'t work, check the Logs tab while pressing the switch.</p>');
+          : '<p style="color:var(--ea-text);font-size:12px;margin-top:8px">If the physical switch still doesn\'t work, check the Events tab while pressing the switch.</p>');
     } catch(e) {
       resEl.innerHTML = '<p style="color:#ff3b30;font-size:13px">✗ ' + esc(e.message) + '</p>';
     }
@@ -2479,49 +2365,49 @@ var TModal = {
     var _ovList = _ovRaw.length ? _ovRaw : State.devices;
     var _ovListS = _ovList.slice().sort(function(a,b){ var za=a.zone||'',zb=b.zone||''; return za!==zb?za.localeCompare(zb):a.name.localeCompare(b.name); });
     var ovDevOpts = _ovListS.map(function(d) { return '<option value="' + esc(d.id) + '">' + esc(d.name) + (d.zone ? ' ('+esc(d.zone)+')' : '') + '</option>'; }).join('');
-    return '<div class="fgrp"><label class="flabel">Zone</label>' +
-        '<select class="finput" id="t-zone" onchange="TModal._zoneChanged()">' +
+    return '<div class="fgrp"><label class="hy-nostyle flabel">Zone</label>' +
+        '<select class="hy-nostyle finput" id="t-zone" onchange="TModal._zoneChanged()">' +
           '<option value="">— Select zone —</option>' + zoneOpts +
         '</select></div>' +
-      '<div class="fgrp"><label class="flabel">Lights in zone</label>' +
+      '<div class="fgrp"><label class="hy-nostyle flabel">Lights in zone</label>' +
         '<div class="dp-wrap" id="dp-lights"></div></div>' +
-      '<div class="fgrp"><label class="flabel">Motion sensor (optional)</label>' +
-        '<select class="finput" id="t-sensor"><option value="">— No sensor (manual only) —</option>' + sensorOpts + '</select></div>' +
-      '<div class="fgrp"><label class="flabel">Brightness</label>' +
-        '<div class="slider-row"><input type="range" id="t-bright" min="1" max="100" value="100" oninput="el(\'t-bval\').textContent=this.value+\'%\';TModal._globalChanged(\'on\',parseInt(this.value))"><span class="slider-val" id="t-bval">100%</span></div></div>' +
-      '<div class="fgrp"><label class="flabel">Fade in (0 = instant)</label>' +
-        '<div class="slider-row"><input type="range" id="t-fadein" min="0" max="10" value="0" oninput="el(\'t-fadein-val\').textContent=this.value==\'0\'?\'instant\':this.value+\'s\'"><span class="slider-val" id="t-fadein-val">instant</span></div></div>' +
-      '<hr class="sep">' +
-      '<div class="check-row"><input type="checkbox" id="t-turnoff" checked onchange="el(\'t-hold-wrap\').style.display=this.checked?\'\':\'none\';el(\'t-fadeout-wrap\').style.display=this.checked?\'\':\'none\'"><label for="t-turnoff">Turn lights off when motion stops</label></div>' +
-      '<div class="fgrp" id="t-hold-wrap"><label class="flabel">Keep lights on for (after motion stops)</label>' +
-        '<div class="slider-row"><input type="range" id="t-hold" min="0" max="60" value="5" oninput="el(\'t-holdval\').textContent=this.value==\'0\'?\'off immediately\':this.value+\' min\'"><span class="slider-val" id="t-holdval">5 min</span></div></div>' +
-      '<div class="fgrp" id="t-fadeout-wrap"><label class="flabel">Fade out (0 = instant)</label>' +
-        '<div class="slider-row"><input type="range" id="t-fadeout" min="0" max="10" value="0" oninput="el(\'t-fadeout-val\').textContent=this.value==\'0\'?\'instant\':this.value+\'s\'"><span class="slider-val" id="t-fadeout-val">instant</span></div></div>' +
-      '<hr class="sep">' +
-      '<div class="check-row"><input type="checkbox" id="t-lux-en" onchange="el(\'t-lux-wrap\').style.display=this.checked?\'\':\'none\'"><label for="t-lux-en">Only trigger if lux is below threshold</label></div>' +
+      '<div class="fgrp"><label class="hy-nostyle flabel">Motion sensor (optional)</label>' +
+        '<select class="hy-nostyle finput" id="t-sensor"><option value="">— No sensor (manual only) —</option>' + sensorOpts + '</select></div>' +
+      '<div class="fgrp"><label class="hy-nostyle flabel">Brightness</label>' +
+        '<div class="slider-row"><input class="hy-nostyle" type="range" id="t-bright" min="1" max="100" value="100" oninput="el(\'t-bval\').textContent=this.value+\'%\';TModal._globalChanged(\'on\',parseInt(this.value))"><span class="slider-val" id="t-bval">100%</span></div></div>' +
+      '<div class="fgrp"><label class="hy-nostyle flabel">Fade in (0 = instant)</label>' +
+        '<div class="slider-row"><input class="hy-nostyle" type="range" id="t-fadein" min="0" max="10" value="0" oninput="el(\'t-fadein-val\').textContent=this.value==\'0\'?\'instant\':this.value+\'s\'"><span class="slider-val" id="t-fadein-val">instant</span></div></div>' +
+      '<hr class="hy-nostyle sep">' +
+      '<div class="check-row"><input class="hy-nostyle" type="checkbox" id="t-turnoff" checked onchange="el(\'t-hold-wrap\').style.display=this.checked?\'\':\'none\';el(\'t-fadeout-wrap\').style.display=this.checked?\'\':\'none\'"><label class="hy-nostyle" for="t-turnoff">Turn lights off when motion stops</label></div>' +
+      '<div class="fgrp" id="t-hold-wrap"><label class="hy-nostyle flabel">Keep lights on for (after motion stops)</label>' +
+        '<div class="slider-row"><input class="hy-nostyle" type="range" id="t-hold" min="0" max="60" value="5" oninput="el(\'t-holdval\').textContent=this.value==\'0\'?\'off immediately\':this.value+\' min\'"><span class="slider-val" id="t-holdval">5 min</span></div></div>' +
+      '<div class="fgrp" id="t-fadeout-wrap"><label class="hy-nostyle flabel">Fade out (0 = instant)</label>' +
+        '<div class="slider-row"><input class="hy-nostyle" type="range" id="t-fadeout" min="0" max="10" value="0" oninput="el(\'t-fadeout-val\').textContent=this.value==\'0\'?\'instant\':this.value+\'s\'"><span class="slider-val" id="t-fadeout-val">instant</span></div></div>' +
+      '<hr class="hy-nostyle sep">' +
+      '<div class="check-row"><input class="hy-nostyle" type="checkbox" id="t-lux-en" onchange="el(\'t-lux-wrap\').style.display=this.checked?\'\':\'none\'"><label class="hy-nostyle" for="t-lux-en">Only trigger if lux is below threshold</label></div>' +
       '<div id="t-lux-wrap" style="display:none">' +
-        '<div class="fgrp"><label class="flabel">Lux sensor</label><select class="finput" id="t-lux-sensor"><option value="">— Select lux sensor —</option>' + luxOpts + '</select></div>' +
-        '<div class="fgrp"><label class="flabel">Maximum lux (only trigger below this)</label><div class="slider-row"><input type="range" id="t-lux-max" min="0" max="500" value="50" oninput="el(\'t-lux-val\').textContent=this.value+\' lx\'"><span class="slider-val" id="t-lux-val">50 lx</span></div></div>' +
+        '<div class="fgrp"><label class="hy-nostyle flabel">Lux sensor</label><select class="hy-nostyle finput" id="t-lux-sensor"><option value="">— Select lux sensor —</option>' + luxOpts + '</select></div>' +
+        '<div class="fgrp"><label class="hy-nostyle flabel">Maximum lux (only trigger below this)</label><div class="slider-row"><input class="hy-nostyle" type="range" id="t-lux-max" min="0" max="500" value="50" oninput="el(\'t-lux-val\').textContent=this.value+\' lx\'"><span class="slider-val" id="t-lux-val">50 lx</span></div></div>' +
       '</div>' +
-      '<hr class="sep">' +
-      '<div class="check-row"><input type="checkbox" id="t-hours-en" onchange="el(\'t-hours-wrap\').style.display=this.checked?\'\':\'none\'"><label for="t-hours-en">Only active during certain hours</label></div>' +
+      '<hr class="hy-nostyle sep">' +
+      '<div class="check-row"><input class="hy-nostyle" type="checkbox" id="t-hours-en" onchange="el(\'t-hours-wrap\').style.display=this.checked?\'\':\'none\'"><label class="hy-nostyle" for="t-hours-en">Only active during certain hours</label></div>' +
       '<div id="t-hours-wrap" style="display:none">' +
-        '<div class="fgrp"><label class="flabel">Active from</label>' + mkTimePicker('t-hours-from','07:00') + '</div>' +
-        '<div class="fgrp"><label class="flabel">Until</label>' + mkTimePicker('t-hours-to','23:00') + '</div>' +
+        '<div class="fgrp"><label class="hy-nostyle flabel">Active from</label>' + mkTimePicker('t-hours-from','07:00') + '</div>' +
+        '<div class="fgrp"><label class="hy-nostyle flabel">Until</label>' + mkTimePicker('t-hours-to','23:00') + '</div>' +
       '</div>' +
-      '<hr class="sep">' +
-      '<div class="check-row"><input type="checkbox" id="t-ov-en" onchange="el(\'t-ov-wrap\').style.display=this.checked?\'\':\'none\'"><label for="t-ov-en">Button override — press a button to set a custom brightness and pause automation</label></div>' +
+      '<hr class="hy-nostyle sep">' +
+      '<div class="check-row"><input class="hy-nostyle" type="checkbox" id="t-ov-en" onchange="el(\'t-ov-wrap\').style.display=this.checked?\'\':\'none\'"><label class="hy-nostyle" for="t-ov-en">Button override — press a button to set a custom brightness and pause automation</label></div>' +
       '<div id="t-ov-wrap" style="display:none">' +
-        '<div class="fgrp"><label class="flabel">Button / switch device</label>' +
-          '<select class="finput" id="t-ov-device" onchange="TModal._ovDeviceChanged()"><option value="">— Select device —</option>' + ovDevOpts + '</select></div>' +
+        '<div class="fgrp"><label class="hy-nostyle flabel">Button / switch device</label>' +
+          '<select class="hy-nostyle finput" id="t-ov-device" onchange="TModal._ovDeviceChanged()"><option value="">— Select device —</option>' + ovDevOpts + '</select></div>' +
         '<div id="t-ov-buttons"></div>' +
-        '<div class="fgrp"><label class="flabel">Override brightness</label>' +
-          '<div class="slider-row"><input type="range" id="t-ov-bright" min="10" max="100" value="100" oninput="el(\'t-ov-bval\').textContent=this.value+\'%\'"><span class="slider-val" id="t-ov-bval">100%</span></div></div>' +
-        '<div class="fgrp"><label class="flabel">Override duration</label>' +
-          '<div class="slider-row"><input type="range" id="t-ov-dur" min="5" max="180" value="30" step="5" oninput="el(\'t-ov-durval\').textContent=this.value+\' min\'"><span class="slider-val" id="t-ov-durval">30 min</span></div></div>' +
+        '<div class="fgrp"><label class="hy-nostyle flabel">Override brightness</label>' +
+          '<div class="slider-row"><input class="hy-nostyle" type="range" id="t-ov-bright" min="10" max="100" value="100" oninput="el(\'t-ov-bval\').textContent=this.value+\'%\'"><span class="slider-val" id="t-ov-bval">100%</span></div></div>' +
+        '<div class="fgrp"><label class="hy-nostyle flabel">Override duration</label>' +
+          '<div class="slider-row"><input class="hy-nostyle" type="range" id="t-ov-dur" min="5" max="180" value="30" step="5" oninput="el(\'t-ov-durval\').textContent=this.value+\' min\'"><span class="slider-val" id="t-ov-durval">30 min</span></div></div>' +
       '</div>' +
-      '<div class="fgrp" style="margin-top:12px"><label class="flabel">Automation name</label>' +
-        '<input class="finput" id="t-name" type="text" placeholder="e.g. Living Room Zone"/></div>';
+      '<div class="fgrp" style="margin-top:12px"><label class="hy-nostyle flabel">Automation name</label>' +
+        '<input class="hy-nostyle finput" id="t-name" type="text" placeholder="e.g. Living Room Zone"/></div>';
   },
 
   _zoneChanged: function() {
@@ -2539,19 +2425,19 @@ var TModal = {
 
   // ── Light Group / Scene form ──
   _formScene: function() {
-    return '<div class="fgrp"><label class="flabel">Lights in this group</label>' +
+    return '<div class="fgrp"><label class="hy-nostyle flabel">Lights in this group</label>' +
         '<div class="scene-picker-tools" id="scene-picker-help">' + i18n('scene_picker_help') + '</div>' +
         '<div class="dp-wrap" id="dp-lights"></div>' +
       '</div>' +
-      '<div class="fgrp"><label class="flabel">Default brightness (0% = OFF)</label>' +
+      '<div class="fgrp"><label class="hy-nostyle flabel">Default brightness (0% = OFF)</label>' +
         '<div class="slider-row">' +
-          '<input type="range" id="t-bright" min="0" max="100" value="10" oninput="el(\'t-bval\').textContent=this.value==\'0\'?\'OFF\':this.value+\'%\';TModal._globalChanged(\'on\',parseInt(this.value))">' +
+          '<input class="hy-nostyle" type="range" id="t-bright" min="0" max="100" value="10" oninput="el(\'t-bval\').textContent=this.value==\'0\'?\'OFF\':this.value+\'%\';TModal._globalChanged(\'on\',parseInt(this.value))">' +
           '<span class="slider-val" id="t-bval">10%</span>' +
         '</div>' +
       '</div>' +
       '<div id="scene-lights-inline"></div>' +
-      '<div class="fgrp" style="margin-top:12px"><label class="flabel">Group name</label>' +
-        '<input class="finput" id="t-name" type="text" placeholder="e.g. Night Scene"/></div>';
+      '<div class="fgrp" style="margin-top:12px"><label class="hy-nostyle flabel">Group name</label>' +
+        '<input class="hy-nostyle finput" id="t-name" type="text" placeholder="e.g. Night Scene"/></div>';
   },
 
   _renderSceneLightsInline: function() {
@@ -2560,11 +2446,11 @@ var TModal = {
     var lights = Picker.getSelected('dp-lights');
     if (!lights.length) { wrap.innerHTML = ''; return; }
     var html = '<div class="fgrp" style="margin-top:4px">';
-    html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">' +
-      '<label class="flabel" style="margin-bottom:0">Individual lights</label>' +
+    html += '<div class="scene-lights-heading" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">' +
+      '<label class="hy-nostyle flabel" style="margin-bottom:0">Individual lights</label>' +
       '<div style="display:flex;gap:6px">' +
-        '<button type="button" class="btn-sm" onclick="TModal._setAllSceneDim(0)">Set all OFF</button>' +
-        '<button type="button" class="btn-sm" onclick="TModal._setAllSceneDim(null)">Reset to default</button>' +
+        '<button type="button" class="hy-nostyle btn-sm" onclick="TModal._setAllSceneDim(0)">Set all OFF</button>' +
+        '<button type="button" class="hy-nostyle btn-sm" onclick="TModal._setAllSceneDim(null)">Reset to default</button>' +
       '</div>' +
     '</div>';
     lights.forEach(function(id) {
@@ -2584,13 +2470,13 @@ var TModal = {
         html += '<div class="lt-row">' +
           '<span class="lt-label">💡 Level</span>' +
           '<div class="slider-row" style="flex:1;margin-top:0">' +
-            '<input type="range" id="' + sid + '" min="0" max="100" value="' + pct + '"' +
+            '<input class="hy-nostyle" type="range" id="' + sid + '" min="0" max="100" value="' + pct + '"' +
               ' oninput="var v=parseInt(this.value);document.getElementById(\'' + vid + '\').textContent=v===0?\'OFF\':v+\'%\';TModal._setLightDim(\'' + id + '\',\'on\',v);TModal._previewLight(\'' + id + '\',v/100)">' +
             '<span class="slider-val" id="' + vid + '">' + (pct === 0 ? 'OFF' : pct + '%') + '</span>' +
           '</div></div>';
       } else {
         html += '<div class="lt-row"><span class="lt-label">🔘 ON/OFF</span>' +
-          '<button type="button" class="btn-sm" onclick="TModal._toggleSceneSwitch(\'' + id + '\')">' +
+          '<button type="button" class="hy-nostyle btn-sm" onclick="TModal._toggleSceneSwitch(\'' + id + '\')">' +
           i18n(pct === 0 ? 'scene_switch_on' : 'scene_switch_off') + '</button></div>';
       }
       if (hasLightTemp(dev)) {
@@ -2599,7 +2485,7 @@ var TModal = {
         html += '<div class="lt-row">' +
           '<span class="lt-label">🌡 Temp</span>' +
           '<div class="slider-row" style="flex:1;margin-top:0">' +
-            '<input type="range" id="' + ctId + '" min="0" max="100" value="' + ctVal + '"' +
+            '<input class="hy-nostyle" type="range" id="' + ctId + '" min="0" max="100" value="' + ctVal + '"' +
               ' oninput="var v=parseInt(this.value);document.getElementById(\'' + ctVid + '\').textContent=(v<30?\'Warm\':(v>70?\'Cool\':\'Mid\'));TModal._setLightDim(\'' + id + '\',\'ct\',v);TModal._previewLight(\'' + id + '\',v/100,\'ct\')">' +
             '<span class="slider-val" id="' + ctVid + '">' + (ctVal < 30 ? 'Warm' : (ctVal > 70 ? 'Cool' : 'Mid')) + '</span>' +
           '</div></div>';
@@ -2612,6 +2498,47 @@ var TModal = {
   },
 
   // ── Motion → Lights form ──
+  _motionIdleVisibility: function() {
+    var enabled = el('t-turnoff') && el('t-turnoff').checked;
+    ['t-hold-wrap', 't-fadeout-wrap', 't-night-section'].forEach(function(id) {
+      if (el(id)) el(id).style.display = enabled ? '' : 'none';
+    });
+    if (el('t-night-controls')) el('t-night-controls').style.display = enabled && el('t-night-idle').checked ? '' : 'none';
+    if (el('t-night-off-wrap')) el('t-night-off-wrap').style.display = el('t-night-off').checked ? '' : 'none';
+  },
+
+  _fillNightIdle: function(config) {
+    el('t-night-idle').checked = !!config;
+    var percent = config ? Math.round(config.brightness * 100) : 1;
+    el('t-night-bright').value = percent;
+    el('t-night-bval').textContent = percent + '%';
+    el('t-night-off').checked = !!(config && config.offAfterMinutes > 0);
+    el('t-night-hours').value = config && config.offAfterMinutes > 0 ? config.offAfterMinutes / 60 : 3;
+    TModal._motionIdleVisibility();
+  },
+
+  _readNightIdle: function() {
+    if (!el('t-turnoff').checked || !el('t-night-idle').checked) return null;
+    var percent = Number(el('t-night-bright').value);
+    var hours = Number(el('t-night-hours').value);
+    if (!Number.isFinite(percent) || percent < 1 || percent > 100) throw new Error(i18n('night_idle_error_level'));
+    if (el('t-night-off').checked && (!Number.isFinite(hours) || hours < .25 || hours > 24)) throw new Error(i18n('night_idle_error_hours'));
+    return { brightness: percent / 100, offAfterMinutes: el('t-night-off').checked ? Math.round(hours * 60) : 0 };
+  },
+
+  _nightIdleForm: function() {
+    return '<div class="night-idle-options" id="t-night-section">' +
+      '<div class="check-row"><input class="hy-nostyle" type="checkbox" id="t-night-idle" onchange="TModal._motionIdleVisibility()"><label class="hy-nostyle" for="t-night-idle">' + i18n('night_idle_enable') + '</label></div>' +
+      '<div id="t-night-controls" style="display:none">' +
+        '<div class="fgrp"><label class="hy-nostyle flabel" for="t-night-bright">' + i18n('night_idle_level') + '</label>' +
+          '<div class="slider-row"><input class="hy-nostyle" type="range" id="t-night-bright" min="1" max="100" value="1" oninput="el(\'t-night-bval\').textContent=this.value+\'%\'"><span class="slider-val" id="t-night-bval">1%</span></div></div>' +
+        '<div class="check-row"><input class="hy-nostyle" type="checkbox" id="t-night-off" onchange="TModal._motionIdleVisibility()"><label class="hy-nostyle" for="t-night-off">' + i18n('night_idle_later_off') + '</label></div>' +
+        '<div class="fgrp" id="t-night-off-wrap" style="display:none"><label class="hy-nostyle flabel" for="t-night-hours">' + i18n('night_idle_hours') + '</label>' +
+          '<input class="hy-nostyle finput" type="number" id="t-night-hours" min="0.25" max="24" step="0.25" value="3" inputmode="decimal"></div>' +
+        '<p class="hint">' + i18n('night_idle_hint') + '</p>' +
+      '</div></div>';
+  },
+
   _formMotion: function() {
     var sensors = State.devices.filter(function(d) { return d.capabilities && d.capabilities.indexOf('alarm_motion') !== -1; });
     var sensorOpts = sensors.map(function(d) { return '<option value="' + esc(d.id) + '">' + esc(d.name) + (d.zone ? ' ('+esc(d.zone)+')' : '') + '</option>'; }).join('');
@@ -2621,45 +2548,46 @@ var TModal = {
     var _ovList = _ovRaw.length ? _ovRaw : State.devices;
     var _ovListS = _ovList.slice().sort(function(a,b){ var za=a.zone||'',zb=b.zone||''; return za!==zb?za.localeCompare(zb):a.name.localeCompare(b.name); });
     var ovDevOpts = _ovListS.map(function(d) { return '<option value="' + esc(d.id) + '">' + esc(d.name) + (d.zone ? ' ('+esc(d.zone)+')' : '') + '</option>'; }).join('');
-    return '<div class="fgrp"><label class="flabel">Motion sensor</label>' +
-        '<select class="finput" id="t-sensor"><option value="">— Select sensor —</option>' + sensorOpts + '</select></div>' +
-      '<div class="fgrp"><label class="flabel">Lights to control</label>' +
+    return '<div class="fgrp"><label class="hy-nostyle flabel">Motion sensor</label>' +
+        '<select class="hy-nostyle finput" id="t-sensor"><option value="">— Select sensor —</option>' + sensorOpts + '</select></div>' +
+      '<div class="fgrp"><label class="hy-nostyle flabel">Lights to control</label>' +
         '<div class="dp-wrap" id="dp-lights"></div></div>' +
-      '<div class="fgrp"><label class="flabel">Brightness when motion detected</label>' +
-        '<div class="slider-row"><input type="range" id="t-bright" min="10" max="100" value="100" oninput="el(\'t-bval\').textContent=this.value+\'%\';TModal._globalChanged(\'on\',parseInt(this.value))"><span class="slider-val" id="t-bval">100%</span></div></div>' +
-      '<div class="fgrp"><label class="flabel">Fade in (0 = instant)</label>' +
-        '<div class="slider-row"><input type="range" id="t-fadein" min="0" max="10" value="0" oninput="el(\'t-fadein-val\').textContent=this.value==\'0\'?\'instant\':this.value+\'s\'"><span class="slider-val" id="t-fadein-val">instant</span></div></div>' +
-      '<hr class="sep">' +
-      '<div class="check-row"><input type="checkbox" id="t-turnoff" checked onchange="el(\'t-hold-wrap\').style.display=this.checked?\'\':\'none\';el(\'t-fadeout-wrap\').style.display=this.checked?\'\':\'none\'"><label for="t-turnoff">Turn lights off when motion stops</label></div>' +
-      '<div class="fgrp" id="t-hold-wrap"><label class="flabel">Keep lights on for (after motion stops)</label>' +
-        '<div class="slider-row"><input type="range" id="t-hold" min="0" max="60" value="5" oninput="el(\'t-holdval\').textContent=this.value==\'0\'?\'off immediately\':this.value+\' min\'"><span class="slider-val" id="t-holdval">5 min</span></div></div>' +
-      '<div class="fgrp" id="t-fadeout-wrap"><label class="flabel">Fade out (0 = instant)</label>' +
-        '<div class="slider-row"><input type="range" id="t-fadeout" min="0" max="10" value="0" oninput="el(\'t-fadeout-val\').textContent=this.value==\'0\'?\'instant\':this.value+\'s\'"><span class="slider-val" id="t-fadeout-val">instant</span></div></div>' +
-      '<hr class="sep">' +
-      '<div class="check-row"><input type="checkbox" id="t-lux-en" onchange="el(\'t-lux-wrap\').style.display=this.checked?\'\':\'none\'"><label for="t-lux-en">Only trigger if lux is below threshold</label></div>' +
+      '<div class="fgrp"><label class="hy-nostyle flabel">Brightness when motion detected</label>' +
+        '<div class="slider-row"><input class="hy-nostyle" type="range" id="t-bright" min="10" max="100" value="100" oninput="el(\'t-bval\').textContent=this.value+\'%\';TModal._globalChanged(\'on\',parseInt(this.value))"><span class="slider-val" id="t-bval">100%</span></div></div>' +
+      '<div class="fgrp"><label class="hy-nostyle flabel">Fade in (0 = instant)</label>' +
+        '<div class="slider-row"><input class="hy-nostyle" type="range" id="t-fadein" min="0" max="10" value="0" oninput="el(\'t-fadein-val\').textContent=this.value==\'0\'?\'instant\':this.value+\'s\'"><span class="slider-val" id="t-fadein-val">instant</span></div></div>' +
+      '<hr class="hy-nostyle sep">' +
+      '<div class="check-row"><input class="hy-nostyle" type="checkbox" id="t-turnoff" checked onchange="TModal._motionIdleVisibility()"><label class="hy-nostyle" for="t-turnoff">Change lights when motion stops</label></div>' +
+      '<div class="fgrp" id="t-hold-wrap"><label class="hy-nostyle flabel">Keep lights on for (after motion stops)</label>' +
+        '<div class="slider-row"><input class="hy-nostyle" type="range" id="t-hold" min="0" max="180" value="5" oninput="el(\'t-holdval\').textContent=this.value==\'0\'?\'off immediately\':this.value+\' min\'"><span class="slider-val" id="t-holdval">5 min</span></div></div>' +
+      '<div class="fgrp" id="t-fadeout-wrap"><label class="hy-nostyle flabel">Fade out (0 = instant)</label>' +
+        '<div class="slider-row"><input class="hy-nostyle" type="range" id="t-fadeout" min="0" max="10" value="0" oninput="el(\'t-fadeout-val\').textContent=this.value==\'0\'?\'instant\':this.value+\'s\'"><span class="slider-val" id="t-fadeout-val">instant</span></div></div>' +
+      TModal._nightIdleForm() +
+      '<hr class="hy-nostyle sep">' +
+      '<div class="check-row"><input class="hy-nostyle" type="checkbox" id="t-lux-en" onchange="el(\'t-lux-wrap\').style.display=this.checked?\'\':\'none\'"><label class="hy-nostyle" for="t-lux-en">Only trigger if lux is below threshold</label></div>' +
       '<div id="t-lux-wrap" style="display:none">' +
-        '<div class="fgrp"><label class="flabel">Lux sensor</label><select class="finput" id="t-lux-sensor"><option value="">— Select lux sensor —</option>' + luxOpts + '</select></div>' +
-        '<div class="fgrp"><label class="flabel">Maximum lux (only trigger below this)</label><div class="slider-row"><input type="range" id="t-lux-max" min="0" max="500" value="50" oninput="el(\'t-lux-val\').textContent=this.value+\' lx\'"><span class="slider-val" id="t-lux-val">50 lx</span></div></div>' +
+        '<div class="fgrp"><label class="hy-nostyle flabel">Lux sensor</label><select class="hy-nostyle finput" id="t-lux-sensor"><option value="">— Select lux sensor —</option>' + luxOpts + '</select></div>' +
+        '<div class="fgrp"><label class="hy-nostyle flabel">Maximum lux (only trigger below this)</label><div class="slider-row"><input class="hy-nostyle" type="range" id="t-lux-max" min="0" max="500" value="50" oninput="el(\'t-lux-val\').textContent=this.value+\' lx\'"><span class="slider-val" id="t-lux-val">50 lx</span></div></div>' +
       '</div>' +
-      '<hr class="sep">' +
-      '<div class="check-row"><input type="checkbox" id="t-hours-en" onchange="el(\'t-hours-wrap\').style.display=this.checked?\'\':\'none\'"><label for="t-hours-en">Only active during certain hours</label></div>' +
+      '<hr class="hy-nostyle sep">' +
+      '<div class="check-row"><input class="hy-nostyle" type="checkbox" id="t-hours-en" onchange="el(\'t-hours-wrap\').style.display=this.checked?\'\':\'none\'"><label class="hy-nostyle" for="t-hours-en">Only active during certain hours</label></div>' +
       '<div id="t-hours-wrap" style="display:none">' +
-        '<div class="fgrp"><label class="flabel">Active from</label>' + mkTimePicker('t-hours-from','07:00') + '</div>' +
-        '<div class="fgrp"><label class="flabel">Until</label>' + mkTimePicker('t-hours-to','23:00') + '</div>' +
+        '<div class="fgrp"><label class="hy-nostyle flabel">Active from</label>' + mkTimePicker('t-hours-from','07:00') + '</div>' +
+        '<div class="fgrp"><label class="hy-nostyle flabel">Until</label>' + mkTimePicker('t-hours-to','23:00') + '</div>' +
       '</div>' +
-      '<hr class="sep">' +
-      '<div class="check-row"><input type="checkbox" id="t-ov-en" onchange="el(\'t-ov-wrap\').style.display=this.checked?\'\':\'none\'"><label for="t-ov-en">Button override — press a button to set a custom brightness and pause automation</label></div>' +
+      '<hr class="hy-nostyle sep">' +
+      '<div class="check-row"><input class="hy-nostyle" type="checkbox" id="t-ov-en" onchange="el(\'t-ov-wrap\').style.display=this.checked?\'\':\'none\'"><label class="hy-nostyle" for="t-ov-en">Button override — press a button to set a custom brightness and pause automation</label></div>' +
       '<div id="t-ov-wrap" style="display:none">' +
-        '<div class="fgrp"><label class="flabel">Button / switch device</label>' +
-          '<select class="finput" id="t-ov-device" onchange="TModal._ovDeviceChanged()"><option value="">— Select device —</option>' + ovDevOpts + '</select></div>' +
+        '<div class="fgrp"><label class="hy-nostyle flabel">Button / switch device</label>' +
+          '<select class="hy-nostyle finput" id="t-ov-device" onchange="TModal._ovDeviceChanged()"><option value="">— Select device —</option>' + ovDevOpts + '</select></div>' +
         '<div id="t-ov-buttons"></div>' +
-        '<div class="fgrp"><label class="flabel">Override brightness</label>' +
-          '<div class="slider-row"><input type="range" id="t-ov-bright" min="10" max="100" value="100" oninput="el(\'t-ov-bval\').textContent=this.value+\'%\'"><span class="slider-val" id="t-ov-bval">100%</span></div></div>' +
-        '<div class="fgrp"><label class="flabel">Override duration</label>' +
-          '<div class="slider-row"><input type="range" id="t-ov-dur" min="5" max="180" value="30" step="5" oninput="el(\'t-ov-durval\').textContent=this.value+\' min\'"><span class="slider-val" id="t-ov-durval">30 min</span></div></div>' +
+        '<div class="fgrp"><label class="hy-nostyle flabel">Override brightness</label>' +
+          '<div class="slider-row"><input class="hy-nostyle" type="range" id="t-ov-bright" min="10" max="100" value="100" oninput="el(\'t-ov-bval\').textContent=this.value+\'%\'"><span class="slider-val" id="t-ov-bval">100%</span></div></div>' +
+        '<div class="fgrp"><label class="hy-nostyle flabel">Override duration</label>' +
+          '<div class="slider-row"><input class="hy-nostyle" type="range" id="t-ov-dur" min="5" max="180" value="30" step="5" oninput="el(\'t-ov-durval\').textContent=this.value+\' min\'"><span class="slider-val" id="t-ov-durval">30 min</span></div></div>' +
       '</div>' +
-      '<div class="fgrp" style="margin-top:12px"><label class="flabel">Automation name</label>' +
-        '<input class="finput" id="t-name" type="text" placeholder="e.g. Hallway Motion"/></div>';
+      '<div class="fgrp" style="margin-top:12px"><label class="hy-nostyle flabel">Automation name</label>' +
+        '<input class="hy-nostyle finput" id="t-name" type="text" placeholder="e.g. Hallway Motion"/></div>';
   },
 
   // ── Smart Dim form ──
@@ -2672,73 +2600,73 @@ var TModal = {
     var _ovListSD   = ovDevicesSD.length ? ovDevicesSD : State.devices;
     var _ovListSDS  = _ovListSD.slice().sort(function(a,b){ var za=a.zone||'',zb=b.zone||''; return za!==zb?za.localeCompare(zb):a.name.localeCompare(b.name); });
     var ovDevOptsSD = _ovListSDS.map(function(d) { return '<option value="' + esc(d.id) + '">' + esc(d.name) + (d.zone ? ' ('+esc(d.zone)+')' : '') + '</option>'; }).join('');
-    return '<div class="fgrp"><label class="flabel">Motion sensor</label>' +
-        '<select class="finput" id="t-sensor"><option value="">— Select sensor —</option>' + sensorOpts + '</select></div>' +
-      '<div class="fgrp"><label class="flabel">Lights to control</label>' +
+    return '<div class="fgrp"><label class="hy-nostyle flabel">Motion sensor</label>' +
+        '<select class="hy-nostyle finput" id="t-sensor"><option value="">— Select sensor —</option>' + sensorOpts + '</select></div>' +
+      '<div class="fgrp"><label class="hy-nostyle flabel">Lights to control</label>' +
         '<div class="dp-wrap" id="dp-lights"></div></div>' +
-      '<hr class="sep">' +
-      '<div class="fgrp"><div style="display:flex;align-items:center;gap:8px"><label class="flabel" style="margin-bottom:0">☀️ Day starts</label>' +
+      '<hr class="hy-nostyle sep">' +
+      '<div class="fgrp"><div style="display:flex;align-items:center;gap:8px"><label class="hy-nostyle flabel" style="margin-bottom:0">☀️ Day starts</label>' +
         mkTimePicker('t-day-from','07:00') + '</div></div>' +
-      '<div class="fgrp"><label class="flabel">Daytime brightness</label>' +
-        '<div class="slider-row"><input type="range" id="t-day-bright" min="10" max="100" value="100" oninput="el(\'t-day-bval\').textContent=this.value+\'%\';TModal._globalChanged(\'day\',parseInt(this.value))"><span class="slider-val" id="t-day-bval">100%</span></div></div>' +
-      '<hr class="sep">' +
-      '<div class="fgrp"><div style="display:flex;align-items:center;gap:8px"><label class="flabel" style="margin-bottom:0">🌙 Night starts</label>' +
+      '<div class="fgrp"><label class="hy-nostyle flabel">Daytime brightness</label>' +
+        '<div class="slider-row"><input class="hy-nostyle" type="range" id="t-day-bright" min="10" max="100" value="100" oninput="el(\'t-day-bval\').textContent=this.value+\'%\';TModal._globalChanged(\'day\',parseInt(this.value))"><span class="slider-val" id="t-day-bval">100%</span></div></div>' +
+      '<hr class="hy-nostyle sep">' +
+      '<div class="fgrp"><div style="display:flex;align-items:center;gap:8px"><label class="hy-nostyle flabel" style="margin-bottom:0">🌙 Night starts</label>' +
         mkTimePicker('t-night-from','22:00') + '</div></div>' +
-      '<div class="fgrp"><label class="flabel">Night brightness</label>' +
-        '<div class="slider-row"><input type="range" id="t-night-bright" min="1" max="80" value="20" oninput="el(\'t-night-bval\').textContent=this.value+\'%\';TModal._globalChanged(\'night\',parseInt(this.value))"><span class="slider-val" id="t-night-bval">20%</span></div></div>' +
-      '<hr class="sep">' +
-      '<div class="fgrp"><label class="flabel">Fade in (0 = instant)</label>' +
-        '<div class="slider-row"><input type="range" id="t-fadein" min="0" max="10" value="0" oninput="el(\'t-fadein-val\').textContent=this.value==\'0\'?\'instant\':this.value+\'s\'"><span class="slider-val" id="t-fadein-val">instant</span></div></div>' +
-      '<div class="check-row"><input type="checkbox" id="t-turnoff" checked onchange="el(\'t-hold-wrap\').style.display=this.checked?\'\':\'none\';el(\'t-fadeout-wrap\').style.display=this.checked?\'\':\'none\'"><label for="t-turnoff">Turn lights off when motion stops</label></div>' +
-      '<div class="fgrp" id="t-hold-wrap"><label class="flabel">Keep lights on for (after motion stops)</label>' +
-        '<div class="slider-row"><input type="range" id="t-hold" min="0" max="60" value="5" oninput="el(\'t-holdval\').textContent=this.value==\'0\'?\'off immediately\':this.value+\' min\'"><span class="slider-val" id="t-holdval">5 min</span></div></div>' +
-      '<div class="fgrp" id="t-fadeout-wrap"><label class="flabel">Fade out (0 = instant)</label>' +
-        '<div class="slider-row"><input type="range" id="t-fadeout" min="0" max="10" value="0" oninput="el(\'t-fadeout-val\').textContent=this.value==\'0\'?\'instant\':this.value+\'s\'"><span class="slider-val" id="t-fadeout-val">instant</span></div></div>' +
-      '<hr class="sep">' +
-      '<div class="check-row"><input type="checkbox" id="t-lux-en" onchange="el(\'t-lux-wrap\').style.display=this.checked?\'\':\'none\'"><label for="t-lux-en">Only trigger if lux is below threshold</label></div>' +
+      '<div class="fgrp"><label class="hy-nostyle flabel">Night brightness</label>' +
+        '<div class="slider-row"><input class="hy-nostyle" type="range" id="t-night-bright" min="1" max="80" value="20" oninput="el(\'t-night-bval\').textContent=this.value+\'%\';TModal._globalChanged(\'night\',parseInt(this.value))"><span class="slider-val" id="t-night-bval">20%</span></div></div>' +
+      '<hr class="hy-nostyle sep">' +
+      '<div class="fgrp"><label class="hy-nostyle flabel">Fade in (0 = instant)</label>' +
+        '<div class="slider-row"><input class="hy-nostyle" type="range" id="t-fadein" min="0" max="10" value="0" oninput="el(\'t-fadein-val\').textContent=this.value==\'0\'?\'instant\':this.value+\'s\'"><span class="slider-val" id="t-fadein-val">instant</span></div></div>' +
+      '<div class="check-row"><input class="hy-nostyle" type="checkbox" id="t-turnoff" checked onchange="el(\'t-hold-wrap\').style.display=this.checked?\'\':\'none\';el(\'t-fadeout-wrap\').style.display=this.checked?\'\':\'none\'"><label class="hy-nostyle" for="t-turnoff">Turn lights off when motion stops</label></div>' +
+      '<div class="fgrp" id="t-hold-wrap"><label class="hy-nostyle flabel">Keep lights on for (after motion stops)</label>' +
+        '<div class="slider-row"><input class="hy-nostyle" type="range" id="t-hold" min="0" max="60" value="5" oninput="el(\'t-holdval\').textContent=this.value==\'0\'?\'off immediately\':this.value+\' min\'"><span class="slider-val" id="t-holdval">5 min</span></div></div>' +
+      '<div class="fgrp" id="t-fadeout-wrap"><label class="hy-nostyle flabel">Fade out (0 = instant)</label>' +
+        '<div class="slider-row"><input class="hy-nostyle" type="range" id="t-fadeout" min="0" max="10" value="0" oninput="el(\'t-fadeout-val\').textContent=this.value==\'0\'?\'instant\':this.value+\'s\'"><span class="slider-val" id="t-fadeout-val">instant</span></div></div>' +
+      '<hr class="hy-nostyle sep">' +
+      '<div class="check-row"><input class="hy-nostyle" type="checkbox" id="t-lux-en" onchange="el(\'t-lux-wrap\').style.display=this.checked?\'\':\'none\'"><label class="hy-nostyle" for="t-lux-en">Only trigger if lux is below threshold</label></div>' +
       '<div id="t-lux-wrap" style="display:none">' +
-        '<div class="fgrp"><label class="flabel">Lux sensor</label><select class="finput" id="t-lux-sensor"><option value="">— Select lux sensor —</option>' + luxOpts + '</select></div>' +
-        '<div class="fgrp"><label class="flabel">Maximum lux (only trigger below this)</label><div class="slider-row"><input type="range" id="t-lux-max" min="0" max="500" value="50" oninput="el(\'t-lux-val\').textContent=this.value+\' lx\'"><span class="slider-val" id="t-lux-val">50 lx</span></div></div>' +
+        '<div class="fgrp"><label class="hy-nostyle flabel">Lux sensor</label><select class="hy-nostyle finput" id="t-lux-sensor"><option value="">— Select lux sensor —</option>' + luxOpts + '</select></div>' +
+        '<div class="fgrp"><label class="hy-nostyle flabel">Maximum lux (only trigger below this)</label><div class="slider-row"><input class="hy-nostyle" type="range" id="t-lux-max" min="0" max="500" value="50" oninput="el(\'t-lux-val\').textContent=this.value+\' lx\'"><span class="slider-val" id="t-lux-val">50 lx</span></div></div>' +
       '</div>' +
-      '<hr class="sep">' +
-      '<div class="check-row"><input type="checkbox" id="t-ov-en" onchange="el(\'t-ov-wrap\').style.display=this.checked?\'\':\'none\'"><label for="t-ov-en">Button override — press a button to set a custom brightness and pause automation</label></div>' +
+      '<hr class="hy-nostyle sep">' +
+      '<div class="check-row"><input class="hy-nostyle" type="checkbox" id="t-ov-en" onchange="el(\'t-ov-wrap\').style.display=this.checked?\'\':\'none\'"><label class="hy-nostyle" for="t-ov-en">Button override — press a button to set a custom brightness and pause automation</label></div>' +
       '<div id="t-ov-wrap" style="display:none">' +
-        '<div class="fgrp"><label class="flabel">Button / switch device</label>' +
-          '<select class="finput" id="t-ov-device" onchange="TModal._ovDeviceChanged()"><option value="">— Select device —</option>' + ovDevOptsSD + '</select></div>' +
+        '<div class="fgrp"><label class="hy-nostyle flabel">Button / switch device</label>' +
+          '<select class="hy-nostyle finput" id="t-ov-device" onchange="TModal._ovDeviceChanged()"><option value="">— Select device —</option>' + ovDevOptsSD + '</select></div>' +
         '<div id="t-ov-buttons"></div>' +
-        '<div class="fgrp"><label class="flabel">Override brightness</label>' +
-          '<div class="slider-row"><input type="range" id="t-ov-bright" min="10" max="100" value="100" oninput="el(\'t-ov-bval\').textContent=this.value+\'%\'"><span class="slider-val" id="t-ov-bval">100%</span></div></div>' +
-        '<div class="fgrp"><label class="flabel">Override duration</label>' +
-          '<div class="slider-row"><input type="range" id="t-ov-dur" min="5" max="180" value="30" step="5" oninput="el(\'t-ov-durval\').textContent=this.value+\' min\'"><span class="slider-val" id="t-ov-durval">30 min</span></div></div>' +
+        '<div class="fgrp"><label class="hy-nostyle flabel">Override brightness</label>' +
+          '<div class="slider-row"><input class="hy-nostyle" type="range" id="t-ov-bright" min="10" max="100" value="100" oninput="el(\'t-ov-bval\').textContent=this.value+\'%\'"><span class="slider-val" id="t-ov-bval">100%</span></div></div>' +
+        '<div class="fgrp"><label class="hy-nostyle flabel">Override duration</label>' +
+          '<div class="slider-row"><input class="hy-nostyle" type="range" id="t-ov-dur" min="5" max="180" value="30" step="5" oninput="el(\'t-ov-durval\').textContent=this.value+\' min\'"><span class="slider-val" id="t-ov-durval">30 min</span></div></div>' +
       '</div>' +
-      '<div class="fgrp" style="margin-top:12px"><label class="flabel">Name prefix (e.g. room name)</label>' +
-        '<input class="finput" id="t-name" type="text" placeholder="e.g. Hallway"/></div>';
+      '<div class="fgrp" style="margin-top:12px"><label class="hy-nostyle flabel">Name prefix (e.g. room name)</label>' +
+        '<input class="hy-nostyle finput" id="t-name" type="text" placeholder="e.g. Hallway"/></div>';
   },
 
   // ── Door → Lights form ──
   _formDoor: function() {
     var sensors = State.devices.filter(function(d) { return d.capabilities && d.capabilities.indexOf('alarm_contact') !== -1; });
     var sensorOpts = sensors.map(function(d) { return '<option value="' + esc(d.id) + '">' + esc(d.name) + (d.zone ? ' ('+esc(d.zone)+')' : '') + '</option>'; }).join('');
-    return '<div class="fgrp"><label class="flabel">Door / contact sensor</label>' +
-        '<select class="finput" id="t-sensor"><option value="">— Select sensor —</option>' + sensorOpts + '</select></div>' +
-      '<div class="fgrp"><label class="flabel">Lights to control</label>' +
+    return '<div class="fgrp"><label class="hy-nostyle flabel">Door / contact sensor</label>' +
+        '<select class="hy-nostyle finput" id="t-sensor"><option value="">— Select sensor —</option>' + sensorOpts + '</select></div>' +
+      '<div class="fgrp"><label class="hy-nostyle flabel">Lights to control</label>' +
         '<div class="dp-wrap" id="dp-lights"></div></div>' +
-      '<div class="fgrp"><label class="flabel">Brightness when door opens</label>' +
-        '<div class="slider-row"><input type="range" id="t-bright" min="10" max="100" value="100" oninput="el(\'t-bval\').textContent=this.value+\'%\';TModal._globalChanged(\'on\',parseInt(this.value))"><span class="slider-val" id="t-bval">100%</span></div></div>' +
-      '<div class="fgrp"><label class="flabel">Fade in (0 = instant)</label>' +
-        '<div class="slider-row"><input type="range" id="t-fadein" min="0" max="10" value="0" oninput="el(\'t-fadein-val\').textContent=this.value==\'0\'?\'instant\':this.value+\'s\'"><span class="slider-val" id="t-fadein-val">instant</span></div></div>' +
-      '<hr class="sep">' +
-      '<div class="check-row"><input type="checkbox" id="t-turnoff" checked onchange="el(\'t-fadeout-wrap\').style.display=this.checked?\'\':\'none\'"><label for="t-turnoff">Turn lights off when door closes</label></div>' +
-      '<div class="fgrp" id="t-fadeout-wrap"><label class="flabel">Fade out (0 = instant)</label>' +
-        '<div class="slider-row"><input type="range" id="t-fadeout" min="0" max="10" value="0" oninput="el(\'t-fadeout-val\').textContent=this.value==\'0\'?\'instant\':this.value+\'s\'"><span class="slider-val" id="t-fadeout-val">instant</span></div></div>' +
-      '<hr class="sep">' +
-      '<div class="check-row"><input type="checkbox" id="t-hours-en" onchange="el(\'t-hours-wrap\').style.display=this.checked?\'\':\'none\'"><label for="t-hours-en">Only active during certain hours</label></div>' +
+      '<div class="fgrp"><label class="hy-nostyle flabel">Brightness when door opens</label>' +
+        '<div class="slider-row"><input class="hy-nostyle" type="range" id="t-bright" min="10" max="100" value="100" oninput="el(\'t-bval\').textContent=this.value+\'%\';TModal._globalChanged(\'on\',parseInt(this.value))"><span class="slider-val" id="t-bval">100%</span></div></div>' +
+      '<div class="fgrp"><label class="hy-nostyle flabel">Fade in (0 = instant)</label>' +
+        '<div class="slider-row"><input class="hy-nostyle" type="range" id="t-fadein" min="0" max="10" value="0" oninput="el(\'t-fadein-val\').textContent=this.value==\'0\'?\'instant\':this.value+\'s\'"><span class="slider-val" id="t-fadein-val">instant</span></div></div>' +
+      '<hr class="hy-nostyle sep">' +
+      '<div class="check-row"><input class="hy-nostyle" type="checkbox" id="t-turnoff" checked onchange="el(\'t-fadeout-wrap\').style.display=this.checked?\'\':\'none\'"><label class="hy-nostyle" for="t-turnoff">Turn lights off when door closes</label></div>' +
+      '<div class="fgrp" id="t-fadeout-wrap"><label class="hy-nostyle flabel">Fade out (0 = instant)</label>' +
+        '<div class="slider-row"><input class="hy-nostyle" type="range" id="t-fadeout" min="0" max="10" value="0" oninput="el(\'t-fadeout-val\').textContent=this.value==\'0\'?\'instant\':this.value+\'s\'"><span class="slider-val" id="t-fadeout-val">instant</span></div></div>' +
+      '<hr class="hy-nostyle sep">' +
+      '<div class="check-row"><input class="hy-nostyle" type="checkbox" id="t-hours-en" onchange="el(\'t-hours-wrap\').style.display=this.checked?\'\':\'none\'"><label class="hy-nostyle" for="t-hours-en">Only active during certain hours</label></div>' +
       '<div id="t-hours-wrap" style="display:none">' +
-        '<div class="fgrp"><label class="flabel">Active from</label>' + mkTimePicker('t-hours-from','07:00') + '</div>' +
-        '<div class="fgrp"><label class="flabel">Until</label>' + mkTimePicker('t-hours-to','23:00') + '</div>' +
+        '<div class="fgrp"><label class="hy-nostyle flabel">Active from</label>' + mkTimePicker('t-hours-from','07:00') + '</div>' +
+        '<div class="fgrp"><label class="hy-nostyle flabel">Until</label>' + mkTimePicker('t-hours-to','23:00') + '</div>' +
       '</div>' +
-      '<div class="fgrp" style="margin-top:12px"><label class="flabel">Automation name</label>' +
-        '<input class="finput" id="t-name" type="text" placeholder="e.g. Front Door Lights"/></div>';
+      '<div class="fgrp" style="margin-top:12px"><label class="hy-nostyle flabel">Automation name</label>' +
+        '<input class="hy-nostyle finput" id="t-name" type="text" placeholder="e.g. Front Door Lights"/></div>';
   },
 
   // ── Schedule form ──
@@ -2746,24 +2674,24 @@ var TModal = {
     var days = i18n('days');
     var dayBtns = days.map(function(d, i) {
       var val = i === 6 ? 0 : i + 1; // 0=Sun,1=Mon...6=Sat
-      return '<label class="day-btn"><input type="checkbox" class="day-chk" value="' + val + '" checked><span>' + d + '</span></label>';
+      return '<label class="hy-nostyle day-btn"><input type="checkbox" class="hy-nostyle day-chk" value="' + val + '" checked><span>' + d + '</span></label>';
     }).join('');
-    return '<div class="fgrp"><label class="flabel">Run every day at</label>' +
+    return '<div class="fgrp"><label class="hy-nostyle flabel">Run every day at</label>' +
         mkTimePicker('t-time','07:00') + '</div>' +
-      '<div class="fgrp"><label class="flabel">Days</label>' +
+      '<div class="fgrp"><label class="hy-nostyle flabel">Days</label>' +
         '<div class="day-row" id="t-days">' + dayBtns + '</div></div>' +
-      '<div class="fgrp"><label class="flabel">Action</label>' +
-        '<select class="finput" id="t-sched-action" onchange="TModal._schedActionChanged()">' +
+      '<div class="fgrp"><label class="hy-nostyle flabel">Action</label>' +
+        '<select class="hy-nostyle finput" id="t-sched-action" onchange="TModal._schedActionChanged()">' +
           '<option value="on">Turn lights ON</option>' +
           '<option value="dim">Turn lights ON and dim to level</option>' +
           '<option value="off">Turn lights OFF</option>' +
         '</select></div>' +
-      '<div id="t-sched-bright-wrap" style="display:none" class="fgrp"><label class="flabel">Brightness</label>' +
-        '<div class="slider-row"><input type="range" id="t-bright" min="1" max="100" value="50" oninput="el(\'t-bval\').textContent=this.value+\'%\'"><span class="slider-val" id="t-bval">50%</span></div></div>' +
-      '<div class="fgrp"><label class="flabel">Lights</label>' +
+      '<div id="t-sched-bright-wrap" style="display:none" class="fgrp"><label class="hy-nostyle flabel">Brightness</label>' +
+        '<div class="slider-row"><input class="hy-nostyle" type="range" id="t-bright" min="1" max="100" value="50" oninput="el(\'t-bval\').textContent=this.value+\'%\'"><span class="slider-val" id="t-bval">50%</span></div></div>' +
+      '<div class="fgrp"><label class="hy-nostyle flabel">Lights</label>' +
         '<div class="dp-wrap" id="dp-lights"></div></div>' +
-      '<div class="fgrp"><label class="flabel">Automation name</label>' +
-        '<input class="finput" id="t-name" type="text" placeholder="e.g. Morning routine"/></div>';
+      '<div class="fgrp"><label class="hy-nostyle flabel">Automation name</label>' +
+        '<input class="hy-nostyle finput" id="t-name" type="text" placeholder="e.g. Morning routine"/></div>';
   },
 
   _schedActionChanged: function() {
@@ -2872,6 +2800,7 @@ var TModal = {
     if (luxEn && luxSensorId) onConditions.push({ type: 'lux_below', deviceId: luxSensorId, maxLux: luxMax });
     var gid = TModal._editingGroup ? TModal._editingGroup.id : TModal._mkId();
     var list = [];
+    var nightIdle = TModal._readNightIdle();
 
     // Turn on all lights first, then apply per-light dim (fallback to global bright)
     var onActs = lights.map(function(id) { return { type: 'turn_on', deviceId: id }; });
@@ -2879,7 +2808,7 @@ var TModal = {
       var dimVal = (TModal._lightDims[id] && TModal._lightDims[id].on != null) ? TModal._lightDims[id].on : bright;
       if (fadeIn > 0) {
         onActs.push({ type: 'fade_to', deviceId: id, value: dimVal, duration: fadeIn });
-      } else if (dimVal < 1) {
+      } else if (dimVal < 1 || nightIdle) {
         onActs.push({ type: 'set_dim', deviceId: id, value: dimVal });
       }
       if (TModal._lightDims[id] && TModal._lightDims[id].ct != null) {
@@ -2903,10 +2832,12 @@ var TModal = {
       var offActs = lights.map(function(id) {
         return fadeOut > 0 ? { type: 'fade_off', deviceId: id, duration: fadeOut } : { type: 'turn_off', deviceId: id };
       });
-      list.push({ id: TModal._mkId(), name: name + ' — OFF', enabled: true,
+      var offAuto = { id: TModal._mkId(), name: name + ' — OFF', enabled: true,
         _groupId: gid, _groupName: name, _templateType: 'motion_lights',
         _holdMinutes: hold,
-        trigger: { type: 'motion_stop', deviceId: sensor }, conditions: [], actions: offActs });
+        trigger: { type: 'motion_stop', deviceId: sensor }, conditions: [], actions: offActs };
+      if (nightIdle) offAuto._nightIdle = nightIdle;
+      list.push(offAuto);
     }
     return list;
   },
@@ -3171,13 +3102,13 @@ var TModal = {
     var swOpts = swList.map(function(d) {
       return '<option value="' + esc(d.id) + '">' + esc(d.name) + (d.zone ? ' (' + esc(d.zone) + ')' : '') + '</option>';
     }).join('');
-    return '<div class="fgrp"><label class="flabel">Wall switch / button device</label>' +
-        '<select class="finput" id="t-switch" onchange="TModal._switchDeviceChanged()">' +
+    return '<div class="fgrp"><label class="hy-nostyle flabel">Wall switch / button device</label>' +
+        '<select class="hy-nostyle finput" id="t-switch" onchange="TModal._switchDeviceChanged()">' +
           '<option value="">— Select device —</option>' + swOpts +
         '</select></div>' +
       '<div id="t-sw-mappings"></div>' +
-      '<div class="fgrp" style="margin-top:12px"><label class="flabel">Automation name</label>' +
-        '<input class="finput" id="t-name" type="text" placeholder="e.g. Living Room Switch"/></div>';
+      '<div class="fgrp" style="margin-top:12px"><label class="hy-nostyle flabel">Automation name</label>' +
+        '<input class="hy-nostyle finput" id="t-name" type="text" placeholder="e.g. Living Room Switch"/></div>';
   },
 
   _switchDeviceChanged: async function() {
@@ -3267,8 +3198,8 @@ var TModal = {
     }
     rows.forEach(function(r, i) {
       html += '<div class="fgrp">' +
-        '<label class="flabel">' + esc(r.label) + '</label>' +
-        '<select class="finput" id="t-sw-map-' + i + '" ' +
+        '<label class="hy-nostyle flabel">' + esc(r.label) + '</label>' +
+        '<select class="hy-nostyle finput" id="t-sw-map-' + i + '" ' +
           'data-trigger-type="' + esc(r.triggerType) + '" ' +
           'data-cap="' + esc(r.cap || '') + '" ' +
           'data-trigger-id="' + esc(r.triggerId || '') + '" ' +
@@ -3281,13 +3212,13 @@ var TModal = {
         '<div id="t-sw-ov-' + i + '" style="display:none;margin-top:6px;padding:8px;background:#1c1c1e;border-radius:8px">' +
           '<div class="slider-row" style="margin-top:0">' +
             '<span class="slider-val" style="min-width:80px;color:var(--ea-text)">' + i18n('Override brightness') + '</span>' +
-            '<input type="range" id="t-sw-ov-bright-' + i + '" min="10" max="100" value="100" ' +
+            '<input class="hy-nostyle" type="range" id="t-sw-ov-bright-' + i + '" min="10" max="100" value="100" ' +
               'oninput="document.getElementById(\'t-sw-ov-bv-' + i + '\').textContent=this.value+\'%\'">' +
             '<span class="slider-val" id="t-sw-ov-bv-' + i + '">100%</span>' +
           '</div>' +
           '<div class="slider-row" style="margin-top:6px">' +
             '<span class="slider-val" style="min-width:80px;color:var(--ea-text)">' + i18n('Override duration') + '</span>' +
-            '<input type="range" id="t-sw-ov-dur-' + i + '" min="5" max="180" step="5" value="60" ' +
+            '<input class="hy-nostyle" type="range" id="t-sw-ov-dur-' + i + '" min="5" max="180" step="5" value="60" ' +
               'oninput="document.getElementById(\'t-sw-ov-dv-' + i + '\').textContent=this.value+\' min\'">' +
             '<span class="slider-val" id="t-sw-ov-dv-' + i + '">60 min</span>' +
           '</div>' +
@@ -3386,12 +3317,12 @@ var TModal = {
 
     wrap.innerHTML =
       '<div class="sec-hdr" style="margin-top:8px;margin-bottom:4px">Button assignment</div>' +
-      '<div class="fgrp"><label class="flabel">Activate override (ON)</label>' +
-        '<select class="finput" id="t-ov-on-sel" onchange="TModal._ovSelChanged(\'on\')">' +
+      '<div class="fgrp"><label class="hy-nostyle flabel">Activate override (ON)</label>' +
+        '<select class="hy-nostyle finput" id="t-ov-on-sel" onchange="TModal._ovSelChanged(\'on\')">' +
           '<option value="">\u2014 Not set \u2014</option>' + opts +
         '</select></div>' +
-      '<div class="fgrp"><label class="flabel">Cancel override (OFF, optional)</label>' +
-        '<select class="finput" id="t-ov-off-sel" onchange="TModal._ovSelChanged(\'off\')">' +
+      '<div class="fgrp"><label class="hy-nostyle flabel">Cancel override (OFF, optional)</label>' +
+        '<select class="hy-nostyle finput" id="t-ov-off-sel" onchange="TModal._ovSelChanged(\'off\')">' +
           '<option value="">\u2014 Not set (optional) \u2014</option>' + opts +
         '</select></div>';
 
@@ -3540,9 +3471,9 @@ var CustomEditor = {
       return '<option value="'+esc(d.id)+'"'+(d.id===t.deviceId?' selected':'')+'>'+esc(d.name)+(d.zone?' ('+esc(d.zone)+')':'')+' ['+esc(d.class||'')+']</option>';
     }).join('');
 
-    var html = '<div class="fgrp"><label class="flabel">' + i18n('ce_lbl_name') + '</label><input class="finput" id="ce-name" value="'+esc(a.name||'')+'"/></div>' +
-      '<div class="fgrp"><label class="flabel">' + i18n('ce_lbl_trigger_type') + '</label>' +
-        '<select class="finput" id="ce-trig-type" onchange="CustomEditor._trigChanged()">' +
+    var html = '<div class="fgrp"><label class="hy-nostyle flabel">' + i18n('ce_lbl_name') + '</label><input class="hy-nostyle finput" id="ce-name" value="'+esc(a.name||'')+'"/></div>' +
+      '<div class="fgrp"><label class="hy-nostyle flabel">' + i18n('ce_lbl_trigger_type') + '</label>' +
+        '<select class="hy-nostyle finput" id="ce-trig-type" onchange="CustomEditor._trigChanged()">' +
           '<option value="motion_start"'+(trigType==='motion_start'?' selected':'')+'>'+i18n('ce_trig_motion_start')+'</option>' +
           '<option value="motion_stop"'+(trigType==='motion_stop'?' selected':'')+'>'+i18n('ce_trig_motion_stop')+'</option>' +
           '<option value="door_open"'+(trigType==='door_open'?' selected':'')+'>'+i18n('ce_trig_door_open')+'</option>' +
@@ -3550,14 +3481,14 @@ var CustomEditor = {
           '<option value="time"'+(trigType==='time'?' selected':'')+'>'+i18n('ce_trig_time')+'</option>' +
         '</select></div>' +
       '<div id="ce-trig-extra"></div>' +
-      '<hr class="sep">' +
+      '<hr class="hy-nostyle sep">' +
       '<div style="font-size:11px;font-weight:700;color:var(--ea-text);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">' + i18n('ce_lbl_conds') + '</div>' +
       '<div id="ce-conds"></div>' +
-      '<button style="width:100%;padding:8px;border:1.5px dashed var(--ea-border);border-radius:8px;background:none;color:var(--ea-text);cursor:pointer;font-size:13px;margin-bottom:12px" onclick="CustomEditor._addCond()">' + i18n('ce_btn_add_cond') + '</button>' +
-      '<hr class="sep">' +
+      '<button class="hy-nostyle" style="width:100%;padding:8px;border:1.5px dashed var(--ea-border);border-radius:8px;background:none;color:var(--ea-text);cursor:pointer;font-size:13px;margin-bottom:12px" onclick="CustomEditor._addCond()">' + i18n('ce_btn_add_cond') + '</button>' +
+      '<hr class="hy-nostyle sep">' +
       '<div style="font-size:11px;font-weight:700;color:var(--ea-text);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">' + i18n('ce_lbl_actions') + '</div>' +
       '<div id="ce-acts"></div>' +
-      '<button style="width:100%;padding:8px;border:1.5px dashed var(--ea-border);border-radius:8px;background:none;color:var(--ea-text);cursor:pointer;font-size:13px" onclick="CustomEditor._addAct()">' + i18n('ce_btn_add_act') + '</button>';
+      '<button class="hy-nostyle" style="width:100%;padding:8px;border:1.5px dashed var(--ea-border);border-radius:8px;background:none;color:var(--ea-text);cursor:pointer;font-size:13px" onclick="CustomEditor._addAct()">' + i18n('ce_btn_add_act') + '</button>';
 
     setTimeout(function() {
       CustomEditor._trigChanged(a.trigger);
@@ -3575,9 +3506,9 @@ var CustomEditor = {
     }).join('');
     var extra = '';
     if (type === 'time') {
-      extra = '<div class="fgrp"><label class="flabel">' + i18n('ce_lbl_time') + '</label><input class="finput" type="text" pattern="\d{2}:\d{2}" placeholder="HH:MM" id="ce-t-time" value="'+(existing.time||'08:00')+'"/></div>';
+      extra = '<div class="fgrp"><label class="hy-nostyle flabel">' + i18n('ce_lbl_time') + '</label><input class="hy-nostyle finput" type="text" pattern="\d{2}:\d{2}" placeholder="HH:MM" id="ce-t-time" value="'+(existing.time||'08:00')+'"/></div>';
     } else {
-      extra = '<div class="fgrp"><label class="flabel">' + i18n('ce_lbl_device') + '</label><select class="finput" id="ce-t-dev"><option value="">' + i18n('ce_lbl_select') + '</option>'+allOpts+'</select></div>';
+      extra = '<div class="fgrp"><label class="hy-nostyle flabel">' + i18n('ce_lbl_device') + '</label><select class="hy-nostyle finput" id="ce-t-dev"><option value="">' + i18n('ce_lbl_select') + '</option>'+allOpts+'</select></div>';
     }
     if (el('ce-trig-extra')) el('ce-trig-extra').innerHTML = extra;
   },
@@ -3594,10 +3525,10 @@ var CustomEditor = {
       if (c.type === 'time_between') {
         return '<div class="fgrp" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">' +
           '<span style="font-size:13px;color:var(--ea-text)">' + i18n('ce_cond_between') + '</span>' +
-          '<input type="text" pattern="\d{2}:\d{2}" placeholder="HH:MM" style="border:1.5px solid #e0e0e5;border-radius:8px;padding:6px;font-size:13px" value="'+(c.from||'08:00')+'" oninput="CustomEditor.conds['+i+'].from=this.value"/>' +
+          '<input class="hy-nostyle" type="text" pattern="\d{2}:\d{2}" placeholder="HH:MM" style="border:1.5px solid #e0e0e5;border-radius:8px;padding:6px;font-size:13px" value="'+(c.from||'08:00')+'" oninput="CustomEditor.conds['+i+'].from=this.value"/>' +
           '<span style="font-size:13px;color:var(--ea-text)">' + i18n('ce_cond_and') + '</span>' +
-          '<input type="text" pattern="\d{2}:\d{2}" placeholder="HH:MM" style="border:1.5px solid #e0e0e5;border-radius:8px;padding:6px;font-size:13px" value="'+(c.to||'22:00')+'" oninput="CustomEditor.conds['+i+'].to=this.value"/>' +
-          '<button onclick="CustomEditor._rmCond('+i+')" style="background:none;border:none;color:#ff3b30;cursor:pointer;font-size:18px">×</button>' +
+          '<input class="hy-nostyle" type="text" pattern="\d{2}:\d{2}" placeholder="HH:MM" style="border:1.5px solid #e0e0e5;border-radius:8px;padding:6px;font-size:13px" value="'+(c.to||'22:00')+'" oninput="CustomEditor.conds['+i+'].to=this.value"/>' +
+          '<button class="hy-nostyle" onclick="CustomEditor._rmCond('+i+')" style="background:none;border:none;color:#ff3b30;cursor:pointer;font-size:18px">×</button>' +
         '</div>';
       }
       return '';
@@ -3625,19 +3556,19 @@ var CustomEditor = {
       var extra = '';
       switch(a.type) {
         case 'turn_on': case 'turn_off':
-          extra = '<select style="flex:1;border:1.5px solid #e0e0e5;border-radius:8px;padding:6px;font-size:13px" onchange="CustomEditor.acts['+i+'].deviceId=this.value"><option value="">' + i18n('ce_act_device') + '</option>'+allOpts(a.deviceId)+'</select>'; break;
+          extra = '<select class="hy-nostyle" style="flex:1;border:1.5px solid #e0e0e5;border-radius:8px;padding:6px;font-size:13px" onchange="CustomEditor.acts['+i+'].deviceId=this.value"><option value="">' + i18n('ce_act_device') + '</option>'+allOpts(a.deviceId)+'</select>'; break;
         case 'set_dim': case 'set_color_temp':
-          extra = '<select style="flex:1;border:1.5px solid #e0e0e5;border-radius:8px;padding:6px;font-size:13px" onchange="CustomEditor.acts['+i+'].deviceId=this.value"><option value="">' + i18n('ce_act_device') + '</option>'+allOpts(a.deviceId)+'</select>' +
-            '<input type="number" min="0" max="1" step="0.05" value="'+(a.value!=null?a.value:1)+'" style="width:65px;border:1.5px solid #e0e0e5;border-radius:8px;padding:6px;font-size:13px" oninput="CustomEditor.acts['+i+'].value=parseFloat(this.value)"/>'; break;
+          extra = '<select class="hy-nostyle" style="flex:1;border:1.5px solid #e0e0e5;border-radius:8px;padding:6px;font-size:13px" onchange="CustomEditor.acts['+i+'].deviceId=this.value"><option value="">' + i18n('ce_act_device') + '</option>'+allOpts(a.deviceId)+'</select>' +
+            '<input class="hy-nostyle" type="number" min="0" max="1" step="0.05" value="'+(a.value!=null?a.value:1)+'" style="width:65px;border:1.5px solid #e0e0e5;border-radius:8px;padding:6px;font-size:13px" oninput="CustomEditor.acts['+i+'].value=parseFloat(this.value)"/>'; break;
         case 'notify':
-          extra = '<input type="text" value="'+esc(a.message||'')+'" placeholder="' + i18n('ce_act_msg_ph') + '" style="flex:1;border:1.5px solid #e0e0e5;border-radius:8px;padding:6px;font-size:13px" oninput="CustomEditor.acts['+i+'].message=this.value"/>'; break;
+          extra = '<input class="hy-nostyle" type="text" value="'+esc(a.message||'')+'" placeholder="' + i18n('ce_act_msg_ph') + '" style="flex:1;border:1.5px solid #e0e0e5;border-radius:8px;padding:6px;font-size:13px" oninput="CustomEditor.acts['+i+'].message=this.value"/>'; break;
         case 'wait':
-          extra = '<input type="number" min="1" value="'+(a.seconds||5)+'" style="width:70px;border:1.5px solid var(--ea-border);border-radius:8px;padding:6px;font-size:13px" oninput="CustomEditor.acts['+i+'].seconds=parseInt(this.value)"/> <span style="font-size:13px;color:var(--ea-text)">' + i18n('ce_act_sec') + '</span>'; break;
+          extra = '<input class="hy-nostyle" type="number" min="1" value="'+(a.seconds||5)+'" style="width:70px;border:1.5px solid var(--ea-border);border-radius:8px;padding:6px;font-size:13px" oninput="CustomEditor.acts['+i+'].seconds=parseInt(this.value)"/> <span style="font-size:13px;color:var(--ea-text)">' + i18n('ce_act_sec') + '</span>'; break;
       }
       return '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:#f2f2f7;border-radius:10px;padding:10px;margin-bottom:8px">' +
-        '<select style="border:1.5px solid #e0e0e5;border-radius:8px;padding:6px;font-size:13px" onchange="CustomEditor._actType('+i+',this.value)">'+typeOpts+'</select>' +
+        '<select class="hy-nostyle" style="border:1.5px solid #e0e0e5;border-radius:8px;padding:6px;font-size:13px" onchange="CustomEditor._actType('+i+',this.value)">'+typeOpts+'</select>' +
         extra +
-        '<button onclick="CustomEditor._rmAct('+i+')" style="background:none;border:none;color:#ff3b30;cursor:pointer;font-size:20px;margin-left:auto">×</button>' +
+        '<button class="hy-nostyle" onclick="CustomEditor._rmAct('+i+')" style="background:none;border:none;color:#ff3b30;cursor:pointer;font-size:20px;margin-left:auto">×</button>' +
       '</div>';
     }).join('');
   },
@@ -3764,7 +3695,7 @@ var TestTab = {
             '<div class="card-name">' + esc(g.name || 'Automation') + '</div>' +
             '<div class="card-sub">' + esc(groupSummary(g)) + '</div>' +
           '</div>' +
-          '<button class="btn btn-blue" style="padding:6px 14px;font-size:13px" onclick="TestTab.runGroup(' + gi + ')">▶ Run</button>' +
+          '<button class="hy-nostyle btn btn-blue" style="padding:6px 14px;font-size:13px" onclick="TestTab.runGroup(' + gi + ')">▶ Run</button>' +
         '</div>';
       });
       orphans.forEach(function(item) {
@@ -3773,7 +3704,7 @@ var TestTab = {
             '<div class="card-name">' + esc(item.a.name || 'Unnamed') + '</div>' +
             '<div class="card-sub">' + esc(AutoList._singleSummary(item.a)) + '</div>' +
           '</div>' +
-          '<button class="btn btn-blue" style="padding:6px 14px;font-size:13px" onclick="TestTab.runSingle(' + item.i + ')">▶ Run</button>' +
+          '<button class="hy-nostyle btn btn-blue" style="padding:6px 14px;font-size:13px" onclick="TestTab.runSingle(' + item.i + ')">▶ Run</button>' +
         '</div>';
       });
       html += '</div>';
@@ -3944,6 +3875,7 @@ var DevTab = {
   },
 
   render: function() {
+    Overview.render();
     var list = el('device-list');
     if (!State.devices.length) {
       list.innerHTML = '<div class="empty"><div class="icon">📡</div><p>No devices cached yet.<br>Press <strong>Refresh</strong> to load them from Homey.</p></div>';
@@ -3973,8 +3905,8 @@ var DevTab = {
       return devs.map(function(d) {
         var checked = State.pinnedDevices.indexOf(d.id) !== -1 ? ' checked' : '';
         var info = DevTab._classInfo(d.class || 'other');
-        return '<label class="device-card" style="cursor:pointer;display:flex;align-items:center;gap:12px">' +
-          '<input type="checkbox" value="' + esc(d.id) + '"' + checked + ' onchange="DevTab.toggle(this.value,this.checked)" style="width:18px;height:18px;flex-shrink:0;accent-color:var(--ea-accent)">' +
+        return '<label class="hy-nostyle device-card" style="cursor:pointer;display:flex;align-items:center;gap:12px">' +
+          '<input class="hy-nostyle" type="checkbox" value="' + esc(d.id) + '"' + checked + ' onchange="DevTab.toggle(this.value,this.checked)" style="width:18px;height:18px;flex-shrink:0;accent-color:var(--ea-accent)">' +
           '<div class="device-card-info" style="flex:1">' +
             '<div class="device-card-name">' + info.icon + ' ' + esc(d.name) + '</div>' +
             '<div class="device-card-sub">' + esc(info.label) + (d.zone ? ' · ' + esc(d.zone) : '') + '</div>' +
@@ -4000,7 +3932,7 @@ var DevTab = {
     var html = classes.map(function(cls) {
       var info = DevTab._classInfo(cls);
       var active = af.indexOf(cls) !== -1;
-      return '<button onclick="DevTab.toggleFilter(\'' + cls + '\')" style="' +
+      return '<button class="hy-nostyle" onclick="DevTab.toggleFilter(\'' + cls + '\')" style="' +
         'display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:20px;border:2px solid ' +
         (active ? 'var(--ea-accent)' : 'var(--ea-border)') + ';background:' +
         (active ? 'var(--ea-accent)' : 'var(--ea-surface)') + ';color:' +
@@ -4086,10 +4018,10 @@ function mkTimePicker(id, defaultVal) {
     mOpts += '<option value="' + mv + '"' + (j === m ? ' selected' : '') + '>' + mv + '</option>';
   }
   return '<div class="tp-wrap">' +
-    '<select class="tp-sel" id="' + id + '-h" onchange="tpSync(\'' + id + '\')">' + hOpts + '</select>' +
+    '<select class="hy-nostyle tp-sel" id="' + id + '-h" onchange="tpSync(\'' + id + '\')">' + hOpts + '</select>' +
     '<span class="tp-sep">:</span>' +
-    '<select class="tp-sel" id="' + id + '-m" onchange="tpSync(\'' + id + '\')">' + mOpts + '</select>' +
-    '<input type="hidden" id="' + id + '" value="' + String(h).padStart(2,'0') + ':' + String(Math.round(m/5)*5).padStart(2,'0') + '">' +
+    '<select class="hy-nostyle tp-sel" id="' + id + '-m" onchange="tpSync(\'' + id + '\')">' + mOpts + '</select>' +
+    '<input class="hy-nostyle" type="hidden" id="' + id + '" value="' + String(h).padStart(2,'0') + ':' + String(Math.round(m/5)*5).padStart(2,'0') + '">' +
     '</div>';
 }
 function tpSync(id) {
@@ -4108,7 +4040,7 @@ function tpSet(id, val) {
   if (el(id))      el(id).value = h + ':' + m;
 }
 
-// ── Logs tab ───────────────────────────────────────────────────────────────────
+// ── Events tab ───────────────────────────────────────────────────────────────────
 var LogTab = {
   load: async function() {
     el('log-list').innerHTML = '<div class="loader">' + i18n('log_loading') + '</div>';

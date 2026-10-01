@@ -2,10 +2,11 @@
   "name": "no.easy.automation",
   "version": "1.0.0",
   "private": true,
-  "description": "Easy Automation - room-based automations for lights and devices",
+  "description": "Light Guard - room-based automations for lights and devices",
   "main": "app.js",
   "dependencies": {
-    "homey-api": "^3.20.0"
+    "homey-api": "^3.20.0",
+    "suncalc": "2.0.2"
   },
   "devDependencies": {
     "homey": "^4.5.3"
