@@ -1,5 +1,3 @@
-Light Guard creates room-based automations for lights, switches, doors, and other Homey devices. Set up motion sensors, door contacts, schedules, scenes, and wall switches directly in the app. An overview groups automations by room and shows recent activity.
+Light Guard makes room lighting comfortable without complicated Flows. Create motion-controlled room automations, light scenes, and wall-switch shortcuts, then see them together in a clear room overview.
 
-Motion-controlled lights can stay dimly lit after sunset and switch off later or at sunrise. The app also supports hold times, temporary overrides, an activity log, and Flow action cards for automation groups.
-
-This app retains the technical Homey ID no.easy.automation so existing local installations keep their settings. The Light Guard features and interface build on work by Thomas Solvik; see NOTICE.md for attribution and the UI stylesheet license.
+When you dim or switch a light manually, Light Guard keeps your choice while the room is occupied. Lights switch off after your chosen period without motion. Optional night lighting can stay softly lit after sunset and switch off later or at sunrise.

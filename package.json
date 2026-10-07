@@ -1,6 +1,6 @@
 {
   "name": "no.easy.automation",
-  "version": "1.0.0",
+  "version": "0.1.15",
   "private": true,
   "description": "Light Guard - room-based automations for lights and devices",
   "main": "app.js",

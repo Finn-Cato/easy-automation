@@ -1,5 +1,3 @@
-Light Guard lager rombaserte automasjoner for lys, brytere, dører og andre Homey-enheter. Sett opp bevegelsessensorer, dørkontakter, tidsplaner, lysscener og veggbrytere direkte i appen. Oversikten samler automasjonene etter rom og viser nylige hendelser.
+Light Guard gjør rombelysning enkel uten kompliserte Flows. Lag bevegelsesstyrte romautomasjoner, lysscener og snarveier for veggbrytere, og se dem samlet i en oversikt per rom.
 
-Bevegelsesstyrte lys kan stå svakt på etter solnedgang og slukkes senere eller ved soloppgang. Appen støtter også holdtid, midlertidig overstyring, aktivitetslogg og Flow-handlinger for automasjonsgrupper.
-
-Appen beholder den tekniske Homey-ID-en no.easy.automation, slik at eksisterende lokale installasjoner beholder innstillingene. Light Guard-funksjonene og grensesnittet bygger på arbeid av Thomas Solvik; se NOTICE.md for opphav og lisens for stilfilen.
+Når du dimmer eller slår et lys av eller på manuelt, beholder Light Guard valget ditt mens rommet er i bruk. Lysene slukkes etter valgt tid uten bevegelse. Valgfritt nattlys kan lyse svakt etter solnedgang og slukkes senere eller ved soloppgang.

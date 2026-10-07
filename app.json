@@ -1,6 +1,6 @@
 {
   "id": "no.easy.automation",
-  "version": "0.1.14",
+  "version": "0.1.15",
   "compatibility": ">=5.0.0",
   "sdk": 3,
   "platforms": [
@@ -49,6 +49,11 @@
   "author": {
     "name": "Finn Cato Andersen",
     "email": "fca@finnlyden.no"
+  },
+  "contributors": {
+    "developers": [
+      { "name": "Thomas Solvik" }
+    ]
   },
   "support": "mailto:fca@finnlyden.no",
   "homepage": "https://github.com/Finn-Cato/easy-automation",

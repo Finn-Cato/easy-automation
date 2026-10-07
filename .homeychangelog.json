@@ -1,4 +1,8 @@
 {
+  "0.1.15": {
+    "en": "Rebranded the app as Light Guard with a refreshed room overview and artwork. Manual light changes now stay in place while a room is occupied, then the lights switch off after the configured inactivity time. Added adjustable night lighting and a clearer app icon.",
+    "no": "Appen heter nå Light Guard og har fått ny romoversikt og nye bilder. Manuelle lysendringer beholdes mens rommet er i bruk, før lysene slukkes etter valgt tid uten bevegelse. Lagt til justerbart nattlys og et tydeligere appikon."
+  },
   "0.1.14": {
     "en": "Light Group selection now includes all light and switch devices, filters out heaters and unrelated on/off devices, and removes the pinned-device scope option. Non-dimmable switches are saved as on/off actions.",
     "no": "Lysgruppevelgeren viser alle lys og brytere, filtrerer bort varmere og andre irrelevante av/på-enheter, og fjerner valget for markerte enheter. Brytere uten dimming lagres som av/på-handlinger."
